@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel_Defect_Test 动画讲解 · 图像传感器 FT 测试</title>
+<link rel="stylesheet" href="../shared/player.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 像素缺陷（Pixel_Defect_Test）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage, External_Configuration));</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>PixelDefect.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">① 从白帧中找出与邻域不一致的像素</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head">
+          <h2>模拟一个 Gr 通道中心像素</h2>
+          <span>四个邻域均值假设为 180；模拟不执行图像团簇检测</span>
+        </div>
+        <div class="sliders two" id="sliders"><label class="slider" style="--c:#7fe08f"><span class="ch">Gr</span><input id="pixelval" type="range" min="0" max="255" step="1" value="180"><output id="pixelout">180</output></label></div>
+        <div class="presets" id="presets"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <div class="explain" id="explain">
+        <h3>这一页在讲什么</h3>
+        <p><code>Pixel_Defect_Test</code> 在四个通道逐像素比较四个邻域，再把二值结果映射回 Bayer 图，统计单点、团簇及 blemish；本页讲解示例配置的 V1.0。</p>
+        <p class="cue">动画无法启动时，可看<a href="storyboard.html">不依赖脚本的静态分镜</a>。</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    教学示意：基于 GC8613T 白帧 <code>PixelDefect.data</code> 的 V1.0，像素与邻域数值非实测。
+    互动仅计算一个居中 Gr 点，假设四个邻域均值为 180，分类结果不等于完整图像检测。
+  </footer>
+</div>
+
+<script src="../shared/player.js"></script>
+<script>
+/* 理想中心点示例：四个 Gr 邻域均为 180，其他点与团簇都假设正常。 */
+const state=AlgoAnim.state; state.pixel=180;
+function result(){
+  const diff=Math.abs(state.pixel-180)/180;
+  const primary=diff>0.30, blemish=!primary && diff>0.12;
+  const sign=state.pixel>180?'亮点':'暗点';
+  return {diff,primary,blemish,sign,bin:primary?(state.pixel>180?2002:2006):2001,grade:primary?1:0};
+}
+function panel(x,y,w,h,title,lines,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.05)',stroke:'rgba(110,168,254,.22)'});
+  txt(title,x+20,y+34,{size:16,weight:700,color:color||C.accent});
+  lines.forEach((s,i)=>txt(s,x+20,y+72+i*29,{size:14,color:i===0?C.ink:C.dim}));
+}
+function map(p){
+  const x=75,y=155,size=50,gap=6;
+  for(let j=0;j<5;j++)for(let i=0;i<5;i++){
+    const a=ease(seg(p,(i+j)*.035,.3+(i+j)*.035));ctx.save();ctx.globalAlpha=a;
+    const center=i===2&&j===2, cross=(i===2||j===2)&&!center;
+    const fill=center?'rgba(255,209,102,.22)':cross?'rgba(255,255,255,.025)':
+      (i<2)===(j<2)?'rgba(110,168,254,.16)':'rgba(61,220,151,.12)';
+    card(x+i*(size+gap),y+j*(size+gap),size,size,{r:6,fill:fill,stroke:center?'rgba(255,209,102,.75)':C.line});
+    if(center)txt(state.pixel,x+i*(size+gap)+size/2,y+j*(size+gap)+31,{size:15,color:C.accent2,align:'center',weight:700});
+    ctx.restore();
+  }
+  [[0,0],[3,0],[0,3],[3,3]].forEach(q=>txt('180',x+(q[0]+1)*(size+gap)-3,y+(q[1]+1)*(size+gap)+4,{size:13,color:C.ink,align:'center',weight:700,alpha:ease(seg(p,.25,.6))}));
+  txt('放大示意：中间是目标像素',75,470,{size:13,color:C.dim});
+  txt('实际每个邻域 5×5，图中未按比例',75,493,{size:12,color:C.dim});
+}
+function intro(p){
+  header(0,'定位','白帧像素缺陷：把目标点与周围同色像素比较');
+  map(p);
+  panel(455,155,480,265,'在白帧测试中的位置',['已拆出 R、Gr、Gb、B 四个通道','四通道分别生成像素缺陷图','映射回 Bayer 图，识别单点与团簇','结合配置输出 bin / grade'],C.accent2);
+  txt('本页讲解示例 PixelDefect.data 的 V1.0。',455,466,{size:13,color:C.dim});
+}
+function quadrants(p){
+  header(1,'四块邻域','在同一颜色通道，对目标像素比较四个邻域');
+  map(p);
+  panel(455,155,480,290,'示意：四个邻域均值相同',['左上、右上、左下、右下：均为 180','配置 radius=5，每块邻域为 5×5','目标所在行、列不属于这四块','每块独立求均值，分别计算差异','真实图像四块均值可能不同'],C.accent);
+}
+function compare(p){
+  header(2,'比例差','白帧模式：四块邻域各自比较，任一超过阈值即可');
+  map(p);const r=result();
+  panel(455,155,480,300,'Gr 通道示意',['目标像素：'+state.pixel+'；每块邻域均值：180','|目标 − 邻域均值| ÷ 邻域均值','当前四块比例差均为 '+(r.diff*100).toFixed(2)+'%','任一比例差 > 30%：进入主缺陷图','等于阈值不触发主缺陷'],C.accent2);
+}
+function masks(p){
+  header(3,'生成缺陷图','主缺陷图和 blemish 候选图不是同一张图');
+  const r=result();map(p);
+  panel(455,155,480,290,'Gr 通道阈值',['主缺陷阈值：30%；严格大于','未进主图时，再比较 blemish 12%','当前：'+(r.primary?'主缺陷候选':r.blemish?'blemish 候选':'两张图均未标记'),'主图和 blemish 图互斥','不同颜色通道的 blemish 阈值不同'],C.accent);
+}
+function groups(p){
+  header(4,'合图与团簇','将四通道的标记映射回 Bayer，再统计空间形状');
+  const entries=[['单点','单个异常标记'],['相邻点','横向 / 纵向或对角'],['更大团簇','多点组成的其他形状']];
+  entries.forEach((a,i)=>{const x=65+i*305;panel(x,170,270,230,a[0],[a[1],'仅作形状示意','实际统计依源码'],i===0?C.accent2:C.accent);});
+  txt('亮 / 暗方向由目标值减四邻域均值的平均值决定。',65,465,{size:14,color:C.dim});
+  txt('团簇会影响单点计数；图形不是完整的分类规则。',65,495,{size:13,color:C.dim});
+}
+function bins(p){
+  header(5,'输出结果','V1.0：团簇分类与单点计数共同决定子项 bin');
+  panel(65,155,420,300,'简单情形：仅单个点',['假设没有其他团簇 / blemish 超限','无主缺陷单点：bin 2001 / grade 0','一个亮点：bin 2002 / grade 1','一个暗点：bin 2006 / grade 1','仅为简化分支，并非全部判定'],C.accent2);
+  panel(535,155,400,300,'重要：子项与最终汇总',['V1.0 初始化 is_passed=false','grade 0 不会覆盖初始最终结果','最终结果还需比较其他子项','高等级团簇有各自的 bin','同级覆盖行为由各处源码决定'],C.accent);
+}
+function interactive(p){
+  header(6,'动手试','滑动 Gr 像素值，观察邻域差与模拟分类');
+  const r=result();map(p);
+  panel(455,155,480,310,'单点教学模型',['目标：'+state.pixel+'；邻域：180','相对差：'+(r.diff*100).toFixed(2)+'%','分类：'+(r.primary?'主缺陷候选 · '+r.sign:r.blemish?'blemish 候选':'未标记'),'假设仅有该孤立主缺陷点：','子项 bin '+r.bin+' / grade '+r.grade],r.primary?C.fail:C.pass);
+  txt('实际邻域、团簇和计数可能改变输出；不等同完整算法。',455,500,{size:12,color:C.dim});
+}
+const SCENES=[
+ {kicker:'定位',dur:12,draw:intro,caption:()=> '① 拆通道后比较像素与邻域，形成缺陷候选',html:'<h3>在白帧中的位置</h3><p>白帧的一条测试分支调用 <code>Pixel_Defect_Test(test_manage, External_Configuration)</code>。本页讲解示例 <code>PixelDefect.data</code> 的 V1.0；其他版本和测试分支可能不同。</p>'},
+ {kicker:'四块邻域',dur:14,draw:quadrants,caption:()=> '② 每个目标点参考同通道的四个 5×5 邻域',html:'<h3>如何找参考值</h3><p>四个通道分别处理。针对目标像素，使用左上、右上、左下、右下四块邻域各自的均值；示例 <code>radius=5</code>，每块为 5×5，不包含目标所在行列。</p><p>动画仅模拟位于内部的理想点，四块均值均设为 180；不模拟图像边界或零分母。</p>'},
+ {kicker:'比例比较',dur:14,draw:compare,caption:()=> '③ 白帧比例模式：任一邻域比例差严格超过 30% 就标记',html:'<h3>计算比例差</h3><p>白帧示例 <code>type=1</code> 使用比例模式，分别计算 <code>|目标 − 邻域均值| / 邻域均值</code>。四个邻域中任一个严格大于配置阈值就写入主缺陷图。</p><p>示例四通道主阈值都是 0.30。暗帧使用 DN 模式，不能直接套用此处的比例阈值。</p>'},
+ {kicker:'两张标记图',dur:13,draw:masks,caption:()=> '④ 未进主缺陷图时，再根据 blemish 阈值生成候选图',html:'<h3>主缺陷与 blemish 候选</h3><p>只有没有进入主缺陷图的像素，才继续比较 blemish 阈值；任一邻域超阈值写入候选图。两张图对同一像素互斥。</p><p>Gr 示例阈值为 0.12；R、Gb、B 的值应查看配置。<b>候选像素不等于已判定的 blemish 缺陷</b>，后续还要做形状、数量判断。</p>'},
+ {kicker:'单点与团簇',dur:14,draw:groups,caption:()=> '⑤ 合并到 Bayer 坐标，按形状统计单点、团簇和 blemish',html:'<h3>从候选图到统计</h3><p>四通道的主缺陷图、blemish 图和差值图映射回 Bayer 排列。源码识别多种全局及通道团簇形状，另统计亮暗单点；部分团簇计数会从单点统计中扣除。</p><p>亮暗方向依据目标像素与四个邻域均值的平均值之差。此处图示仅是概念示意，不代表完整形状判定。</p>'},
+ {kicker:'结果与汇总',dur:15,draw:bins,caption:()=> '⑥ 根据团簇及计数设 bin / grade，最终 bin 还要与其他子项汇总',html:'<h3>不要混淆子项和最终结果</h3><p>V1.0 的 bin 有多条团簇和单点分支。假设没有团簇、其他点及 blemish 超限：无主缺陷对应 2001 / grade 0；一个亮点对应 2002 / grade 1；一个暗点对应 2006 / grade 1。</p><p>源码初始化 <code>is_passed=false</code>，V1.0 内没有将其改为 true。最终汇总只在失败且 grade 严格大于当前 grade 时覆盖，因此 grade 0 不会覆盖默认最终结果；实际还要检查其他子项。</p>'},
+ {kicker:'互动模拟',dur:15,draw:interactive,caption:()=> '⑦ 拖动像素值，观察 Gr 点的比例差和两张候选图',html:'<h3>动手试</h3><p>四块 Gr 邻域固定为 180。目标值 234 时比例差恰为 30%，不进入主缺陷图；235 时大于 30%，成为主缺陷候选。</p><p>子项 bin 显示建立在<b>只有这个孤立主缺陷点、无其他点和团簇</b>的假设上；实际运行中周围像素、团簇和各项配置都会影响结果。</p>'}
+];
+const input=document.getElementById('pixelval'),output=document.getElementById('pixelout');
+input.addEventListener('input',()=>{state.pixel=Number(input.value);output.textContent=input.value;AlgoAnim.render();});
+AlgoAnim.start({scenes:SCENES});
+</script>
+</body>
+</html>

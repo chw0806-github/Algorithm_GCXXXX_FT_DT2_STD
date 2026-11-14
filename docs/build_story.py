@@ -25,6 +25,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
     {
+        "dir": "pixel_defect",
+        "title": "Pixel_Defect_Test",
+        "sub": "白帧像素缺陷：邻域比较、单点和团簇",
+        "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+        "lead": "动画的 7 幕各定格成一帧，图下配字幕和同一份讲解文字。",
+    },
+    {
         "dir": "deadrow_deadcol_bright",
         "title": "Deadrow_Deadcol_bright",
         "sub": "白帧坏行坏列：按通道比较邻近行列与线异常",
