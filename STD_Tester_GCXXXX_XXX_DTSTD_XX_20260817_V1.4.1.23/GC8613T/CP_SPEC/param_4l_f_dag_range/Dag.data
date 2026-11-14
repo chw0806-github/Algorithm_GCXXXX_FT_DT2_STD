@@ -1,0 +1,9 @@
+[ROI_COL]=50
+[ROI_ROW]=4
+[VAL]=200
+
+[bin_dag]=2280
+[grade_dag]=7
+
+[dag_open_mode]=1
+[log_align]=1

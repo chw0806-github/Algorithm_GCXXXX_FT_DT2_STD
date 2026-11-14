@@ -1,0 +1,18 @@
+<?xml version='1.0'?>
+<list>
+	<device>
+		<name>GC8613T</name>
+		<width>3848</width>
+		<height>2168</height>
+		<format>RAW10</format>
+		<mode>MIPI_4L</mode>
+		<setting>GC8613T_DPHY_MIPI4L_RAW10_3848x2168_fullsize_30fps_Bright_otp_pre.set</setting>
+		<testflow>testFlow_GC8613T_202603041055_V1.0.0.xml</testflow>
+		<id>8613</id>
+		<i2c_slave>62</i2c_slave>
+		<i2c_mode>3</i2c_mode>
+		<power>2800,1800,1200,3300,3300,0</power>
+		<mclk>27</mclk>
+		<resetPWDN>03</resetPWDN>
+	</device>
+</list>

@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<paramspath>
+	<param_binarization fcnt="2" fillLog="14">
+        <spec>Basic.data</spec>
+		<spec>binary.data</spec>
+    </param_binarization>
+
+
+	<param_4l_f_i2c_dl fcnt="3" fillLog="66">
+        <spec>Basic.data</spec>
+	<spec>FPN_DL_IIC.data</spec>
+	<spec>LightResponse.data</spec>
+    </param_4l_f_i2c_dl>
+
+
+
+
+
+	<param_4l_f_dag_range fcnt="2" fillLog="1">
+        <spec>Basic.data</spec>
+	<spec>Dag.data</spec>
+    </param_4l_f_dag_range>
+
+		
+	<param_4l_f_dag_linear fcnt="3" fillLog="23">
+        <spec>Basic.data</spec>
+	<spec>DagMeanStd.data</spec>
+	<spec>LightResponse.data</spec>
+    </param_4l_f_dag_linear>
+
+
+
+	<param_4l_f_lgb1_normal fcnt="8" fillLog="101">
+        <spec>Basic.data</spec>
+		<spec>LightResponse.data</spec>
+        <spec>LineDefect.data</spec>
+		<spec>EdgeLineDefect.data</spec>	
+		<spec>NonUniformity.data</spec>
+		<spec>PixelDefect.data</spec>
+		<spec>RelativeIllumination.data</spec>
+		<spec>ROI_PRNU.data</spec>
+    </param_4l_f_lgb1_normal>
+	
+
+
+	
+	
+	<param_4l_f_bright1_normal_30fps fcnt="18" fillLog="225">
+        <spec>Basic.data</spec>
+		<spec>ColorFourier.data</spec>
+        <spec>ColorRatio.data</spec>
+		<spec>ColorShading.data</spec>
+        <spec>LightResponse.data</spec>
+		<spec>LineDefect.data</spec>
+		<spec>EdgeLineDefect.data</spec>
+        <spec>NonUniformity.data</spec>
+		<spec>Opticalcenter.data</spec>
+        <spec>PixelDefect.data</spec>
+		<spec>POG.data</spec>
+		<spec>GI.data</spec>
+        <spec>RelativeIllumination.data</spec>
+		<spec>ROI_PRNU.data</spec>	
+		<spec>EdgeLineDefect.data</spec>
+		<spec>ImageDirt.data</spec>		
+	<spec>Blemish_V1.1.data</spec>	
+	<spec>ColorShading_5x5.data</spec>	
+    </param_4l_f_bright1_normal_30fps>
+	
+	
+	
+	
+	<param_4l_f_bright3_normal_60fps fcnt="4" fillLog="102">
+        <spec>Basic.data</spec>
+        <spec>LightResponse.data</spec>
+		<spec>LineDefect.data</spec>
+		<spec>EdgeLineDefect.data</spec>
+    </param_4l_f_bright3_normal_60fps>
+	
+	
+	
+	<param_4l_f_dark1_normal_30fps fcnt="12" fillLog="201">
+        <spec>Basic.data</spec>
+		<spec>Column_Noise.data</spec>
+		<spec>FPN_DL.data</spec>
+		<spec>LightResponse.data</spec>
+		<spec>NonUniformity.data</spec>
+		<spec>OB_DarkShading_V1.1.data</spec>
+		<spec>PixelDefect_V1.2.data</spec>
+		<spec>POG.data</spec>
+		<spec>Read_Noise.data</spec>
+		<spec>ROI_PRNU.data</spec>
+		<spec>Row_Noise.data</spec>
+		<spec>Channel_Noise.data</spec>
+    </param_4l_f_dark1_normal_30fps>	
+	
+	
+	
+	
+	<param_4l_f_dark3_normal_60fps fcnt="3" fillLog="66">
+        <spec>Basic.data</spec>
+		<spec>FPN_DL.data</spec>
+		<spec>LightResponse.data</spec>
+    </param_4l_f_dark3_normal_60fps>	
+
+	<param_4l_f_dark8_ref fcnt="2" fillLog="4">
+        <spec>Basic.data</spec>
+		
+		<spec>LightResponse.data</spec>
+		
+    </param_4l_f_dark8_ref>	
+
+	<param_4l_f_colorbar1_normal fcnt="3" fillLog="1">
+	    <spec>Basic.data</spec>
+        <spec>Colorbar.xml</spec>
+		<spec>colorbar.tiff</spec>
+    </param_4l_f_colorbar1_normal>
+	
+	<param_4l_f_fixCounter_sig1 fcnt="3" fillLog="1">
+	    <spec>Basic.data</spec>
+        <spec>Colorbar.xml</spec>
+		<spec>colorbar.tiff</spec>
+    </param_4l_f_fixCounter_sig1>
+	
+	<param_4l_f_merge1_normal fcnt="3" fillLog="1">
+	    <spec>Basic.data</spec>
+        <spec>Colorbar.xml</spec>
+		<spec>colorbar.tiff</spec>
+    </param_4l_f_merge1_normal>
+
+	<param_4l_f_range2_lcg fcnt="3" fillLog="4">
+        <spec>Basic.data</spec>
+		<spec>LightResponse.data</spec>
+		<spec>LineDefect.data</spec>
+		
+    </param_4l_f_range2_lcg>
+
+
+
+</paramspath>

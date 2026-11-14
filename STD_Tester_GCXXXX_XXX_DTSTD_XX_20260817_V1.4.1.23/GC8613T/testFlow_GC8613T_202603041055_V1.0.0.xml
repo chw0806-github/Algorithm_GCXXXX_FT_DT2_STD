@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  测试流程配置：target id 表示第几屏，item type 表示测试类型，属性名与各测试函数参数对应。
+  setting/name 中可用 %1 表示设备名(如 GC8613)，运行时会被替换。
+  target 可选属性 action：对应工具栏按钮的 objectName（如 actionWFBinary），用于手动测试时点击该按钮执行本屏；同时决定该按钮在工具栏上的显示顺序（按 target id 升序）。
+  可选属性 order：指定同一屏内测试项执行顺序（整数，小者先执行）；不写则按本文件中 item 出现顺序执行。加载后会按 order 排序，确保严格按顺序执行。
+  将此文件放在 设备名/test-flow.xml（与 ctr.xml、binMap.xml 等同级）。存在该文件时优先按配置执行，否则走代码内硬编码流程。
+-->
+<testFlow device="GC8613T">
+  <target id="0" action="actionDFTest" num="9">
+    <item order="1" type="DCTest" index="0" name="OpenShort" setting="NULL"/>
+    <item order="2" type="DCTest" index="5" name="PowerShort" setting="NULL"/>
+	<item order="3" type="Poweron"/>
+    <item order="4" type="I2C_Check"/>
+    <item order="5" type="OTP_AllFlag_Check" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_Bright1_normal.set"/>
+    <item order="6" type="OTP_WaferInfoRead" setting="NULL"/>
+    <item order="7" type="OTP_WriteWaferInfo_BoxID" setting="NULL"/>
+    <item order="8" type="Voltage_Stress" name="HVS" setting="GC8613T_DPHY_MIPI4L_RAW10_3848x2168_fullsize_30fps_HVS.set"/>
+    <item order="9" type="DF_Static_Flicker_pix_Binary" bin="1361" w="3848" h="2168" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" setting="GC8613T_DPHY_MIPI4L_RAW10_3848x2168_fullsize_30fps_Dark_otp_pre.set" param="param_binarization"/>
+  </target>
+  <target id="1" action="actionWFTest" num="6">
+    <item order="1" type="WF_Binary" bin="1161" w="3848" h="2168" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" setting="GC8613T_DPHY_MIPI4L_RAW10_3848x2168_fullsize_30fps_Bright_otp_pre.set" param="param_binarization"/>
+    <item order="2" type="Merge_DD_Burning" flicker="true"/>
+    <item order="3" type="WFTest_Pog_IIC" bin="161" w="3840" h="2160" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" name="WFTest_Pog_IIC" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_Bright1_normal.set" param="param_4l_f_bright1_normal_30fps"/>
+    <item order="4" type="DCTest" index="1" name="IDD_VREF_IDDS" setting="NULL"/>
+    <item order="5" type="WFTest" bin="4161" w="3840" h="2160" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" name="WFTest_60fps" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_60fps_Bright3_normal.set" param="param_4l_f_bright3_normal_60fps" enabled="true" lowGradeCode="801"/>
+    <item order="6" type="MIPITest" w="3848" h="2168" name="MIPI_CRC" setting="GC8613T_DPHY_MIPI4L_RAW10_3848x2168_fullsize_30fps_Bright_otp_pre.set" mode="MIPI_4L" format="RAW10"/>
+  </target>
+  <target id="2" action="actionGray" num="1">
+    <item order="1" type="LGBTest" bin="461" w="3840" h="2160" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" name="LGBTest1" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_LGB1_normal.set" param="param_4l_f_lgb1_normal" enabled="false" lowGradeCode="1"/>
+  </target>
+  <target id="3" action="actionRange" num="1">
+    <item order="1" type="RangeTest" bin="3870" w="3840" h="2160" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" name="RangeTest2" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_Range2_lcg.set" param="param_4l_f_range2_lcg" enabled="false" lowGradeCode="1"/>
+  </target>
+  <target id="4" action="actionLag1D" num="4">
+    <item order="1" type="DFNoise" bin="361" w="3840" h="2160" grab="10" skip="2" settingType="10" mode="MIPI_4L" format="RAW10" name="DarkTest_IIC" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_Dark1_normal.set" param="param_4l_f_dark1_normal_30fps" enabled="false" lowGradeCode="1"/>
+    
+    <item order="2" type="ColorBarTest" bin="361" w="3840" h="2160" grab="10" skip="2" settingType="10"  name="Colorbar" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_TestPattern1_normal.set" param="param_4l_f_colorbar1_normal" testFormat="RAW16" mode="MIPI_4L" format="RAW10" enabled="false" lowGradeCode="1"/>
+    <item order="3" type="ColorBarTest" bin="361" w="3840" h="2160" grab="10" skip="2" settingType="10"  name="Colorbar" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_FixCounter_sig.set" param="param_4l_f_fixCounter_sig1" testFormat="RAW16" mode="MIPI_4L" format="RAW10" enabled="false" lowGradeCode="1"/>
+    <item order="4" type="ColorBarTest" bin="361" w="3840" h="2160" grab="10" skip="2" settingType="10"  name="Colorbar" setting="GC8613T_DPHY_MIPI4L_RAW10_3840x2160_fullsize_30fps_MergeSram1_normal_PN9.set" param="param_4l_f_merge1_normal" testFormat="RAW16" mode="MIPI_4L" format="RAW10" enabled="false" lowGradeCode="1"/>
+
+  </target>
+</testFlow>

@@ -1,0 +1,6 @@
+# ReCode local database
+.recode
+
+# Generated at build time (content-stable writes)
+git_version_data.h
+.generated/

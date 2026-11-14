@@ -1,0 +1,11 @@
+<?xml version='1.0'?>
+<scene>
+	<autoNo flowNo='1' getMesRule='start' sendMesRule='over'>0</autoNo>
+	<autoNo flowNo='2' getMesRule='dark1' sendMesRule='dark1over'>1</autoNo>
+	<autoNo flowNo='3' getMesRule='white2' sendMesRule='white2over'>2</autoNo>
+	<autoNo flowNo='4' getMesRule='wlgb' sendMesRule='wlgbover'>3</autoNo>
+	<autoNo flowNo='5' getMesRule='range' sendMesRule='rover'>4</autoNo>
+	<autoNo flowNo='6' getMesRule='lag1' sendMesRule='code'>5</autoNo>
+	
+	
+</scene>

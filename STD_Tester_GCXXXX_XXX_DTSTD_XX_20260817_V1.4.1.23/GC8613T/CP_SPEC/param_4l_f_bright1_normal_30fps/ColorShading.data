@@ -1,0 +1,16 @@
+[Skip]=0
+[ROI_X_Cnt]=17
+[ROI_Y_Cnt]=13
+
+[Factor_Center_Class1]=0.2
+[Factor_Center_Class2]=0.2
+
+[bin_shading]=2227
+[grade_shading]=5
+
+[bin_shading_MA]=2228
+[grade_shading_MA]=2
+
+[open_mode]=1
+
+[log_align]=1

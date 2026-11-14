@@ -1,0 +1,11 @@
+<?xml version='1.0'?>
+<pattern>
+	<width>3840</width>
+	<height>2160</height>
+	<dif_pix_min>0</dif_pix_min>
+	<dif_pix_ratio>0</dif_pix_ratio>
+	<limit_cnt>0</limit_cnt>
+	<area x='0' y='0' w='3840' h='2160'></area>
+	<bin>211</bin>
+	<grade>6</grade>
+</pattern>

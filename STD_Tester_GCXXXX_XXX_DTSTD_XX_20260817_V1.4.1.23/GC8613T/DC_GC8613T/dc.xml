@@ -1,0 +1,67 @@
+<?xml version='1.0'?>
+<dc>
+    <pinSet testVSet='1500' gpioCSet='1500' posEnable='0' negEnable='1' powerCSet='1500'/>
+    <iddSet iddMode='00000' iddsMode='22111' />
+    <idds_pwd>00</idds_pwd>
+	
+	<poSet state='21' level='1' name='PO2'>22</poSet>
+	<poSet state='34' level='0' name='PO1'>23</poSet>
+	<poSet state='20' level='0' name='PO3'>24</poSet>
+	<poSet state='20' level='0' name='PO4'>25</poSet>
+	
+<!--
+
+  PIN_GPIO1  17          ///< 测试盒输出GPIO1
+  PIN_NC     20          ///< no-connect 输入
+  PIN_GPIO2  21          ///< 测试盒输出GPIO2
+  PIN_GPIO3  22         ///< 测试盒输出GPIO3
+  PIN_GPIO4  23         ///< 测试盒输出GPIO4
+  PIN_PWM1_OUT  34     ///< 输出0-18Mhz的可调节时钟频率 =PIN_CLK_ADJ_18M
+-->
+
+
+	<Stress_AVDD>3920</Stress_AVDD>
+	<Stress_DVDD>1680</Stress_DVDD>
+	<Stress_IOVDD>2520</Stress_IOVDD>
+	<Stress_Time>600</Stress_Time>
+
+
+	<spec group='pin' min='100' max='900' grade='9' name='DOVDD'>0</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='DVDD'>1</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='AVDD'>2</spec>
+	<spec group='pin' min='0' max='1000' grade='9' name='GND1'>5</spec>
+	<spec group='pin' min='0' max='1000' grade='9' name='GND2'>6</spec>
+	<spec group='pin' min='0' max='41000' grade='9' name='GND3'>7</spec>
+	<spec group='pin' min='0' max='41000' grade='9' name='GND4'>8</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='CLK_P'>9</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='CLK_N'>10</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D0P'>11</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D0N'>12</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D1P'>13</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D1N'>14</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D2P'>15</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D2N'>16</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D3P'>17</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='D3N'>18</spec>	
+	<spec group='pin' min='100' max='900' grade='9' name='MCLK'>36</spec>
+    <spec group='pin' min='100' max='900' grade='9' name='PWND'>37</spec>	
+	<spec group='pin' min='100' max='900' grade='9' name='SCL'>39</spec>
+	<spec group='pin' min='100' max='900' grade='9' name='SDA'>40</spec>
+	
+	<spec group='ps' min='0' max='1000' grade='9' name='PS-AVDD' code='912'>0</spec>
+	<spec group='ps' min='0' max='1000' grade='9' name='PS-DOVDD' code='913'>1</spec>
+	<spec group='ps' min='0' max='1000' grade='9' name='PS-DVDD' code='914'>2</spec>
+
+    <spec group='adc' min='-1000' max='2000' grade='9' name='RSGLOW' code='941'>0</spec>
+	<spec group='adc' min='2600' max='4000' grade='9' name='vref' code='940'>1</spec>
+	<spec group='adc' min='-1500' max='-700' grade='9' name='txlow' code='942'>2</spec>
+
+
+	<spec group='idd' min='0' max='75' grade='9' name='IDD-AVDD' code='931'>0</spec>
+	<spec group='idd' min='0' max='8' grade='9' name='IDD-DOVDD' code='932'>1</spec>
+	<spec group='idd' min='0' max='102' grade='9' name='IDD-DVDD' code='933'>2</spec>
+	
+	<spec group='idds' min='0' max='24' grade='9' name='IDDS-AVDD' code='921'>0</spec>
+	<spec group='idds' min='-1' max='28' grade='9' name='IDDS-DOVDD' code='922'>1</spec>
+	<spec group='idds' min='0' max='2500' grade='9' name='IDDS-DVDD' code='923'>2</spec>
+</dc>

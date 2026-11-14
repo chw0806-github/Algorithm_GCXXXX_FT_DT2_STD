@@ -1,0 +1,8 @@
+<?xml version='1.0'?>
+<dc>
+         <spec std='1' leftMoveNum='0'>0</spec>
+         <spec std='1' leftMoveNum='1'>1</spec>
+         <spec std='1' leftMoveNum='2'>2</spec>
+         <spec std='1' leftMoveNum='3'>3</spec>
+        <sensor add='fe' val='01'></sensor>
+</dc>

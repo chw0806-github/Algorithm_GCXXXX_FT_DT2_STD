@@ -1,0 +1,38 @@
+# Qt Creator user settings
+*.pro.user
+*.pro.user.*
+
+# Build / IDE
+build/
+debug/
+release/
+*.o
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.a
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.autosave
+.vs/
+.vscode/
+*.suo
+*.user
+
+# ReCode / generated
+.recode
+.generated/
+**/git_version_data.h
+
+# Temp / editor leftovers
+*.TMP
+*~
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,128 @@
+<?xml version='1.0'?>
+<otp>
+<product_ID>GC8613T-2.6</product_ID>
+<Sensor_ID>
+<SensorIDReadH value = '86'>03f0</SensorIDReadH>
+<SensorIDReadL value = '13' value2 = '13'>03f1</SensorIDReadL>//正常可以删除value2
+</Sensor_ID>
+
+
+<!-- 多条序列模式 -->
+<I2C_Gain_Sequence>
+    <Reg type='write' addr='0075'  value='64' sleep_ms='10'/>
+</I2C_Gain_Sequence>
+
+
+
+<otpBasicSetParam>//otp 读写基础参数设置
+    <otpAccessAddressH>0a69</otpAccessAddressH>
+    <otpAccessAddressL>0a6a</otpAccessAddressL>	
+	<otpWriteValue>0a6b</otpWriteValue>
+	<otpReadValue>0a6c</otpReadValue>	
+	<otpRWMode ReadValue='20' WriteValue='40'>0a5a</otpRWMode>
+	<otpCheckBusy RWValue='02' FlowRValue='02'>0a01</otpCheckBusy>		
+</otpBasicSetParam>
+
+
+<otpWaferIDParam>
+	<otpWaferIDAddress ValidBit='ff'>20</otpWaferIDAddress>
+	<otpWaferCoordXAddress ValidBit='ff'>28</otpWaferCoordXAddress>
+    <otpWaferCoordYAddress ValidBit='ff'>30</otpWaferCoordYAddress>
+    <otpWaferLot1Address ValidBit='ff'>38</otpWaferLot1Address>
+	<otpWaferLot2Address ValidBit='ff'>40</otpWaferLot2Address>
+	<otpWaferLot3Address ValidBit='ff'>48</otpWaferLot3Address>
+	<otpWaferLot4Address ValidBit='ff'>50</otpWaferLot4Address>
+	<otpWaferLot5Address ValidBit='ff'>58</otpWaferLot5Address>
+	<otpWaferLot6Address ValidBit='ff'>60</otpWaferLot6Address>
+	<otpWaferLot7Address ValidBit='ff'>68</otpWaferLot7Address>  
+    <otpWaferInfoCheck CheckValue='01' CheckErrorValue='02' ValidBit='ff' >18</otpWaferInfoCheck>
+	<BoxIDFlag CheckValue ='01' ValidBit='01'>70</BoxIDFlag>
+	<otpWriteFailCode>981</otpWriteFailCode>
+	<otpReadFailCode>982</otpReadFailCode>
+</otpWaferIDParam>
+
+<otpDDParam>
+	
+	<skipCheckIfBurnt>0</skipCheckIfBurnt>	
+	<offsetXForOtp>8</offsetXForOtp>	
+	<offsetYForOtp>8</offsetYForOtp>			
+    <otpStartAddress>f8</otpStartAddress>
+	<otpCountAddressH>e8</otpCountAddressH>
+	<otpCountAddressL>e8</otpCountAddressL>
+	<otpErrorCountAddress>f0</otpErrorCountAddress>
+    <otpCheckAddress CheckValue='01' CheckErrorValue='02'>e0</otpCheckAddress>
+    <otpDDNumMax otpLimit='150'></otpDDNumMax>	
+	<otpDDFlagVaild validvalue='00' invalidvalue='80'></otpDDFlagVaild>
+	<otpBigDDcode>2074</otpBigDDcode>
+	<otpDDNumExceedLimitCode>981</otpDDNumExceedLimitCode>
+	<otpWriteFailCode>981</otpWriteFailCode>
+	<otpReadFailCode>982</otpReadFailCode>	
+</otpDDParam>
+
+
+<otpFlagParam>//根据实际需要可以调整
+	<ATETestFlag value ='02' ValidBit='02'>70</ATETestFlag>	
+	<Gradeflag Bin1value ='01' Bin2value ='02' Bin3value ='03'>90</Gradeflag>	
+	<POGflag value ='01' ValidBit='01'>98</POGflag>	
+	<otpWriteFailCode>981</otpWriteFailCode>
+	<otpReadFailCode>982</otpReadFailCode>
+</otpFlagParam>
+	
+
+
+<otp_dd_encoding>
+  <!-- 全局 X/Y 坐标偏移，不需要时可设为 0 -->
+  <offset_x>1</offset_x>
+  <offset_y>1</offset_y>
+  <!-- type 为 2 位时用 0b11，即 3 -->
+  <type_mask>3</type_mask>
+
+  <byte_configs>
+    <!-- Byte 0：存 col[7:0] -->
+    <byte_config index="0">
+      <source>x</source>
+      <bit_mask>0xff</bit_mask>
+      <shift>0</shift>
+    </byte_config>
+
+    <!-- Byte 1：高 4 位 row[3:0]，低 4 位 col[11:8] -->
+    <byte_config index="1">
+      <high_nibble>
+        <source>y</source>
+        <bit_mask>0xf0</bit_mask>
+        <shift>4</shift>
+      </high_nibble>
+      <low_nibble>
+        <source>x</source>
+        <bit_mask>0x0f</bit_mask>
+        <shift>-8</shift>
+      </low_nibble>
+    </byte_config>
+
+    <!-- Byte 2：存 row[11:4] -->
+    <byte_config index="2">
+      <source>y</source>
+      <bit_mask>0xff</bit_mask>
+      <shift>-4</shift>
+    </byte_config>
+
+    <!-- Byte 3：存 type[1:0]，其余位由 bit_mask 置 0 -->
+    <byte_config index="3">
+      <source>type</source>
+      <bit_mask>0x03</bit_mask>
+      <shift>0</shift>
+    </byte_config>
+  </byte_configs>
+</otp_dd_encoding>
+
+
+
+
+
+
+
+
+
+
+
+</otp>

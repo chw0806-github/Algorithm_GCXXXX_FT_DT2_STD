@@ -1,0 +1,27 @@
+ff  0aa0  00 
+ff  0a67  81 //[7]otp_en [0]OTP flow en
+ff  0a61  29 //write time2低位
+ff  0a62  03 //write time2高位
+ff  0a63  29 //write time1低位
+ff  0a64  03 //write time1高位
+ff  0a65  80 //read time 
+ff  0a75  f1 //[7:4]OTP_read_gap
+ff  0a66  04 //[2]check fail [1]check pass [0]T1 pass
+ff  0a53  05 //otp_cp
+ff  0a51  41 //OTP_ipg_t1 恒流模式 120uA
+ff  0a52  41 //OTP_ipg_t2 恒流模式 120uA
+ff  0a54  48 //[6:5]烧录管选择 [4:0]校验档位选择 t1
+ff  0a55  48 //OTP_reg_t2 140k
+ff  0a56  2e //OTP_reg_t3 590k 
+ff  0a57  0e //OTP_reg_t4 590k
+ff  0a58  56 //OTP_reg_t5 380k 
+ff  0a4e  0e
+ff  0a4f  0e
+ff  0a5d  40 //OTP_delay_time1_WR
+ff  0a5e  00 //OTP_delay_time1_WR
+ff  0a5f  40 //OTP_delay_time2_RW
+ff  0a60  00 //OTP_delay_time2_RW
+ff  0a5b  11 //[7:4]OTP_check_time [3:0]OTP_read_repeat_time1
+ff  0a5c  11 //[7:4]OTP_read_repeat_time2 [3:0]OTP_read_repeat_time3
+ff  0a67  81 //[7]otp_en [0]OTP flow en
+

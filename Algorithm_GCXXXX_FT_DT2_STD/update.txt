@@ -1,0 +1,41 @@
+2025/11/26
+标准算法库初版
+
+2025/12/18
+1.DAG Bug修复，增加return;
+2.DAG参数load修复，DAG.data改为Dag.data
+3.DAG算法增加DAG1.1，卡控列均值
+4.Light_Linearity_Ushort尺寸防呆优化：待讨论
+5.Edge_Deadrow_Deadcol_bright 边缘线条测试log打开
+6.PD增加白屏测试log输出
+7.增加PD3，可外配卡控单点、点类分段
+
+2026/4/18
+
+1.colorratio由白屏里测试移植到Algorithm_all，便于灰屏也可以调用；
+2.灰屏增加colorratio、Blemish测试
+3.接口函数都增加传进来的参数文件夹的check，若不属于params-path.xml，返回code-1;
+4.灰屏增加Remosaic测试；
+5.黑屏增加OB_darkshading_V1.3;
+6.白屏增加colorratio_V1.1,offset为系数相乘；
+7.增加PixelDefect_V1.4测试；
+8.增加PD_single、PD_single_channel测试；
+7.灰屏点类卡控：支持三种，正常黑白屏类点、只卡单点、分通道卡单点；
+8.兼容Raw8/10/12/14/16出图格式测试；
+9.查点Skip边缘行列（二值化图像边缘填充0）
+10.白屏增加GI_5*5（02M3需求）
+11.imagedirt 增加亮度低时补log
+
+11.imagedirt 增加亮度低时补log
+
+2026/6/18
+1、raw8强制转成raw16后进算法库测试。
+2、Subitem_Result AlgorithmItems::Pixel_Defect_Test_NO_Test_Info    这个函数需要卡控一下，需要强制测PD，出 -2
+
+
+20260820：
+DEFINES += APP_VERSION=\\\"1.4.1.21\\\"
+1、修复git指令
+
+
+

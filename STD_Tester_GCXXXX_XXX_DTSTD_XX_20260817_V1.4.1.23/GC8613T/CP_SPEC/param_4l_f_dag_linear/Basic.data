@@ -1,0 +1,6 @@
+[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0

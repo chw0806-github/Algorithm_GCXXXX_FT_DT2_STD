@@ -1,0 +1,12 @@
+[Skip]=0
+[ROI_X_Cnt]=9
+[ROI_Y_Cnt]=9
+
+[GI_Ratio]=0.08
+
+[bin_GI]=157
+[grade_GI]=3
+
+[ratio_open_mode]=1
+
+[log_align]=1

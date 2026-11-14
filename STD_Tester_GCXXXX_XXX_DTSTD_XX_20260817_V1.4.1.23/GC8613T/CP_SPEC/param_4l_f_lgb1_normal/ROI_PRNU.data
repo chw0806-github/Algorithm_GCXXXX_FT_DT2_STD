@@ -1,0 +1,16 @@
+[X_ROI]=768
+[Y_ROI]=432
+[W_ROI]=384
+[H_ROI]=216
+
+[SpecR]=20
+[SpecG1]=20
+[SpecG2]=20
+[SpecB]=20
+
+[bin]=2328
+[grade]=4
+
+[open_mode]=1
+
+[log_align]=1

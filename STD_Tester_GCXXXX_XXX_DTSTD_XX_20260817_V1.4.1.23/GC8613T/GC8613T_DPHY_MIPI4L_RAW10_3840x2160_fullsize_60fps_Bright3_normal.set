@@ -1,0 +1,245 @@
+//version 1.1
+//mclk 27MHz, mipiclk 1458Mbps, wpclk 351MHz, rpclk 291.6MHz
+//rowtime 7.20us, vts 2314
+//darksun on, HDR off, fixposition off, DAG off
+//window 3840 2160
+
+
+ff  03fe  f0
+ff  03fe  00
+ff  03fe  10
+ff  0a38  01
+ff  0a20  19
+ff  061b  17
+ff  061c  44
+ff  061d  05
+ff  061e  82
+ff  061f  05
+ff  0a21  10
+ff  0a30  00
+ff  0a31  d8
+ff  0a34  40  
+ff  0a35  08
+ff  0a37  44
+ff  0314  50
+ff  031c  ce
+ff  0219  47
+ff  0342  02
+ff  0343  78
+ff  0259  08
+ff  025a  96
+ff  0340  09
+ff  0341  0a
+ff  0351  00
+ff  0345  02
+ff  0347  02
+ff  0348  0f
+ff  0349  18
+ff  034a  08
+ff  034b  88
+ff  034f  f0
+ff  0094  0f
+ff  0095  00
+ff  0096  08
+ff  0097  70
+ff  0099  0c
+ff  009b  0c
+ff  060c  06
+ff  060e  20
+ff  060f  0f
+ff  070c  06
+ff  070e  20
+ff  070f  0f
+ff  0087  50
+ff  141b  03
+ff  0901  0e
+ff  0907  d5
+ff  0909  06
+ff  0902  0b
+ff  0904  08  
+ff  0908  09 
+ff  0903  c5 
+ff  090c  09  
+ff  0905  10
+ff  0906  00
+ff  0724  2b
+ff  0727  2b
+ff  072b  1a
+ff  072a  5e//7c
+ff  0601  00
+ff  073e  40
+ff  0078  88
+ff  0618  01
+ff  1466  12
+ff  1468  07
+ff  1467  07
+ff  1478  10
+ff  1477  10
+ff  0709  40
+ff  0719  40
+ff  1469  80
+ff  146a  20
+ff  146b  03
+ff  1479  80
+ff  147a  20
+ff  147b  03
+ff  1480  02
+ff  1481  80
+ff  1482  02
+ff  1483  80
+ff  1484  08
+ff  1485  c0
+ff  1486  08
+ff  1487  c0
+ff  1407  10
+ff  1408  16
+ff  1409  03
+ff  1434  04
+ff  1447  75
+ff  140d  04
+ff  1461  10
+ff  146c  10
+ff  146d  10
+ff  146e  2e
+ff  146f  30
+ff  1474  34
+ff  1470  10
+ff  1471  13
+ff  143a  00
+ff  024b  02
+ff  0245  c7
+ff  025b  07
+ff  02bb  77
+ff  0612  01
+ff  0613  26
+ff  0243  66
+ff  0087  53
+ff  0053  05
+ff  0089  02
+ff  0002  eb
+ff  005a  0c
+ff  0040  83
+ff  0075  58
+ff  0205  0c
+ff  0202  06
+ff  0203  27
+ff  061a  02
+ff  0122  12
+ff  0123  50
+ff  0126  0f
+ff  0129  10
+ff  012a  20
+ff  012b  10
+ff  03fe  00
+ff  0106  78
+ff  0136  00
+ff  0181  f0
+ff  0185  01
+ff  0180  46
+ff  0106  38
+ff  010d  c0
+ff  010e  12
+ff  0113  02
+ff  0114  03
+ff  0100  09
+ff  0619  01
+ff  023b  58
+ff  023e  00
+ff  023f  84
+ff  0220  80
+ff  021b  96
+ff  0004  0f
+ff  000e  07
+ff  0219  47
+ff  0054  98
+ff  0076  01
+ff  0052  02
+ff  021a  10
+ff  0430  10
+ff  0431  10
+ff  0432  10
+ff  0433  10
+ff  0434  6d
+ff  0435  6d
+ff  0436  6d
+ff  0437  6d
+ff  0704  03
+ff  0706  02
+ff  0716  02
+ff  0708  c8
+ff  0718  c8
+ff  071d  dc
+ff  071e  05	
+//otp autoload
+ff  031f  01
+ff  031f  00
+ff  0a67  80
+ff  0a54  0e
+ff  0a65  10
+ff  0a98  04
+ff  05be  00
+ff  05a9  01
+ff  0089  02
+ff  0aa0  00
+ff  0023  00
+ff  0022  00
+ff  0025  00
+ff  0024  00
+ff  0028  0f
+ff  0029  18
+ff  002a  08
+ff  002b  88
+ff  0317  1c
+ff  0a70  03
+ff  0a82  00
+ff  0a83  e0
+ff  0a71  00
+ff  0a72  02
+ff  0a73  60
+ff  0a75  41
+ff  0a70  03
+ff  0a5a  80
+sleep 20  
+ff  0089  02
+ff  05be  01
+ff  0a70  00
+ff  0080  02
+ff  0a67  00
+ff  0020  01
+ff  024b  02
+ff  0220  80		
+ff  0058  00
+ff  0059  04
+
+//**Bright3**
+//30fps（60fps）
+//exp 
+//again 64X dgain 2x
+//wboffset 64
+//89=2 HCG
+//tx on  dpc on
+
+//ISPbypass
+ff  0089  02
+//frame
+ff  0340  11
+ff  0341  08  //framelength
+ff  0202  11
+ff  0203  00  //exp
+//Again
+ff  0614  00
+ff  0615  00
+ff  0225  00
+ff  1467  09
+ff  1468  09
+ff  00b8  02
+ff  00b9  0d  //1x
+//Dgain
+ff  0064  01
+ff  0065  00  //1x
+//dpc  tx
+ff  1436  00  //tx on
+ff  000e  06
+ff  0004  0f
+ff  0078  88  //dpc on
+ff  0060  00

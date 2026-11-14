@@ -1,0 +1,18 @@
+<?xml version='1.0'?>
+<ctr>
+	<whiteDelay>100</whiteDelay>
+	<darkDelay>100</darkDelay>
+	<patternDelay>100</patternDelay>
+	<rawDelay>100</rawDelay>
+	<waitProThr>100</waitProThr>
+	<recapDelay>100</recapDelay>
+	<whiteDelay_mipi>100</whiteDelay_mipi>
+	<patternDelay_mipi>100</patternDelay_mipi>
+	<std_map_value>90</std_map_value>
+	<Lag_HL_Value>800</Lag_HL_Value>
+	<LagDelay>100</LagDelay>
+	<WFmeanMin>45</WFmeanMin>
+	<WFmeanMax>120</WFmeanMax>
+	<iddsDelay>10</iddsDelay>
+	<SetGrabTimeout>500</SetGrabTimeout>
+</ctr>

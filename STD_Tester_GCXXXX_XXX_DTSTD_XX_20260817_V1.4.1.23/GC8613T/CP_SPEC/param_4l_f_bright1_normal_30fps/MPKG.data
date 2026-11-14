@@ -1,0 +1,9 @@
+[threshold]=45
+[limit_size]=5
+[skip]=2
+[code]=123
+[code_white]=173
+[mottle_cnt_threshold]=100000
+[mottle_code]=127
+[grade]=5
+[open_mode]=1
