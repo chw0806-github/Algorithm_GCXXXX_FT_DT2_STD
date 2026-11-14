@@ -21,6 +21,7 @@
       <span class="badge">GC8613T · CP_SPEC</span>
       <span class="badge">参数取自 <b>LightResponse.data</b></span>
       <span class="badge">面向初学者</span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
     </div>
   </header>
 
@@ -28,7 +29,7 @@
     <section class="stage-col">
       <div class="stage-card">
         <canvas id="stage" aria-label="算法动画舞台"></canvas>
-        <div class="caption"><span class="dot"></span><span id="caption">加载中…</span></div>
+        <div class="caption"><span class="dot"></span><span id="caption">① 一张 3840×2160 的 Bayer 白帧进入算法</span></div>
       </div>
 
       <div class="controls">
@@ -56,7 +57,16 @@
 
     <aside class="side">
       <nav class="chapters" id="chapters" aria-label="章节"></nav>
-      <div class="explain" id="explain"></div>
+      <div class="explain" id="explain">
+        <h3>这一页在讲什么</h3>
+        <p><code>Algorithm_all[site_].Light_Response(test_manage)</code> 是<b>白帧测试（Bright Test）</b>里的第一个子项：
+        取该工位缓冲区中的 3840×2160 Bayer 白帧，用 <code>Split_Channel</code> 拆成 R / Gr / Gb / B 四个平面，
+        每张图在中心取一块 ROI 求平均亮度（DN），再和 <code>LightResponse.data</code> 里的 Min / Max 比大小；
+        任一通道越界就 <code>is_passed = false</code>，并按判定树给出 bin / grade。</p>
+        <p class="cue">动画没有动起来？说明当前阅读器<b>屏蔽了页面脚本</b>（预览框、沙箱、邮件客户端里很常见）。
+        同一份内容还有不依赖脚本的版本：<a href="storyboard.html">静态分镜版 storyboard.html</a>
+        —— 8 幕各一张定格图，配同样的字幕和讲解文字。</p>
+      </div>
     </aside>
   </main>
 

@@ -7,6 +7,7 @@ items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
 ```
 
 - 动画：`docs/light_response/index.html`（单文件、零依赖、可离线；源文件为同目录 `index.src.html`）
+- 静态分镜：`docs/light_response/storyboard.html`（**不执行脚本也能看**：8 幕各一张定格图 + 字幕 + 讲解）
 - 讲解：本文件（算法流程、判定树、真实配置、常见坑）
 - 目录：`../index.html`；相对照度对照页：`../relative_illumination/index.html`
 
@@ -47,6 +48,19 @@ items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
 | `0.5×` `1×` `2×` | 播放速度 |
 | 拖 R / Gr / Gb / B 滑杆 | 修改四个通道的 ROI 均值，**第 06、07、08 幕实时重算**（表盘位置、PASS/FAIL、bin 都跟着变） |
 | 预设按钮 | 一键切换：正常片 / 偏暗 / 极暗<50 / 偏亮 / 过曝>241 / 只有 R 超限 |
+
+### 打开后只显示「动画没有启动」怎么办
+
+有些环境（IDE 内嵌预览、`sandbox` 沙箱 iframe、邮件客户端、部分在线文档站）会**屏蔽页面脚本**，
+这时 Canvas 不会动，页面上会留一句提示。同一份内容有两条不依赖脚本的路：
+
+| 想看什么 | 打开 | 说明 |
+|---|---|---|
+| 每幕的定格画面 + 字幕 + 讲解 | `storyboard.html` | 纯 HTML + CSS，图片 base64 内嵌，零脚本、零外部请求 |
+| 纯文字版流程 / 判定树 / 配置 | `README.md`（本文件） | 最省事，复制粘贴也方便 |
+
+`index.html` 的页头也有一个「看不了动画？→ 静态分镜」的链接，点它即可。
+静态分镜与动画共用同一份字幕/讲解数据，两者说法一致。
 
 ### 三种典型用法
 

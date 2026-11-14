@@ -38,6 +38,10 @@
   .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
     padding:4px 10px;border-radius:999px;white-space:nowrap}
   .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
 
   /* ---------- layout ---------- */
   main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
@@ -114,6 +118,12 @@
   .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
     padding:12px;overflow:auto}
   .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
   .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
     border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
     border-radius:8px;padding:9px 11px}
@@ -151,6 +161,7 @@
       <span class="badge">GC8613T · CP_SPEC</span>
       <span class="badge">参数取自 <b>RelativeIllumination.data</b></span>
       <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
     </div>
   </header>
 
@@ -158,7 +169,7 @@
     <section class="stage-col">
       <div class="stage-card">
         <canvas id="stage" aria-label="算法动画舞台"></canvas>
-        <div class="caption"><span class="dot"></span><span id="caption">加载中…</span></div>
+        <div class="caption"><span class="dot"></span><span id="caption">① 同一张白帧，Light_Response 看绝对亮度</span></div>
       </div>
 
       <div class="controls">
@@ -186,7 +197,15 @@
 
     <aside class="side">
       <nav class="chapters" id="chapters" aria-label="章节"></nav>
-      <div class="explain" id="explain"></div>
+      <div class="explain" id="explain">
+        <h3>这一页在讲什么</h3>
+        <p><code>Relative_Illumination</code> 是白帧测试里排在 <code>Light_Response</code> 之后的子项：
+        它<b>不拆通道</b>，直接在 RAW 全图上取四角 + 中心共 5 个 96×54 的窗口求平均，
+        用 <code>darkest = avg(四角)</code>、<code>ratio = center / darkest × 100%</code> 判断画面边缘相对中心衰减了多少（暗角 / 阴影）。</p>
+        <p class="cue">动画没有动起来？说明当前阅读器<b>屏蔽了页面脚本</b>（预览框、沙箱、邮件客户端里很常见）。
+        同一份内容还有不依赖脚本的版本：<a href="storyboard.html">静态分镜版 storyboard.html</a>
+        —— 7 幕各一张定格图，配同样的字幕和讲解文字。</p>
+      </div>
     </aside>
   </main>
 
@@ -218,6 +237,70 @@
    常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
    ========================================================================== */
 'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
 
 
 /* =====================================================================
@@ -374,7 +457,11 @@ let scenes = [];
 let elCaption = null, elBar = null;
 
 function resize(){
-  const r = canvas.getBoundingClientRect();
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
   dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.max(1, Math.round(r.width * dpr));
   canvas.height = Math.max(1, Math.round(r.height * dpr));
@@ -387,7 +474,11 @@ function render(){
   drawBg();
   const sc = scenes[PState.scene];
   const p = clamp01(PState.t / sc.dur);
-  sc.draw(p);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
   if(elCaption){
     const cap = sc.caption(p);
     if(elCaption.textContent !== cap) elCaption.textContent = cap;
@@ -500,7 +591,9 @@ const AlgoAnim = {
     canvas = document.getElementById(opts.canvas || 'stage');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
     scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
     Object.assign(PState, opts.state || {});
     elCaption = document.getElementById('caption');
     elBar = document.getElementById('bar');
@@ -508,10 +601,13 @@ const AlgoAnim = {
     bindControls();
     if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
     else window.addEventListener('resize', resize);
-    resize();
-    gotoScene(opts.start || 0, true);
-    requestAnimationFrame(tick);
-    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
   }
 };
 window.AlgoAnim = AlgoAnim;
@@ -1192,14 +1288,40 @@ AlgoAnim.start({ scenes: SCENES });
 </script>
 
 <script>
-/* 兜底提示：脚本被拦（部分文件预览器 / 禁 JS）时给一句人话，而不是一直“加载中” */
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
 setTimeout(function () {
-  if (!window.__ANIM) {
-    var c = document.getElementById('caption');
-    if (c) c.textContent = '脚本没有运行起来：请用 Chrome / Edge 直接打开本文件，或在本目录执行 '
-      + 'python3 -m http.server 8000 后访问 http://localhost:8000/';
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　当前环境没有执行页面脚本，请看右下讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('这个阅读器没有执行页面脚本（预览框、沙箱、邮件客户端里很常见）。不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
   }
-}, 1500);
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
 </script>
 </body>
 </html>

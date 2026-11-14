@@ -1,0 +1,58 @@
+[
+  {
+    "i": 1,
+    "file": "s01.png",
+    "kicker": "定位",
+    "caption": "③ 它直接用 RAW 全图 + 5 个窗口，不拆通道",
+    "dur": 11,
+    "html": "<h3>它和 Light_Response 有什么不同？</h3>\n      <p>同一个白帧，两项各看一件事：</p>\n      <ul>\n        <li><b>Light_Response</b>：拆通道 → 每个通道一个中心 ROI → 看<b>绝对亮度</b>够不够（80~220 DN）。</li>\n        <li><b>Relative_Illumination</b>：不拆通道，直接读 RAW → 四角 + 中心 5 个窗口 → 看<b>边缘比中心暗多少</b>（20%~100%）。</li>\n      </ul>\n      <pre><code>// AlgorithmItems::Relative_Illumination_V1_0  algorithmitems.cpp:1320\ndouble RelIllum = AlgorithmFuncs::TestRelativeIlumination(\n        g_buf_raw_, w, h, w_win, h_win);\nif (RelIllum &gt; limit_max_ratio_ || RelIllum &lt; limit_min_ratio_) {\n    res.is_passed = false;\n    res.bin   = param.bin_;     // 2202\n    res.grade = param.grade_;   // 8\n}</code></pre>\n      <p class=\"tip\">坐标体系不同是最大的坑：这里窗口坐标是 <b>RAW 像素</b>；Light_Response 的 ROI 是 <b>拆分后平面</b>的坐标（一半）。</p>"
+  },
+  {
+    "i": 2,
+    "file": "s02.png",
+    "kicker": "取窗口",
+    "caption": "5 个窗口全部落在 RAW 上（本图窗口为放大示意）",
+    "dur": 13,
+    "html": "<h3>5 个窗口的位置</h3>\n      <p>窗口大小来自参数 <code>w_win=96</code>、<code>h_win=54</code>；位置在代码里写死：</p>\n      <pre><code>// TestRelativeIlumination()  cpalgorithmraw.cpp:1576\nROI_3 = 左上角 [0 .. h_win) × [0 .. w_win)\nROI_4 = 左下角 [h-h_win .. h) × [0 .. w_win)\nROI_5 = 右上角 [0 .. h_win) × [w-w_win .. w)\nROI_6 = 右下角 [h-h_win .. h) × [w-w_win .. w)\nROI_2 = 中心   [h/2-h_win/2 .. +h_win) × [w/2-w_win/2 .. +w_win)</code></pre>\n      <p>4 个角窗口各 96×54 = 5184 个像素，加起来只占全图的约 <b>0.25%</b> —— 算得很快。</p>\n      <p class=\"tip\">窗口必须落在有效成像区内。若 <code>w_win</code> 配得比图还大，或者 RAW 含 OB 区，角上取到的就不是有效像素了。</p>"
+  },
+  {
+    "i": 3,
+    "file": "s03.png",
+    "kicker": "求均值",
+    "caption": "② 得到 5 个窗口均值（N 都是 5184）",
+    "dur": 12,
+    "html": "<h3>每个窗口一个均值</h3>\n      <pre><code>for (int i=0; i&lt;h_win; ++i)\n  for (int j=0; j&lt;w_win; ++j)\n    ROI_3 += pData[w*i + j];\nROI_3 /= cnt;        // 左上角均值\n// 其余三个角、中心同理</code></pre>\n      <p>五个窗口面积相同（N 都是 5184），所以均值可以直接横向比较，不需要再归一化。</p>\n      <p class=\"tip\">均值本身不看单点：一个坏点落在窗口里几乎不影响结果。边缘坏点、划伤由 ImageDirt / Pixel_Defect 等子项负责。</p>"
+  },
+  {
+    "i": 4,
+    "file": "s04.png",
+    "kicker": "算 ratio",
+    "caption": "ratio 就是这一子项的测量值（单位 %）",
+    "dur": 12,
+    "html": "<h3>两个公式</h3>\n      <pre><code>double darkest = (ROI_3 + ROI_4 + ROI_5 + ROI_6) / 4;\nif (ROI_2 &lt; darkest/10)      return 1000;\nelse if (ROI_2 &gt; darkest*10) return 10;\nelse return 100 * darkest / ROI_2;</code></pre>\n      <ul>\n        <li><b>darkest</b>：四角均值再平均 → 代表\"边缘有多亮\"。</li>\n        <li><b>center</b>：中心窗口均值 → 代表\"镜头中心照度\"。</li>\n        <li><b>ratio</b>：边缘占中心的百分比。20% 表示边缘只有中心的 1/5。</li>\n      </ul>\n      <p class=\"tip\">注意分母是 center：如果中心被遮挡/压暗，ratio 反而会变大，所以代码才加了 &gt;10 倍的防呆。</p>"
+  },
+  {
+    "i": 5,
+    "file": "s05.png",
+    "kicker": "防呆",
+    "caption": "两条极端保护：中心 &lt; darkest/10 → 1000；中心 &gt; darkest×10 → 10",
+    "dur": 12,
+    "html": "<h3>为什么要防呆？</h3>\n      <p>如果中心暗到接近 0，除法会炸（或得到天文数字）；如果中心远亮于边缘，比值会大于 100%，说明不是\"暗角\"而是别的问题。</p>\n      <pre><code>if (ROI_2 &lt; 0.001) ROI_2 = 0.001;   // 防除零\nif (ROI_2 &lt; darkest/10) return 1000; // 中心几乎全黑\nelse if (ROI_2 &gt; darkest*10) return 10; // 中心远亮于边缘</code></pre>\n      <p>两个返回值（1000 和 10）都必然超出 20~100 的 Spec，所以\"异常\"一定会被卡住，不会误判成良品。</p>\n      <p class=\"tip\">看到 ratio 恰好是 <b>1000</b> 或 <b>10</b>，别怀疑测量精度 —— 那是防呆分支被命中了，去查图像本身（中心是否全黑 / 光源是否偏）。</p>"
+  },
+  {
+    "i": 6,
+    "file": "s06.png",
+    "kicker": "判 Spec",
+    "caption": "判定：PASS → bin = 1，grade = 0",
+    "dur": 13,
+    "html": "<h3>判据只有一条</h3>\n      <pre><code>if (RelIllum &gt; limit_max_ratio_ ||   // 100\n    RelIllum &lt; limit_min_ratio_) {   // 20\n    res.is_passed = false;\n    res.bin   = 2202;\n    res.grade = 8;\n}</code></pre>\n      <p>本例配置：<code>min_ratio=20</code>、<code>max_ratio=100</code>、<code>bin=2202</code>、<code>grade=8</code>。</p>\n      <p>ratio 太小 = 暗角太重（镜头/装配/遮光问题）；ratio 大于 100% = 边缘比中心亮，通常是中心被遮挡或参数错。</p>\n      <p class=\"tip\">和 Light_Response 不同，这里没有 161/162 这种\"极端 bin\"，只有配置里那一个 <code>bin_</code>。</p>"
+  },
+  {
+    "i": 7,
+    "file": "s07.png",
+    "kicker": "归档",
+    "caption": "最终 bin 由 grade 最大的失败项决定",
+    "dur": 14,
+    "html": "<h3>两个子项如何共同决定 bin</h3>\n      <ul>\n        <li>Light_Response 失败 → bin 2201 / grade <b>9</b></li>\n        <li>Relative_Illumination 失败 → bin 2202 / grade <b>8</b></li>\n        <li>两个都失败时，<code>Calculate_The_Final_Bin</code> 取 grade 更大的 → 返回 <b>2201</b></li>\n      </ul>\n      <pre><code>if (!item.is_passed &amp;&amp; item.grade &gt; final_result.grade)\n    final_result = item;     // 只换更严重的</code></pre>\n      <p class=\"tip\">所以看到机台回 2201，不代表相对照度没问题——它可能也失败了，只是被更严重的项覆盖。排障要看完整 log（<code>g_str_msg_all</code>）。</p>"
+  }
+]

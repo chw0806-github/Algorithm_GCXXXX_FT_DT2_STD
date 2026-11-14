@@ -7,12 +7,17 @@ docs/
 ├── catalog.src.html           目录页源文件
 ├── index.html                 目录页成品（由 build.py 生成）
 ├── build.py                   把 shared 内联进成品页（单文件、零依赖）
+├── build_story.py             把 story/ 素材打包成静态分镜页（无脚本可看）
 ├── shared/
 │   ├── player.js              播放器：画布自适应 / 章节 / 控制条 / 字幕 / 快捷键 / 绘图工具
 │   └── player.css             统一视觉（深色舞台、侧栏、滑杆、按钮）
+├── tools/
+│   └── export_story.js        离线导出每幕定格帧 + 字幕/讲解（需要 jsdom、@napi-rs/canvas）
 ├── light_response/            一个算法 = 一个目录
 │   ├── index.src.html         源文件：只写 SCENES（draw + caption + html）
 │   ├── index.html             成品：CSS/JS 已内联，双击就能看
+│   ├── storyboard.html        成品：静态分镜（纯 HTML+CSS，图内嵌，零脚本）
+│   ├── story/                 静态分镜素材：sNN.png + meta.json
 │   └── README.md              文字版讲解
 ├── relative_illumination/     第二个算法，证明这套骨架可复用
 └── HOWTO.md                   本文件
@@ -34,6 +39,30 @@ python3 docs/build.py --check  # 检查成品是否过期（提交前跑一下�
 
 > 为什么要内联：成品页可以双击打开、单独拷给别人、放进文件预览器都不依赖相对路径；
 > 而播放器仍然只有 `shared/` 一份，新增算法不会复制粘贴播放器代码。
+
+### 静态分镜（`storyboard.html`）：给“不执行脚本”的环境兜底
+
+有些阅读器只渲染 HTML/CSS、**不执行页面脚本**（IDE 内嵌预览、`sandbox` 沙箱 iframe、邮件客户端、
+在线文档站都常见）。这时动画只剩一句提示，读者什么都没看到。所以每个算法目录还产出一页
+`storyboard.html`：**每幕一张定格图 + 同一份字幕 + 同一份讲解文字**，纯 HTML + CSS，
+图片以 `base64` 内嵌，零脚本、零外部请求。
+
+```bash
+python3 docs/build_story.py          # 由 story/ 素材生成 storyboard.html
+python3 docs/build_story.py --check  # 检查成品是否过期（和 build.py 一样，提交前跑）
+```
+
+素材在 `docs/<算法>/story/`：`sNN.png`（每幕一帧）+ `meta.json`（字幕、讲解）。重新出素材属于离线操作：
+
+```bash
+node docs/tools/export_story.js docs/light_response/index.html docs/light_response/story 0.78
+```
+
+> 只有在**改了动画画面或字幕**时才需要重新导出；平时改文案跑 `build.py` 即可，
+> 改文案后记得重跑 `export_story.js` + `build_story.py`，否则静态分镜会和动画说法不一致。
+
+三个入口都指向静态分镜，保证“怎么翻都能看到内容”：动画页页头的「看不了动画？→ 静态分镜」按钮、
+脚本兜底提示里的链接、目录页的「静态分镜」区。
 
 ---
 
@@ -224,6 +253,15 @@ AlgoAnim.start({ scenes: SCENES });
 
 ## 4. 约定与检查清单
 
+**兼容性**
+
+- 播放器和页面都按 **ES5 + ES6 语法**写，避免 `Object.assign`、`String.padStart`、`NodeList.forEach` 这类"较新的"API；
+- `player.js` 顶部对这三个 API 做了兜底补丁（老 Qt WebEngine / 内嵌 WebView 也能跑）；
+- CSS 不依赖 `aspect-ratio`：`resize()` 里会自己按 1000:620 算高度；
+- 页面自带错误上报：脚本出错时会在画布下方和浮层里写出原因，不会只剩一个空画布；
+- `#caption` 和 `#explain` **在 HTML 里就有静态内容**（第一幕的字幕 + 本页要点 + 静态分镜链接），
+  脚本跑起来后才被逐幕内容替换 —— 所以脚本被屏蔽时，页面看起来是一张“带说明的海报”，而不是空白。
+
 **约定**
 
 - 一幕 **10~16 秒**，太长会困；每幕只讲一件事。
@@ -241,8 +279,11 @@ AlgoAnim.start({ scenes: SCENES });
 - [ ] 章节按钮顺序、字幕、右侧讲解三者对得上
 - [ ] 页脚写明参数来源文件
 - [ ] 改完 `*.src.html` 后跑过 `python3 docs/build.py`，并确认 `--check` 通过
+- [ ] 改过画面/字幕的话，重跑 `export_story.js` + `build_story.py`，`build_story.py --check` 通过
+- [ ] 用 `disable javascript` 打开一次 `index.html`：应能看到第一幕字幕 + 讲解 + 静态分镜链接（不是空白）
 
-**加完一个子项后**：先在 `docs/catalog.src.html` 的卡片区加一张入口卡，再运行一次 `python3 docs/build.py`。
+**加完一个子项后**：先在 `docs/catalog.src.html` 的卡片区加一张入口卡，再运行一次 `python3 docs/build.py`；
+若要连带静态分镜，把算法加进 `docs/build_story.py` 的 `PAGES`，导出 `story/` 素材后跑 `python3 docs/build_story.py`。
 
 ---
 

@@ -38,6 +38,10 @@
   .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
     padding:4px 10px;border-radius:999px;white-space:nowrap}
   .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
 
   /* ---------- layout ---------- */
   main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
@@ -114,6 +118,12 @@
   .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
     padding:12px;overflow:auto}
   .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
   .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
     border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
     border-radius:8px;padding:9px 11px}
@@ -144,6 +154,7 @@
   .note code{font-family:var(--mono);font-size:11px;color:#8fa4c8}
   .meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:11.5px;color:var(--faint)}
   .meta span{border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .note a{color:#8fc0ff}
 </style>
 </head>
 <body>
@@ -161,6 +172,7 @@
       <span class="badge">C++ / Qt</span>
       <span class="badge">GC8613T · CP_SPEC</span>
       <span class="badge">面向初学者</span>
+      <a class="badge link" href="light_response/storyboard.html" title="不执行脚本也能看">看不了动画？→ 静态分镜</a>
     </div>
   </header>
 
@@ -186,6 +198,14 @@
     </a>
   </div>
 
+  <div class="section-title">静态分镜 · 不执行脚本也能看</div>
+  <p class="note" style="margin-top:0">
+    如果打开的动画页只显示一行「动画没有启动」，说明当前阅读器（预览框 / 沙箱 / 邮件客户端）屏蔽了页面脚本。
+    这两页是同样的内容，纯 HTML + CSS，图片以 base64 内嵌 —— <b>零脚本、零外部请求</b>，任何环境都能看：
+    <a href="light_response/storyboard.html">Light_Response 静态分镜（8 幕）</a> ·
+    <a href="relative_illumination/storyboard.html">Relative_Illumination 静态分镜（7 幕）</a>
+  </p>
+
   <div class="meta">
     <span>空格 播放/暂停</span>
     <span>← → 切换章节</span>
@@ -195,20 +215,46 @@
 
   <footer class="foot">
     目录页 · 动画共用 <code>shared/player.js</code> + <code>shared/player.css</code>；
-    每个算法一个目录（<code>index.html</code> 场景 + <code>README.md</code> 讲解）。
+    每个算法一个目录（<code>index.html</code> 动画 + <code>storyboard.html</code> 静态分镜 + <code>README.md</code> 讲解）。
     页面中的像素值、均值、比值均为教学示意，不代表产线实测数据。
   </footer>
 </div>
 
 <script>
-/* 兜底提示：脚本被拦（部分文件预览器 / 禁 JS）时给一句人话，而不是一直“加载中” */
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
 setTimeout(function () {
-  if (!window.__ANIM) {
-    var c = document.getElementById('caption');
-    if (c) c.textContent = '脚本没有运行起来：请用 Chrome / Edge 直接打开本文件，或在本目录执行 '
-      + 'python3 -m http.server 8000 后访问 http://localhost:8000/';
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　当前环境没有执行页面脚本，请看右下讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('这个阅读器没有执行页面脚本（预览框、沙箱、邮件客户端里很常见）。不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
   }
-}, 1500);
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
 </script>
 </body>
 </html>

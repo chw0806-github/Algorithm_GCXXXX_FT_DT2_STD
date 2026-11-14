@@ -34,14 +34,40 @@ PAGES = [
 
 FALLBACK = """
 <script>
-/* 兜底提示：脚本被拦（部分文件预览器 / 禁 JS）时给一句人话，而不是一直“加载中” */
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
 setTimeout(function () {
-  if (!window.__ANIM) {
-    var c = document.getElementById('caption');
-    if (c) c.textContent = '脚本没有运行起来：请用 Chrome / Edge 直接打开本文件，或在本目录执行 '
-      + 'python3 -m http.server 8000 后访问 http://localhost:8000/';
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　当前环境没有执行页面脚本，请看右下讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('这个阅读器没有执行页面脚本（预览框、沙箱、邮件客户端里很常见）。不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
   }
-}, 1500);
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
 </script>
 """
 

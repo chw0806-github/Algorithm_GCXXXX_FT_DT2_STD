@@ -14,6 +14,7 @@
   .note code{font-family:var(--mono);font-size:11px;color:#8fa4c8}
   .meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:11.5px;color:var(--faint)}
   .meta span{border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .note a{color:#8fc0ff}
 </style>
 </head>
 <body>
@@ -31,6 +32,7 @@
       <span class="badge">C++ / Qt</span>
       <span class="badge">GC8613T · CP_SPEC</span>
       <span class="badge">面向初学者</span>
+      <a class="badge link" href="light_response/storyboard.html" title="不执行脚本也能看">看不了动画？→ 静态分镜</a>
     </div>
   </header>
 
@@ -56,6 +58,14 @@
     </a>
   </div>
 
+  <div class="section-title">静态分镜 · 不执行脚本也能看</div>
+  <p class="note" style="margin-top:0">
+    如果打开的动画页只显示一行「动画没有启动」，说明当前阅读器（预览框 / 沙箱 / 邮件客户端）屏蔽了页面脚本。
+    这两页是同样的内容，纯 HTML + CSS，图片以 base64 内嵌 —— <b>零脚本、零外部请求</b>，任何环境都能看：
+    <a href="light_response/storyboard.html">Light_Response 静态分镜（8 幕）</a> ·
+    <a href="relative_illumination/storyboard.html">Relative_Illumination 静态分镜（7 幕）</a>
+  </p>
+
   <div class="meta">
     <span>空格 播放/暂停</span>
     <span>← → 切换章节</span>
@@ -65,7 +75,7 @@
 
   <footer class="foot">
     目录页 · 动画共用 <code>shared/player.js</code> + <code>shared/player.css</code>；
-    每个算法一个目录（<code>index.html</code> 场景 + <code>README.md</code> 讲解）。
+    每个算法一个目录（<code>index.html</code> 动画 + <code>storyboard.html</code> 静态分镜 + <code>README.md</code> 讲解）。
     页面中的像素值、均值、比值均为教学示意，不代表产线实测数据。
   </footer>
 </div>

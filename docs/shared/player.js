@@ -19,6 +19,70 @@
    ========================================================================== */
 'use strict';
 
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
 
 /* =====================================================================
    基础设置
@@ -174,7 +238,11 @@ let scenes = [];
 let elCaption = null, elBar = null;
 
 function resize(){
-  const r = canvas.getBoundingClientRect();
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
   dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.max(1, Math.round(r.width * dpr));
   canvas.height = Math.max(1, Math.round(r.height * dpr));
@@ -187,7 +255,11 @@ function render(){
   drawBg();
   const sc = scenes[PState.scene];
   const p = clamp01(PState.t / sc.dur);
-  sc.draw(p);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
   if(elCaption){
     const cap = sc.caption(p);
     if(elCaption.textContent !== cap) elCaption.textContent = cap;
@@ -300,7 +372,9 @@ const AlgoAnim = {
     canvas = document.getElementById(opts.canvas || 'stage');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
     scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
     Object.assign(PState, opts.state || {});
     elCaption = document.getElementById('caption');
     elBar = document.getElementById('bar');
@@ -308,10 +382,13 @@ const AlgoAnim = {
     bindControls();
     if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
     else window.addEventListener('resize', resize);
-    resize();
-    gotoScene(opts.start || 0, true);
-    requestAnimationFrame(tick);
-    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
   }
 };
 window.AlgoAnim = AlgoAnim;

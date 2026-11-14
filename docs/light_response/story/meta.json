@@ -1,0 +1,66 @@
+[
+  {
+    "i": 1,
+    "file": "s01.png",
+    "kicker": "总览",
+    "caption": "④ 所有子项结果汇总成最终 bin —— 一颗芯片的「体检结论」",
+    "dur": 11,
+    "html": "<h3>这一行在流水线的哪里？</h3>\n      <p>它不是孤立的函数调用，而是<b>白帧测试（Bright Test）</b>流水线上的一站。一次 Bright Test 会依次跑十几个子项，这里只有第一项。</p>\n      <ol>\n        <li><b>RAW 白帧</b>：点亮均匀光源，采一帧 3840×2160 的 Bayer 原始图。</li>\n        <li><b>Split_Channel</b>：拆成 R / Gr / Gb / B 四个 1920×1080 平面。</li>\n        <li><b>Light_Response</b>：中心 ROI 四个通道的平均亮度（DN）与 Spec 比较。</li>\n        <li><b>Calculate_The_Final_Bin</b>：汇总所有子项，取最严重的失败项作为最终 bin。</li>\n      </ol>\n      <pre><code>// BrightTest::TestFunc_Normal_Bright_ALL()  BrightTest.cpp\nstd::vector&lt;Subitem_Result&gt; items_results;\nitems_results.push_back(Algorithm_all[site_].Light_Response(test_manage));\n// ... 还有十几个子项 ...\nSubitem_Result bright_result =\n    Algorithm_all[site_].Calculate_The_Final_Bin(items_results);\nint code = bright_result.bin;      // 返回给机台分选</code></pre>\n      <p class=\"tip\">所以这一行的返回值只是「一项体检结论」，不是最终分选结果。</p>"
+  },
+  {
+    "i": 2,
+    "file": "s02.png",
+    "kicker": "拆解代码",
+    "caption": "按语序拆开：Light_Response(test_manage)",
+    "dur": 15,
+    "html": "<h3>一行代码，五个部件</h3>\n      <ul>\n        <li><code>items_results</code>：<code>std::vector&lt;Subitem_Result&gt;</code>，装整帧所有子项的结果。</li>\n        <li><code>push_back(...)</code>：把结果追加到末尾，返回 <code>void</code>。</li>\n        <li><code>Algorithm_all[site_]</code>：第 <code>site_</code> 号工位的算法对象（全局数组，4 个工位）。</li>\n        <li><code>Light_Response(test_manage)</code>：真正的计算，参数全在 <code>ParamManage</code> 里。</li>\n        <li>返回 <code>Subitem_Result{name, is_passed, bin, grade, g_msg}</code>。</li>\n      </ul>\n      <pre><code>class Subitem_Result {          // algorithmitems.h:98\npublic:\n    std::string name;   // 子项名\n    bool is_passed;     // 通过?\n    int  bin;           // 失效代码\n    int  grade;         // 严重程度\n    bool g_msg;         // false = 不参与汇总\n};</code></pre>\n      <p class=\"tip\">记住这 5 个字段，后面所有判定都在填这张表。</p>"
+  },
+  {
+    "i": 3,
+    "file": "s03.png",
+    "kicker": "多工位",
+    "caption": "该工位用自己缓冲里的图像执行 Light_Response",
+    "dur": 13,
+    "html": "<h3>为什么是 Algorithm_all[site_]？</h3>\n      <p>这是一台「一拖四」的测试机台：4 个探针工位同时测 4 颗芯片。</p>\n      <pre><code>// FTAlgorithm.cpp:29\nAlgorithmItems Algorithm_all[Parallel_num];   // Parallel_num = 4\n// 每个工位：Algorithm_all[i].set_site(i)</code></pre>\n      <p><code>site_</code> 就是工位号。<b>全局数组 + 工位下标</b>让 4 个工位共用同一套代码，但各用各的图像缓冲（<code>g_buf_r_ / gr_ / gb_ / b_</code>）和日志。</p>\n      <p class=\"tip\">排查现场问题：如果 <code>site_</code> 和机台通道对不上，就会拿别的工位的图来算 —— 现象是「图像正常但结果乱飞」。</p>"
+  },
+  {
+    "i": 4,
+    "file": "s04.png",
+    "kicker": "分通道",
+    "caption": "拆完后每个平面是 W/2 × H/2：3840×2160 → 4 × 1920×1080",
+    "dur": 16,
+    "html": "<h3>为什么要先分通道？</h3>\n      <p>传感器输出的是 Bayer 原始图：每个像素前面只盖了一种颜色的滤光片，<code>RG / GB</code> 两个绿点位置不同（Gr、Gb）。</p>\n      <pre><code>// TestItem::split_channel()  testitems.cpp:57\nfor (int i=0; i&lt;h; i+=2)\n  for (int j=0; j&lt;w; j+=2) {\n    *pb1++ = raw[w*i + j];       // R\n    *pb2++ = raw[w*i + j+1];     // Gr\n  }\n// 奇数行同理 → Gb / B</code></pre>\n      <p>拆完后每个平面是 <b>W/2 × H/2</b>。之后所有 ROI、均值都在这个半尺寸平面上算。</p>\n      <p class=\"tip\">关键坐标概念：配置文件里 <code>ROI_X=768</code> 是在 <b>1920 宽的平面</b>上量的，不是 3840 的 RAW。<code>bayer</code> 配错（RG/GB）会导致 R 和 B 互换，值就会整体错位。</p>"
+  },
+  {
+    "i": 5,
+    "file": "s05.png",
+    "kicker": "取 ROI",
+    "caption": "只统计矩形内的像素，边缘暗角交给别的子项",
+    "dur": 12,
+    "html": "<h3>ROI：只看中心，不看边缘</h3>\n      <p>镜头中心照度最均匀，最能代表标称响应；边缘有暗角（roll-off），由 Relative Illumination 子项单独卡控。</p>\n      <pre><code>test_roi_channel_mean(w, h,\n    roi_x, roi_y, roi_w, roi_h, ...);\n\n// AlgorithmFuncs::GetROIMean()  cpalgorithmraw.cpp:7949\nif (line+win_h &gt;= height || col+win_w &gt;= width)\n    return -1;                     // 防呆：越界 → -1\nfor (...) mean_t += pData[width*i+j];\nreturn mean_t/cnt;</code></pre>\n      <p class=\"tip\">越界很危险：函数返回 <code>-1</code>，均值 -1 必然越过下限，若 <code>error_min_open</code> 打开就直接落 <b>bin 161</b>。看到「明明图像很亮却报 161」，先查 ROI 是否越界。</p>"
+  },
+  {
+    "i": 6,
+    "file": "s06.png",
+    "kicker": "算均值",
+    "caption": "四个均值就是这一子项的「测量值」",
+    "dur": 14,
+    "html": "<h3>DN 是什么？</h3>\n      <p>DN（Digital Number）就是像素的灰度量化值。本例是 8 bit，范围 0~255；10/12 bit 则是 0~1023 / 0~4095。</p>\n      <pre><code>// 四个通道各开一个线程，互不等待\nMultiThread::get_roi_channel_mean\n    -&gt; GetROIMean(data, w, h, x, y, w, h);\n\nmean = Σ DN / N</code></pre>\n      <p>均值代表<b>整体响应灵敏度</b>：偏暗说明光电转换弱 / 曝光不足，偏亮说明增益过大或接近饱和。</p>\n      <p class=\"tip\">均值会「稀释」个别坏点：一个 255 的亮点平均到几十万像素里几乎看不出来。所以坏点由 Pixel_Defect、DAG 等子项负责 —— 每个子项各管一件事。</p>"
+  },
+  {
+    "i": 7,
+    "file": "s07.png",
+    "kicker": "判 Spec",
+    "caption": "判定：PASS → bin 保持初值 1，grade 0",
+    "dur": 14,
+    "html": "<h3>判定树（代码里的分支顺序）</h3>\n      <pre><code>if (mean_r &gt; max_r || mean_r &lt; min_r ||\n    ... 四个通道任一越界 ...) {\n    res.is_passed = false;\n\n    if (error_min_open &amp;&amp; (... &lt; error_min))\n        { bin = 161; grade = 9; }       // 死黑 / 不响应\n    else if (error_max_open &amp;&amp; (... &gt; error_max))\n        { bin = 162; grade = 9; }       // 饱和 / 过曝\n    else\n        { bin = bin_response;           // 配置值，本例 2201\n          grade = grade_response; }     // 本例 9\n}</code></pre>\n      <p>本例配置：R/B 的 80~220，Gr/Gb 的 144~216，<code>error_MIN=50</code>、<code>error_MAX=241</code>、<code>bin_response=2201</code>。</p>\n      <p class=\"tip\">先判 161 再判 162：即使某个通道同时满足「低于 50」和「另一通道高于 241」，也只会落 <b>161</b>。这是代码顺序决定的，不是巧合。</p>"
+  },
+  {
+    "i": 8,
+    "file": "s08.png",
+    "kicker": "归档汇总",
+    "caption": "Calculate_The_Final_Bin 取 grade 最大的失败项 → BrightTest 返回它的 bin",
+    "dur": 15,
+    "html": "<h3>最后，bin 是怎么定下来的？</h3>\n      <pre><code>Subitem_Result final_result(\"The initial value\", true, 1, 0, true);\nfor (item : items_results) {\n    if (item.g_msg == false) continue;          // 未开启 → 跳过\n    if (!item.is_passed &amp;&amp;\n        item.grade &gt; final_result.grade)        // 只挑更严重的\n        final_result = item;\n}\nreturn bright_result.bin;                       // BrightTest.cpp:79</code></pre>\n      <ul>\n        <li>全通过 → 返回初值 <code>bin=1, grade=0</code>（良品）。</li>\n        <li>有失败 → 取 <b>grade 最大</b>的那一项的 bin；同级取先出现的。</li>\n        <li><code>g_msg=false</code>（未开启 / 版本不匹配）的子项不参与竞争。</li>\n      </ul>\n      <p class=\"tip\">Light_Response 在 <code>response_open_mode≠1</code> 或版本号不是 <code>LightResponse_V1.0</code> 时返回 <code>g_msg=false</code>：不是「通过」，而是「不表态」。现场查「为什么这项没卡住」先看这里。</p>"
+  }
+]
