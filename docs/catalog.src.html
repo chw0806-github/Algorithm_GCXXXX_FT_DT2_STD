@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FT 算法动画讲解 · 目录</title>
+<link rel="stylesheet" href="shared/player.css">
+<style>
+  .hero{padding:10px 0 4px}
+  .hero h1{font-size:24px;margin:0 0 10px}
+  .hero p{margin:0 0 6px;color:var(--dim);font-size:13px;line-height:1.8;max-width:760px}
+  .section-title{margin:30px 0 12px;font-size:13px;color:#cfdcf5;letter-spacing:.4px}
+  .note{font-size:12px;line-height:1.8;color:var(--faint);margin-top:10px}
+  .note code{font-family:var(--mono);font-size:11px;color:#8fa4c8}
+  .meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:11.5px;color:var(--faint)}
+  .meta span{border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◈</div>
+      <div class="hero">
+        <h1>图像传感器 FT 测试 · 算法动画讲解</h1>
+        <p>把测试子项的 C++ 实现拆成动画：一行代码在流水线的哪一站、数据怎么流、判定怎么落 bin。
+           每个页面都是单文件场景 + 共用播放器，可以直接点击播放，也可以拖滑杆改数值看结论变化。</p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">面向初学者</span>
+    </div>
+  </header>
+
+  <div class="section-title">动画</div>
+  <div class="cards">
+    <a class="card-link" href="light_response/index.html">
+      <span class="tag">8 幕 · 白帧 Bright Test</span>
+      <h3>光照响应 Light_Response</h3>
+      <p>拆通道 → 中心 ROI → 四通道均值 → 与 80~220 比对 → bin 2201 / 161 / 162。
+         讲清楚 <b>items_results.push_back(Algorithm_all[site_].Light_Response(test_manage))</b> 这一行。</p>
+    </a>
+    <a class="card-link" href="relative_illumination/index.html">
+      <span class="tag">7 幕 · 与 Light_Response 对照</span>
+      <h3>相对照度 Relative_Illumination</h3>
+      <p>RAW 全图 → 四角 + 中心 5 个窗口 → darkest / center → 20%~100% 比对 → bin 2202。
+         顺带讲两条防呆分支（1000 / 10）与 grade 竞争。</p>
+    </a>
+    <a class="card-link" href="HOWTO.md" style="opacity:.92">
+      <span class="tag">文档</span>
+      <h3>怎么再加一个算法</h3>
+      <p>算法类型 → 可视化模板的对照表，以及「只写场景」的接入步骤：<code>player.js</code> 提供画布、章节、
+         控制条、字幕，页面只需要写 draw 函数。</p>
+    </a>
+  </div>
+
+  <div class="meta">
+    <span>空格 播放/暂停</span>
+    <span>← → 切换章节</span>
+    <span>滑杆可实时改测量值</span>
+    <span>零依赖 · 可离线打开</span>
+  </div>
+
+  <footer class="foot">
+    目录页 · 动画共用 <code>shared/player.js</code> + <code>shared/player.css</code>；
+    每个算法一个目录（<code>index.html</code> 场景 + <code>README.md</code> 讲解）。
+    页面中的像素值、均值、比值均为教学示意，不代表产线实测数据。
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relative_Illumination 动画讲解 · 图像传感器 FT 测试</title>
+<link rel="stylesheet" href="../shared/player.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 相对照度（Relative_Illumination）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>RelativeIllumination.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">加载中…</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head">
+          <h2>模拟测量值 · 拖动看亮度衰减怎么影响判定</h2>
+          <span>中心窗 / 四角窗平均 DN，对应 RelativeIllumination.data 的 20 ~ 100</span>
+        </div>
+        <div class="sliders two" id="sliders"></div>
+        <div class="presets" id="presets"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <div class="explain" id="explain"></div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    说明：动画是教学模型，按 <code>STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/RelativeIllumination.data</code>
+    的示例配置绘制（w_win=96, h_win=54, ratio 20~100, bin=2202, grade=8）。窗口尺寸为示意图，非等比。
+    页面骨架来自 <code>../shared/player.js</code>。
+  </footer>
+</div>
+
+<script src="../shared/player.js"></script>
+<script>
+/* =====================================================================
+   本页只写「场景」：常量、算法逻辑、7 个 draw 函数、SCENES 数组。
+   ===================================================================== */
+
+const state = AlgoAnim.state;
+state.center = 205;   // 中心窗平均 DN
+state.corner = 168;   // 四角窗平均 DN
+
+/* 真实配置：GC8613T / param_4l_f_bright1_normal_30fps/RelativeIllumination.data */
+const SPEC = {
+  win:{ w:96, h:54 },        // w_win / h_win —— 单位是 RAW 像素
+  minRatio:20, maxRatio:100, // 单位 %
+  bin:2202, grade:8,
+  raw:{ w:3840, h:2160 }
+};
+
+/* 四角各自的实测值（围绕用户设的"四角平均"轻微起伏，模拟真实差异） */
+function cornerValues(){
+  const e = state.corner;
+  return [
+    Math.round(e*1.02),
+    Math.round(e*0.98),
+    Math.round(e*1.01),
+    Math.round(e*0.99)
+  ];
+}
+
+/* 严格照 C++：TestRelativeIlumination()  cpalgorithmraw.cpp:1576 */
+function ri(){
+  const cs = cornerValues();
+  const darkest = (cs[0]+cs[1]+cs[2]+cs[3])/4;
+  let center = state.center;
+  if(center < 0.001) center = 0.001;
+
+  let ratio, guard = null;
+  if(center < darkest/10){
+    ratio = 1000; guard = 'dark';
+  } else if(center > darkest*10){
+    ratio = 10;   guard = 'bright';
+  } else {
+    ratio = 100*darkest/center;
+  }
+  const pass = (ratio >= SPEC.minRatio && ratio <= SPEC.maxRatio);
+  return {
+    cs:cs, darkest:darkest, center:center, ratio:ratio, guard:guard, pass:pass,
+    bin: pass ? 1 : SPEC.bin,
+    grade: pass ? 0 : SPEC.grade
+  };
+}
+
+/* =====================================================================
+   STEP 01 · 定位
+   ===================================================================== */
+function drawIntro(p){
+  header(0, '定位', '同一个白帧，两种看法：绝对亮度 vs 相对衰减');
+
+  const cards = [
+    { x:55,  title:'Light_Response',        sub:'绝对亮度',        c:'#6ea8fe', delay:0.05 },
+    { x:515, title:'Relative_Illumination', sub:'边缘相对中心的衰减', c:'#ffd166', delay:0.20, hot:true }
+  ];
+
+  cards.forEach((cd,i)=>{
+    const ap = ease(seg(p, cd.delay, cd.delay+0.24));
+    const y = 158;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(cd.x, y + (1-ap)*14, 430, 330, {
+      fill: cd.hot ? 'rgba(255,209,102,0.07)' : 'rgba(255,255,255,0.03)',
+      stroke: cd.hot ? 'rgba(255,209,102,0.45)' : C.line,
+      lw: cd.hot ? 1.5 : 1,
+      glow: cd.hot ? 'rgba(255,209,102,0.25)' : null
+    });
+    const yy = y + (1-ap)*14;
+    ctx.fillStyle = cd.c;
+    rr(cd.x+24, yy+24, 22, 3, 2); ctx.fill();
+    txt(cd.title, cd.x+24, yy+52, {
+      size: cd.title.length > 18 ? 14 : 16,
+      font:MONO, weight:700, color: cd.hot ? '#ffe6a8' : '#cfe0ff'
+    });
+    txt(cd.sub, cd.x+24, yy+72, {size:11.5, color:C.dim});
+
+    // 图标
+    if(i === 0){
+      // 4 个通道平面 + 中心 ROI
+      const ix = cd.x+32, iy = yy+94;
+      for(let k=0;k<4;k++){
+        const px = ix + (k%2)*92, py = iy + Math.floor(k/2)*50;
+        card(px, py, 84, 42, {r:5, fill: withA(CHLIST[k]==='R'?CH.R:CHLIST[k]==='Gr'?CH.Gr:CHLIST[k]==='Gb'?CH.Gb:CH.B, 0.12),
+          stroke: withA(CH[CHLIST[k]],0.35)});
+        ctx.strokeStyle = 'rgba(110,168,254,0.9)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px+32, py+13, 20, 16);
+        txt(CHLIST[k], px+8, py+14, {size:8.5, font:MONO, color:CH[CHLIST[k]]});
+      }
+      txt('4 个平面（1920×1080）', ix+188, iy+20, {size:10, color:C.faint});
+      txt('每通道 1 个中心 ROI', ix+188, iy+42, {size:10, color:C.faint});
+    } else {
+      // RAW 全图 + 5 个窗口
+      const ix = cd.x+32, iy = yy+94, fw = 214, fh = 120;
+      card(ix, iy, fw, fh, {r:6, fill:'rgba(255,255,255,0.03)', stroke:'rgba(255,255,255,0.16)'});
+      [[ix+10,iy+8],[ix+fw-34,iy+8],[ix+10,iy+fh-26],[ix+fw-34,iy+fh-26],[ix+fw/2-12,iy+fh/2-9]].forEach((w,k)=>{
+        card(w[0], w[1], 24, 18, {r:3, fill:'rgba(255,209,102,0.22)', stroke:'rgba(255,209,102,0.7)'});
+      });
+      txt('RAW 全图 + 5 个窗口', ix+fw+12, iy+30, {size:10, color:C.faint});
+      txt('96 × 54（RAW 坐标）', ix+fw+12, iy+52, {size:10, color:C.faint});
+    }
+
+    const lines = i === 0
+      ? ['· 先 Split_Channel → 4 个平面', '· 每个通道取 1 个中心 ROI', '· 判：够不够亮（80~220 DN）']
+      : ['· 直接用 RAW 全图（不拆通道）', '· 四角 + 中心共 5 个窗口', '· 判：边缘比中心暗多少（20~100%）'];
+    lines.forEach((ln,k)=> txt(ln, cd.x+24, yy+232+k*26, {size:12, color:'#c7d5ee'}));
+    txt(i===0 ? '越界 → bin 2201 / 161 / 162' : '越界 → bin 2202（grade 8）',
+        cd.x+24, yy+306, {size:10.5, color: i===0 ? C.faint : '#ffe6a8'});
+    ctx.restore();
+  });
+
+  txt('一个看「够不够亮」，一个看「亮得匀不匀」——都用白帧，但读的是不同缓冲、不同坐标。',
+      40, 540, {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 02 · 5 个窗口
+   ===================================================================== */
+function drawWindows(p){
+  header(1, '取窗口', '四角 + 中心：5 个 96×54 的窗口都落在 RAW 上');
+
+  const fx = 162, fy = 170, fw = 676, fh = 380;
+  card(fx, fy, fw, fh, {r:8, fill:'rgba(110,168,254,0.04)', stroke:'rgba(110,168,254,0.26)'});
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(110,168,254,0.07)';
+  ctx.lineWidth = 1;
+  for(let x=fx; x<fx+fw; x+=44){
+    ctx.beginPath(); ctx.moveTo(x,fy); ctx.lineTo(x,fy+fh); ctx.stroke();
+  }
+  for(let y=fy; y<fy+fh; y+=44){
+    ctx.beginPath(); ctx.moveTo(fx,y); ctx.lineTo(fx+fw,y); ctx.stroke();
+  }
+  ctx.restore();
+
+  txt('RAW 3840 × 2160（Bayer，未拆通道）', fx, fy-12, {size:11.5, color:'#9fb0d0'});
+  txt('窗口 96 × 54', fx+fw, fy-12, {size:11, color:'#ffe6a8', align:'right'});
+
+  const bw = 74, bh = 42, mg = 18;
+  const wins = [
+    {x:fx+mg,          y:fy+mg,          n:'C1', t:0.16},
+    {x:fx+fw-mg-bw,    y:fy+mg,          n:'C2', t:0.28},
+    {x:fx+mg,          y:fy+fh-mg-bh,    n:'C3', t:0.40},
+    {x:fx+fw-mg-bw,    y:fy+fh-mg-bh,    n:'C4', t:0.52},
+    {x:fx+fw/2-bw/2,   y:fy+fh/2-bh/2,   n:'中心', c:true, t:0.70}
+  ];
+
+  const j = ri();
+  wins.forEach((w,i)=>{
+    const ap = ease(seg(p, w.t, w.t+0.18));
+    if(ap <= 0) return;
+    const pulse = w.c ? 1 + Math.sin(Math.max(0, p-w.t)*10)*0.04*(p<w.t+0.35?1:0) : 1;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    ctx.translate(w.x + bw/2, w.y + bh/2);
+    ctx.scale(pulse, pulse);
+    ctx.translate(-(w.x + bw/2), -(w.y + bh/2));
+    card(w.x, w.y, bw, bh, {r:6,
+      fill: w.c ? 'rgba(110,168,254,0.22)' : 'rgba(255,209,102,0.16)',
+      stroke: w.c ? 'rgba(110,168,254,0.95)' : 'rgba(255,209,102,0.75)',
+      lw: 1.4,
+      glow: w.c ? 'rgba(110,168,254,0.5)' : null});
+    txt(w.n, w.x+bw/2, w.y+bh/2+4, {size:11, align:'center', weight:700,
+      color: w.c ? '#dce9ff' : '#ffe6a8'});
+    ctx.restore();
+
+    // 数值标注
+    if(ap > 0.5){
+      const val = w.c ? j.center : j.cs[i];
+      txt(val.toFixed(0), w.x+bw/2, w.c ? w.y+bh+18 : w.y-8, {
+        size:10.5, font:MONO, align:'center', alpha: (ap-0.5)*2,
+        color: w.c ? '#dce9ff' : '#ffe6a8'
+      });
+    }
+  });
+
+  txt('窗口尺寸与位置写死在参数里；坐标是 RAW 像素，不是拆分后的平面像素。', 40, 574,
+      {size:11.5, color:C.faint});
+  txt('（示意图：窗口被放大绘制，方便看清）', 960, 574, {size:10.5, color:C.faint, align:'right'});
+}
+
+/* =====================================================================
+   STEP 03 · 五个均值
+   ===================================================================== */
+function drawMeans(p){
+  header(2, '求均值', '每个窗口各算一个 mean = Σ DN / N');
+
+  const j = ri();
+  const fx = 80, fy = 178, fw = 430, fh = 242;
+  card(fx, fy, fw, fh, {r:8, fill:'rgba(110,168,254,0.04)', stroke:'rgba(110,168,254,0.24)'});
+
+  const bw = 52, bh = 30, mg = 14;
+  const wins = [
+    {x:fx+mg,       y:fy+mg,        n:'C1'},
+    {x:fx+fw-mg-bw, y:fy+mg,        n:'C2'},
+    {x:fx+mg,       y:fy+fh-mg-bh,  n:'C3'},
+    {x:fx+fw-mg-bw, y:fy+fh-mg-bh,  n:'C4'},
+    {x:fx+fw/2-bw/2, y:fy+fh/2-bh/2, n:'中心', c:true}
+  ];
+  wins.forEach(w=>{
+    card(w.x, w.y, bw, bh, {r:5,
+      fill: w.c ? 'rgba(110,168,254,0.2)' : 'rgba(255,209,102,0.14)',
+      stroke: w.c ? 'rgba(110,168,254,0.8)' : 'rgba(255,209,102,0.6)'});
+    txt(w.n, w.x+bw/2, w.y+bh/2+4, {size:9.5, align:'center',
+      color: w.c ? '#dce9ff' : '#ffe6a8'});
+  });
+
+  // 右侧 5 行结果
+  const rows = [
+    {n:'C1', v:j.cs[0]}, {n:'C2', v:j.cs[1]}, {n:'C3', v:j.cs[2]}, {n:'C4', v:j.cs[3]},
+    {n:'Center', v:j.center, c:true}
+  ];
+  rows.forEach((r,i)=>{
+    const y = fy + i*54;
+    const ap = ease(seg(p, 0.18 + i*0.09, 0.34 + i*0.09));
+    if(ap <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(560, y, 360, 46, {r:10,
+      fill: r.c ? 'rgba(110,168,254,0.10)' : 'rgba(255,255,255,0.03)',
+      stroke: r.c ? 'rgba(110,168,254,0.4)' : C.line});
+    txt(r.n, 580, y+29, {size:12, font:MONO, weight:700,
+      color: r.c ? '#cfe0ff' : '#ffe6a8'});
+    txt('mean = Σ DN / N', 680, y+29, {size:10, font:MONO, color:C.faint});
+    txt(r.v.toFixed(1), 900, y+29, {size:14, font:MONO, align:'right', weight:700,
+      color:'#e9f1ff'});
+    ctx.restore();
+  });
+
+  txt('N = 96 × 54 = 5184 个像素（每个窗口一样大，所以可以直接比）', 40, 470,
+      {size:11.5, color:C.faint});
+  txt('四角 4 个值留到下一步求平均 → darkest', 40, 578, {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 04 · darkest 与 ratio
+   ===================================================================== */
+function drawRatio(p){
+  header(3, '算 ratio', 'darkest = 四角平均；ratio = 100 × darkest / center');
+
+  const j = ri();
+  const a = ease(seg(p, 0.08, 0.34));
+  const b = ease(seg(p, 0.40, 0.66));
+
+  // 公式 1
+  card(70, 150, 860, 132, {r:14, fill:'rgba(255,209,102,0.06)', stroke:'rgba(255,209,102,0.28)'});
+  txt('① darkest（四角平均）', 94, 180, {size:11.5, color:C.accent2, weight:700});
+  txt('( C1 + C2 + C3 + C4 ) / 4', 94, 218, {size:17, font:MONO, color:'#e6eefc'});
+  txt(j.darkest.toFixed(1), 906, 222, {size:28, font:MONO, align:'right', weight:700,
+    color:'#ffe6a8', alpha:a});
+  txt('DN', 908, 222, {size:10, font:MONO, color:C.faint, alpha:a});
+
+  // 公式 2
+  card(70, 300, 860, 132, {r:14,
+    fill: j.pass ? 'rgba(61,220,151,0.06)' : 'rgba(255,95,126,0.07)',
+    stroke: j.pass ? 'rgba(61,220,151,0.30)' : 'rgba(255,95,126,0.32)'});
+  txt('② ratio（边缘相对中心）', 94, 330, {size:11.5, color:C.accent, weight:700});
+  txt('100 × darkest / center', 94, 368, {size:17, font:MONO, color:'#e6eefc'});
+  txt(j.ratio.toFixed(1) + '%', 906, 372, {size:28, font:MONO, align:'right', weight:700,
+    color: j.pass ? C.pass : C.fail, alpha:b});
+  if(j.guard){
+    txt(j.guard === 'dark' ? '触发防呆：center < darkest/10 → 1000'
+        : '触发防呆：center > darkest×10 → 10', 94, 402, {size:10.5, color:'#ffb3c0', alpha:b});
+  }
+
+  // 对比条
+  const barY = 470, barX = 150, barMaxW = 640;
+  const maxV = Math.max(j.center, j.darkest, 1);
+  const wC = j.center/maxV*barMaxW;
+  const wD = j.darkest/maxV*barMaxW;
+  txt('center', barX-14, barY+15, {size:11, font:MONO, color:'#c7d5ee', align:'right'});
+  card(barX, barY, wC, 22, {r:6, fill: withA('#6ea8fe',0.35), stroke:'rgba(110,168,254,0.6)'});
+  txt(j.center.toFixed(1), barX+wC+8, barY+16, {size:10.5, font:MONO, color:'#bcd2ff'});
+  txt('darkest', barX-14, barY+45, {size:11, font:MONO, color:'#c7d5ee', align:'right'});
+  card(barX, barY+30, wD, 22, {r:6, fill: withA('#ffd166',0.35), stroke:'rgba(255,209,102,0.6)'});
+  txt(j.darkest.toFixed(1), barX+wD+8, barY+46, {size:10.5, font:MONO, color:'#ffe6a8'});
+
+  txt('比例越小 = 边缘越暗（暗角越重）；>100% 说明边缘比中心还亮，通常是中心被压暗或参数错。',
+      40, 574, {size:11, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 05 · 防呆分支
+   ===================================================================== */
+function drawGuard(p){
+  header(4, '防呆', '代码里还有两条“极端保护”，避免除零和反极');
+
+  const j = ri();
+  const rows = [
+    { code:'if (center < darkest/10)  return 1000;',   note:'中心几乎全黑：比值无意义，直接给 1000（必 Fail）', g:'dark' },
+    { code:'else if (center > darkest*10) return 10;', note:'中心远亮于边缘：给 10（必 Fail），防止反向异常混过', g:'bright' },
+    { code:'else return 100 * darkest / center;',      note:'正常情况：百分比就是这一子项的测量值', g:null }
+  ];
+
+  rows.forEach((r,i)=>{
+    const y = 156 + i*96;
+    const active = (j.guard === r.g) || (j.guard === null && r.g === null);
+    const ap = ease(seg(p, 0.06 + i*0.08, 0.22 + i*0.08));
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(64, y, 872, 80, {r:12,
+      fill: active ? 'rgba(110,168,254,0.12)' : 'rgba(255,255,255,0.028)',
+      stroke: active ? 'rgba(110,168,254,0.7)' : C.line,
+      lw: active ? 1.5 : 1,
+      glow: active ? 'rgba(110,168,254,0.35)' : null});
+    txt(r.code, 88, y+32, {size:13, font:MONO, weight:600,
+      color: active ? '#dce9ff' : '#9fb0d0'});
+    txt(r.note, 88, y+58, {size:11.5, color: active ? '#c7d5ee' : C.faint});
+    if(active){
+      card(838, y+14, 78, 26, {r:8, fill:'rgba(110,168,254,0.2)', stroke:'rgba(110,168,254,0.6)'});
+      txt('当前命中', 877, y+31, {size:9.5, align:'center', color:'#dce9ff'});
+    }
+    ctx.restore();
+  });
+
+  // 结果
+  card(64, 466, 872, 92, {r:14,
+    fill: j.pass ? 'rgba(61,220,151,0.08)' : 'rgba(255,95,126,0.09)',
+    stroke: j.pass ? 'rgba(61,220,151,0.4)' : 'rgba(255,95,126,0.42)'});
+  txt('本子项的测量值', 88, 496, {size:11, color:C.dim});
+  txt(j.ratio.toFixed(1) + '%', 88, 534, {size:26, font:MONO, weight:700,
+    color: j.pass ? C.pass : C.fail});
+  txt(j.pass ? '落在 20 ~ 100 之间 → PASS' : '不在 20 ~ 100 之间 → FAIL',
+      330, 512, {size:12, color:'#c7d5ee'});
+  txt(j.pass ? 'bin = 1, grade = 0' : 'bin = 2202, grade = 8', 330, 538,
+      {size:11.5, font:MONO, color: j.pass ? C.pass : C.fail});
+
+  txt('两条防呆都返回必然越界的值（1000 或 10），所以“异常”不会被误判成良品。', 40, 592,
+      {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 06 · 判 Spec
+   ===================================================================== */
+function drawSpecRI(p){
+  header(5, '判 Spec', 'ratio 落在 20 ~ 100 才算通过');
+
+  const j = ri();
+  const x0 = 300, x1 = 860, y = 250;
+  const maxScale = 120;
+  const mapX = v => x0 + (Math.min(v, maxScale)/maxScale)*(x1-x0);
+
+  txt('0', x0, y+30, {size:10, font:MONO, align:'center', color:C.faint});
+  txt('20', mapX(20), y+30, {size:10, font:MONO, align:'center', color:C.faint});
+  txt('100', mapX(100), y+30, {size:10, font:MONO, align:'center', color:C.faint});
+  txt('120+', x1, y+30, {size:10, font:MONO, align:'center', color:C.faint});
+
+  // 轴
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  [0,20,40,60,80,100,120].forEach(t=>{
+    const x = mapX(t);
+    ctx.beginPath(); ctx.moveTo(x, y-5); ctx.lineTo(x, y+5); ctx.stroke();
+  });
+
+  // Spec 区间
+  const bx = mapX(20), bw = mapX(100)-mapX(20);
+  ctx.fillStyle = 'rgba(61,220,151,0.14)';
+  rr(bx, y-10, bw, 20, 10); ctx.fill();
+  ctx.strokeStyle = 'rgba(61,220,151,0.45)';
+  rr(bx, y-10, bw, 20, 10); ctx.stroke();
+  txt('Spec 20 ~ 100', bx+bw/2, y-22, {size:11, align:'center', color:C.pass});
+
+  // 指针
+  const ap = ease(seg(p, 0.10, 0.42));
+  const val = lerp(0, j.ratio, ap);
+  const mx = mapX(val);
+  ctx.save();
+  if(ap > 0.3){
+    ctx.shadowColor = j.pass ? withA(C.pass, 0.9) : 'rgba(255,95,126,0.9)';
+    ctx.shadowBlur = 16;
+  }
+  ctx.fillStyle = j.pass ? C.pass : C.fail;
+  ctx.beginPath();
+  ctx.moveTo(mx, y-10); ctx.lineTo(mx-8, y-26); ctx.lineTo(mx+8, y-26);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(mx-1.2, y-10, 2.4, 20);
+  ctx.restore();
+
+  // 读数
+  txt((j.ratio > maxScale ? '1000' : j.ratio.toFixed(1)) + '%', mx, y-42, {
+    size:16, font:MONO, align:'center', weight:700,
+    color: j.pass ? '#dbe7ff' : '#ff9db0'
+  });
+  if(j.ratio > maxScale) txt('（超出量程）', mx+50, y-42, {size:10, color:C.fail});
+
+  // 判定
+  const apj = ease(seg(p, 0.42, 0.66));
+  ctx.save();
+  ctx.globalAlpha = apj;
+  card(60, 330, 880, 190, {r:14,
+    fill: j.pass ? 'rgba(61,220,151,0.09)' : 'rgba(255,95,126,0.10)',
+    stroke: j.pass ? 'rgba(61,220,151,0.42)' : 'rgba(255,95,126,0.45)',
+    glow: j.pass ? 'rgba(61,220,151,0.3)' : 'rgba(255,95,126,0.3)'});
+  txt('Relative_Illumination', 88, 372, {size:12, font:MONO, color:C.accent, weight:700});
+  txt(j.pass ? 'is_passed = true' : 'is_passed = false', 88, 414, {
+    size:20, font:MONO, weight:700, color: j.pass ? C.pass : C.fail});
+  txt('bin = ' + j.bin + '    grade = ' + j.grade, 88, 448, {size:14, font:MONO, color:'#dbe7ff'});
+  txt(j.pass ? '边缘亮度是中心的 ' + j.ratio.toFixed(1) + '%，在 20% ~ 100% 之间'
+             : '实测 ' + (j.ratio>120?'1000':j.ratio.toFixed(1)) + '%，超出 20% ~ 100% 范围',
+      88, 482, {size:12, color:'#c7d5ee'});
+  ctx.restore();
+
+  txt('判据只有一条：ratio 与 limit_min_ratio_ / limit_max_ratio_ 比较。', 40, 574,
+      {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 07 · 归档
+   ===================================================================== */
+function drawPack(p){
+  header(6, '归档', '两个子项都进清单，最终 bin 取 grade 更大的那个');
+
+  const j = ri();
+  const liFail = true; // 假设同一颗芯片的 Light_Response 失败了（grade 9）
+
+  // 左：本子项结果
+  const cx = 50, cy = 150, cw = 286, chh = 232;
+  card(cx, cy, cw, chh, {fill:'rgba(255,209,102,0.07)', stroke:'rgba(255,209,102,0.35)', r:14});
+  txt('Subitem_Result', cx+18, cy+28, {size:12.5, font:MONO, color:C.accent2, weight:700});
+  txt('Relative_Illumination', cx+18, cy+46, {size:10.5, color:C.faint});
+  [['name','"Relative_Illumination"'],
+   ['is_passed', j.pass?'true':'false'],
+   ['bin', String(j.bin)],
+   ['grade', String(j.grade)],
+   ['g_msg','true']].forEach((f,i)=>{
+    const y = cy + 78 + i*30;
+    txt(f[0], cx+18, y, {size:10.5, font:MONO, color:'#ffd166'});
+    txt(f[1], cx+cw-18, y, {size:10.5, font:MONO, align:'right', color:'#dbe7ff'});
+  });
+
+  arrow(cx+cw+6, cy+chh/2, cx+cw+34, cy+chh/2, 'rgba(140,170,230,0.55)', 1.8);
+
+  // 中：清单
+  const lx = 374, ly = 138, lw = 292, lh = 432;
+  card(lx, ly, lw, lh, {fill:'rgba(255,255,255,0.022)', stroke:'rgba(255,255,255,0.08)', r:14});
+  txt('items_results', lx+18, ly+26, {size:12, font:MONO, color:'#dbe7ff', weight:700});
+  txt('std::vector', lx+lw-18, ly+26, {size:10, font:MONO, color:C.faint, align:'right'});
+
+  const items = [
+    {n:'Light_Response', bin:2201, grade:9, fail:liFail},
+    {n:'Relative_Illumination', bin:j.bin, grade:j.grade, fail:!j.pass, hot:true},
+    {n:'Non_Uniformity', bin:2203, grade:6, fail:false},
+    {n:'ImageDirt', bin:2210, grade:4, fail:false},
+    {n:'Color_Shading', bin:2227, grade:5, fail:false},
+    {n:'PKG_Test', bin:2215, grade:6, fail:false}
+  ];
+  items.forEach((it,i)=>{
+    const ap = ease(seg(p, 0.10 + i*0.06, 0.26 + i*0.06));
+    if(ap <= 0) return;
+    const y = ly + 44 + i*64;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(lx+14, y, lw-28, 54, {r:9,
+      fill: it.hot ? 'rgba(255,209,102,0.12)' : 'rgba(255,255,255,0.035)',
+      stroke: it.hot ? 'rgba(255,209,102,0.5)' : 'rgba(255,255,255,0.07)'});
+    txt(it.n, lx+28, y+22, {size:10.5, font:MONO, color: it.hot ? '#ffe6a8' : '#9fb0d0', weight: it.hot?700:400});
+    txt('bin ' + it.bin + ' · grade ' + it.grade, lx+28, y+42, {size:9.5, font:MONO, color:C.faint});
+    txt(it.fail ? 'FAIL' : 'PASS', lx+lw-28, y+32, {size:10, font:MONO, align:'right',
+      color: it.fail ? C.fail : C.pass, weight:700});
+    ctx.restore();
+  });
+
+  // 右：汇总
+  const fx = 702, fy = 150, fw = 258;
+  card(fx, fy, fw, 216, {fill:'rgba(196,181,253,0.07)', stroke:'rgba(196,181,253,0.35)', r:14});
+  txt('Calculate_The_Final_Bin()', fx+16, fy+26, {size:11, font:MONO, color:'#c4b5fd', weight:700});
+  ['final = {bin:1, grade:0}',
+   'for (item : items) {',
+   '  if (!passed &&',
+   '      grade > final.grade)',
+   '     final = item;',
+   '}'].forEach((ln,i)=> txt(ln, fx+16, fy+54+i*22, {size:10, font:MONO, color:'#b8c6e2'}));
+
+  txt('grade 9 > 8', fx+16, fy+192, {size:11, font:MONO, color:'#ffb3c0'});
+
+  const ry = 386;
+  card(fx, ry, fw, 140, {r:14,
+    fill:'rgba(255,95,126,0.10)', stroke:'rgba(255,95,126,0.45)', glow:'rgba(255,95,126,0.3)'});
+  txt('return code = bin', fx+16, ry+28, {size:11, font:MONO, color:C.dim});
+  txt('2201', fx+16, ry+80, {size:36, font:MONO, weight:700, color:C.fail});
+  txt('来自 Light_Response', fx+fw-16, ry+70, {size:10, align:'right', color:'#ffb3c0'});
+  txt('grade 9 · 更严重', fx+fw-16, ry+90, {size:10, align:'right', color:'#ffb3c0'});
+
+  txt('本例假设这颗芯片的 Light_Response 也失败（grade 9）：相对照度 grade 8 更轻，最终 bin 由更严重的那个决定。',
+      40, 604, {size:11, color:C.faint});
+}
+
+/* =====================================================================
+   场景定义
+   ===================================================================== */
+const SCENES = [
+  {
+    kicker:'定位', dur:11, draw:drawIntro,
+    caption:p => p < 0.35 ? '① 同一张白帧，Light_Response 看绝对亮度'
+             : p < 0.62 ? '② Relative_Illumination 看边缘相对中心的衰减'
+             : '③ 它直接用 RAW 全图 + 5 个窗口，不拆通道',
+    html: `
+      <h3>它和 Light_Response 有什么不同？</h3>
+      <p>同一个白帧，两项各看一件事：</p>
+      <ul>
+        <li><b>Light_Response</b>：拆通道 → 每个通道一个中心 ROI → 看<b>绝对亮度</b>够不够（80~220 DN）。</li>
+        <li><b>Relative_Illumination</b>：不拆通道，直接读 RAW → 四角 + 中心 5 个窗口 → 看<b>边缘比中心暗多少</b>（20%~100%）。</li>
+      </ul>
+      <pre><code>// AlgorithmItems::Relative_Illumination_V1_0  algorithmitems.cpp:1320
+double RelIllum = AlgorithmFuncs::TestRelativeIlumination(
+        g_buf_raw_, w, h, w_win, h_win);
+if (RelIllum &gt; limit_max_ratio_ || RelIllum &lt; limit_min_ratio_) {
+    res.is_passed = false;
+    res.bin   = param.bin_;     // 2202
+    res.grade = param.grade_;   // 8
+}</code></pre>
+      <p class="tip">坐标体系不同是最大的坑：这里窗口坐标是 <b>RAW 像素</b>；Light_Response 的 ROI 是 <b>拆分后平面</b>的坐标（一半）。</p>
+    `
+  },
+  {
+    kicker:'取窗口', dur:13, draw:drawWindows,
+    caption:p => p < 0.5 ? '四个角各取一个 96×54 的窗口'
+             : p < 0.75 ? '再加一个同样大小的中心窗口'
+             : '5 个窗口全部落在 RAW 上（本图窗口为放大示意）',
+    html: `
+      <h3>5 个窗口的位置</h3>
+      <p>窗口大小来自参数 <code>w_win=96</code>、<code>h_win=54</code>；位置在代码里写死：</p>
+      <pre><code>// TestRelativeIlumination()  cpalgorithmraw.cpp:1576
+ROI_3 = 左上角 [0 .. h_win) × [0 .. w_win)
+ROI_4 = 左下角 [h-h_win .. h) × [0 .. w_win)
+ROI_5 = 右上角 [0 .. h_win) × [w-w_win .. w)
+ROI_6 = 右下角 [h-h_win .. h) × [w-w_win .. w)
+ROI_2 = 中心   [h/2-h_win/2 .. +h_win) × [w/2-w_win/2 .. +w_win)</code></pre>
+      <p>4 个角窗口各 96×54 = 5184 个像素，加起来只占全图的约 <b>0.25%</b> —— 算得很快。</p>
+      <p class="tip">窗口必须落在有效成像区内。若 <code>w_win</code> 配得比图还大，或者 RAW 含 OB 区，角上取到的就不是有效像素了。</p>
+    `
+  },
+  {
+    kicker:'求均值', dur:12, draw:drawMeans,
+    caption:p => p < 0.45 ? '① 每个窗口内部做一次 Σ DN / N'
+             : p < 0.8 ? '② 得到 5 个窗口均值（N 都是 5184）'
+             : '③ 中心和四角用的是同一把尺子，可以直接比',
+    html: `
+      <h3>每个窗口一个均值</h3>
+      <pre><code>for (int i=0; i&lt;h_win; ++i)
+  for (int j=0; j&lt;w_win; ++j)
+    ROI_3 += pData[w*i + j];
+ROI_3 /= cnt;        // 左上角均值
+// 其余三个角、中心同理</code></pre>
+      <p>五个窗口面积相同（N 都是 5184），所以均值可以直接横向比较，不需要再归一化。</p>
+      <p class="tip">均值本身不看单点：一个坏点落在窗口里几乎不影响结果。边缘坏点、划伤由 ImageDirt / Pixel_Defect 等子项负责。</p>
+    `
+  },
+  {
+    kicker:'算 ratio', dur:12, draw:drawRatio,
+    caption:p => p < 0.35 ? 'darkest = 四个角窗口的平均'
+             : p < 0.7 ? 'ratio = 100 × darkest / center'
+             : 'ratio 就是这一子项的测量值（单位 %）',
+    html: `
+      <h3>两个公式</h3>
+      <pre><code>double darkest = (ROI_3 + ROI_4 + ROI_5 + ROI_6) / 4;
+if (ROI_2 &lt; darkest/10)      return 1000;
+else if (ROI_2 &gt; darkest*10) return 10;
+else return 100 * darkest / ROI_2;</code></pre>
+      <ul>
+        <li><b>darkest</b>：四角均值再平均 → 代表"边缘有多亮"。</li>
+        <li><b>center</b>：中心窗口均值 → 代表"镜头中心照度"。</li>
+        <li><b>ratio</b>：边缘占中心的百分比。20% 表示边缘只有中心的 1/5。</li>
+      </ul>
+      <p class="tip">注意分母是 center：如果中心被遮挡/压暗，ratio 反而会变大，所以代码才加了 &gt;10 倍的防呆。</p>
+    `
+  },
+  {
+    kicker:'防呆', dur:12, draw:drawGuard,
+    caption:p => '两条极端保护：中心 &lt; darkest/10 → 1000；中心 &gt; darkest×10 → 10',
+    html: `
+      <h3>为什么要防呆？</h3>
+      <p>如果中心暗到接近 0，除法会炸（或得到天文数字）；如果中心远亮于边缘，比值会大于 100%，说明不是"暗角"而是别的问题。</p>
+      <pre><code>if (ROI_2 &lt; 0.001) ROI_2 = 0.001;   // 防除零
+if (ROI_2 &lt; darkest/10) return 1000; // 中心几乎全黑
+else if (ROI_2 &gt; darkest*10) return 10; // 中心远亮于边缘</code></pre>
+      <p>两个返回值（1000 和 10）都必然超出 20~100 的 Spec，所以"异常"一定会被卡住，不会误判成良品。</p>
+      <p class="tip">看到 ratio 恰好是 <b>1000</b> 或 <b>10</b>，别怀疑测量精度 —— 那是防呆分支被命中了，去查图像本身（中心是否全黑 / 光源是否偏）。</p>
+    `
+  },
+  {
+    kicker:'判 Spec', dur:13, draw:drawSpecRI,
+    caption:p => p < 0.45 ? 'ratio 与 20 / 100 比较'
+             : (ri().pass ? '判定：PASS → bin = 1，grade = 0'
+                          : '判定：FAIL → bin = 2202，grade = 8'),
+    html: `
+      <h3>判据只有一条</h3>
+      <pre><code>if (RelIllum &gt; limit_max_ratio_ ||   // 100
+    RelIllum &lt; limit_min_ratio_) {   // 20
+    res.is_passed = false;
+    res.bin   = 2202;
+    res.grade = 8;
+}</code></pre>
+      <p>本例配置：<code>min_ratio=20</code>、<code>max_ratio=100</code>、<code>bin=2202</code>、<code>grade=8</code>。</p>
+      <p>ratio 太小 = 暗角太重（镜头/装配/遮光问题）；ratio 大于 100% = 边缘比中心亮，通常是中心被遮挡或参数错。</p>
+      <p class="tip">和 Light_Response 不同，这里没有 161/162 这种"极端 bin"，只有配置里那一个 <code>bin_</code>。</p>
+    `
+  },
+  {
+    kicker:'归档', dur:14, draw:drawPack,
+    caption:p => p < 0.35 ? 'Relative_Illumination 的结果进入 items_results'
+             : p < 0.68 ? '同一颗芯片的其它子项也各自有 bin / grade'
+             : '最终 bin 由 grade 最大的失败项决定',
+    html: `
+      <h3>两个子项如何共同决定 bin</h3>
+      <ul>
+        <li>Light_Response 失败 → bin 2201 / grade <b>9</b></li>
+        <li>Relative_Illumination 失败 → bin 2202 / grade <b>8</b></li>
+        <li>两个都失败时，<code>Calculate_The_Final_Bin</code> 取 grade 更大的 → 返回 <b>2201</b></li>
+      </ul>
+      <pre><code>if (!item.is_passed &amp;&amp; item.grade &gt; final_result.grade)
+    final_result = item;     // 只换更严重的</code></pre>
+      <p class="tip">所以看到机台回 2201，不代表相对照度没问题——它可能也失败了，只是被更严重的项覆盖。排障要看完整 log（<code>g_str_msg_all</code>）。</p>
+    `
+  }
+];
+
+/* ---------- 滑杆 / 预设（本页特有） ---------- */
+const SLIDERS = [
+  { key:'center', label:'中心', max:255 },
+  { key:'corner', label:'四角', max:255 }
+];
+const slidersEl = document.getElementById('sliders');
+SLIDERS.forEach(cfg=>{
+  const lab = document.createElement('label');
+  lab.className = 'slider';
+  lab.style.setProperty('--c', cfg.key === 'center' ? '#6ea8fe' : '#ffd166');
+  lab.innerHTML =
+    '<span class="ch">' + cfg.label + '</span>' +
+    '<input type="range" min="0" max="' + cfg.max + '" step="1" value="' + state[cfg.key] + '" data-k="' + cfg.key + '">' +
+    '<output>' + state[cfg.key] + '</output>';
+  slidersEl.appendChild(lab);
+  const input = lab.querySelector('input');
+  const out = lab.querySelector('output');
+  input.addEventListener('input', ()=>{
+    state[cfg.key] = parseFloat(input.value);
+    out.textContent = state[cfg.key].toFixed(0);
+  });
+});
+
+const PRESETS = [
+  { n:'正常片（20% 暗角）', v:{ center:205, corner:168 } },
+  { n:'轻度暗角',          v:{ center:205, corner:120 } },
+  { n:'暗角过重 <20%',      v:{ center:205, corner:30 } },
+  { n:'边缘比中心亮 >100%', v:{ center:200, corner:215 } },
+  { n:'中心极暗 → 1000',    v:{ center:12,  corner:200 } },
+  { n:'中心过亮 → 10',      v:{ center:210, corner:15 } }
+];
+const presetsEl = document.getElementById('presets');
+PRESETS.forEach(p=>{
+  const b = document.createElement('button');
+  b.textContent = p.n;
+  b.addEventListener('click', ()=>{
+    Object.keys(p.v).forEach(k=>{ state[k] = p.v[k]; });
+    document.querySelectorAll('.slider input').forEach(inp=>{
+      const k = inp.dataset.k;
+      inp.value = state[k];
+      inp.parentElement.querySelector('output').textContent = state[k].toFixed(0);
+    });
+  });
+  presetsEl.appendChild(b);
+});
+
+/* ---------- 启动 ---------- */
+AlgoAnim.start({ scenes: SCENES });
+</script>
+</body>
+</html>

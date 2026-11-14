@@ -4,16 +4,36 @@
 
 ```
 docs/
-├── index.html                 目录页
+├── catalog.src.html           目录页源文件
+├── index.html                 目录页成品（由 build.py 生成）
+├── build.py                   把 shared 内联进成品页（单文件、零依赖）
 ├── shared/
 │   ├── player.js              播放器：画布自适应 / 章节 / 控制条 / 字幕 / 快捷键 / 绘图工具
 │   └── player.css             统一视觉（深色舞台、侧栏、滑杆、按钮）
 ├── light_response/            一个算法 = 一个目录
-│   ├── index.html             只写 SCENES（draw + caption + html）
+│   ├── index.src.html         源文件：只写 SCENES（draw + caption + html）
+│   ├── index.html             成品：CSS/JS 已内联，双击就能看
 │   └── README.md              文字版讲解
 ├── relative_illumination/     第二个算法，证明这套骨架可复用
 └── HOWTO.md                   本文件
 ```
+
+### 源文件 vs 成品（重要）
+
+- **`*.src.html` 是唯一要手改的文件**，它引用 `../shared/player.css` 和 `../shared/player.js`；
+- 改完运行一次构建，生成**单文件成品** `index.html`：
+
+```bash
+python3 docs/build.py          # 重新生成三个成品页
+python3 docs/build.py --check  # 检查成品是否过期（提交前跑一下）
+```
+
+构建做的事很简单：把 `<link href="...player.css">` 换成 `<style>…</style>`，
+把 `<script src="...player.js"></script>` 换成 `<script>…</script>`，
+并追加一段"脚本没跑起来"的兜底提示。
+
+> 为什么要内联：成品页可以双击打开、单独拷给别人、放进文件预览器都不依赖相对路径；
+> 而播放器仍然只有 `shared/` 一份，新增算法不会复制粘贴播放器代码。
 
 ---
 
@@ -220,8 +240,9 @@ AlgoAnim.start({ scenes: SCENES });
 - [ ] 窗口宽度 < 1120px 时，右侧栏自动落到下方
 - [ ] 章节按钮顺序、字幕、右侧讲解三者对得上
 - [ ] 页脚写明参数来源文件
+- [ ] 改完 `*.src.html` 后跑过 `python3 docs/build.py`，并确认 `--check` 通过
 
-**加完一个子项后**，在 `docs/index.html` 的卡片区加一张入口卡即可。
+**加完一个子项后**：先在 `docs/catalog.src.html` 的卡片区加一张入口卡，再运行一次 `python3 docs/build.py`。
 
 ---
 

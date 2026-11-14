@@ -6,7 +6,7 @@
 items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
 ```
 
-- 动画：`docs/light_response/index.html`（零依赖、可离线；播放器来自 `../shared/player.js`）
+- 动画：`docs/light_response/index.html`（单文件、零依赖、可离线；源文件为同目录 `index.src.html`）
 - 讲解：本文件（算法流程、判定树、真实配置、常见坑）
 - 目录：`../index.html`；相对照度对照页：`../relative_illumination/index.html`
 

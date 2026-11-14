@@ -2,7 +2,7 @@
 
 与 [Light_Response](../light_response/index.html) 成对的第二个例子：**同一个白帧，换一个角度看**。
 
-- 动画：`index.html`（7 幕，播放器来自 `../shared/player.js`）
+- 动画：`index.html`（7 幕，单文件可直接打开；源文件为同目录 `index.src.html`）
 - 目录页：`../index.html`
 - 怎么再加别的算法：`../HOWTO.md`
 
