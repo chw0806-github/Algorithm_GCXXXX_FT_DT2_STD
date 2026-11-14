@@ -234,6 +234,7 @@ function header(idx, kicker, title, sub){
    播放器
    ========================================================================== */
 const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
 let scenes = [];
 let elCaption = null, elBar = null;
 
@@ -243,7 +244,7 @@ function resize(){
     canvas.style.height = Math.round(r.width * VH / VW) + 'px';
     r = canvas.getBoundingClientRect();
   }
-  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.max(1, Math.round(r.width * dpr));
   canvas.height = Math.max(1, Math.round(r.height * dpr));
 }

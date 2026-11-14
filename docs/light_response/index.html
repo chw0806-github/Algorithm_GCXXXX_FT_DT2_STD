@@ -203,7 +203,7 @@
         取该工位缓冲区中的 3840×2160 Bayer 白帧，用 <code>Split_Channel</code> 拆成 R / Gr / Gb / B 四个平面，
         每张图在中心取一块 ROI 求平均亮度（DN），再和 <code>LightResponse.data</code> 里的 Min / Max 比大小；
         任一通道越界就 <code>is_passed = false</code>，并按判定树给出 bin / grade。</p>
-        <p class="cue">动画没有动起来？说明当前阅读器<b>屏蔽了页面脚本</b>（预览框、沙箱、邮件客户端里很常见）。
+        <p class="cue">动画没有动起来？可能是脚本运行出错，或当前阅读器不支持动画。
         同一份内容还有不依赖脚本的版本：<a href="storyboard.html">静态分镜版 storyboard.html</a>
         —— 8 幕各一张定格图，配同样的字幕和讲解文字。</p>
       </div>
@@ -453,6 +453,7 @@ function header(idx, kicker, title, sub){
    播放器
    ========================================================================== */
 const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
 let scenes = [];
 let elCaption = null, elBar = null;
 
@@ -462,7 +463,7 @@ function resize(){
     canvas.style.height = Math.round(r.width * VH / VW) + 'px';
     r = canvas.getBoundingClientRect();
   }
-  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.max(1, Math.round(r.width * dpr));
   canvas.height = Math.max(1, Math.round(r.height * dpr));
 }
@@ -1787,7 +1788,7 @@ setTimeout(function () {
   var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
 
   var c = document.getElementById('caption');
-  if (c) c.textContent = '动画没有启动' + why + '　当前环境没有执行页面脚本，请看右下讲解或 storyboard.html 静态分镜';
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
 
   var ex = document.getElementById('explain');
   if (ex) {
@@ -1796,7 +1797,7 @@ setTimeout(function () {
     var b = document.createElement('b');
     b.textContent = '动画没有启动' + why + '　';
     d.appendChild(b);
-    d.appendChild(document.createTextNode('这个阅读器没有执行页面脚本（预览框、沙箱、邮件客户端里很常见）。不依赖脚本的版本：'));
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
     var a = document.createElement('a');
     a.href = 'storyboard.html';
     a.textContent = 'storyboard.html 静态分镜';

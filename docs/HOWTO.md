@@ -273,6 +273,7 @@ AlgoAnim.start({ scenes: SCENES });
 **自测**
 
 - [ ] `node --check` 抽出内联脚本，语法通过
+- [ ] 运行 `node docs/tools/test_player.js`，检查播放器严格模式下的启动、绘制和章节切换
 - [ ] 每幕取 `p = 0.15 / 0.55 / 0.95` 截图，检查文字不重叠、不出界
 - [ ] 拖滑杆：第 5~7 幕的数值、PASS/FAIL、bin 都跟着变
 - [ ] 窗口宽度 < 1120px 时，右侧栏自动落到下方
