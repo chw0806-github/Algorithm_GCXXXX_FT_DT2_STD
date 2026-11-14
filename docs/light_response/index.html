@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light_Response 动画讲解 · 图像传感器 FT 测试</title>
+<style>
+  :root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◉</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 光照响应（Light_Response）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>LightResponse.data</b></span>
+      <span class="badge">面向初学者</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">加载中…</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head">
+          <h2>模拟测量值 · 拖动看判定怎么变</h2>
+          <span>四个通道 ROI 均值（DN），对应 LightResponse.data 的上下限</span>
+        </div>
+        <div class="sliders" id="sliders"></div>
+        <div class="presets" id="presets"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <div class="explain" id="explain"></div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    说明：动画是教学模型，按 <code>STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/LightResponse.data</code>
+    的示例配置绘制，不是产线实际二进制。像素值、Σ/N 等数字为示意。
+  </footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+/* 真实配置（GC8613T / param_4l_f_bright1_normal_30fps/LightResponse.data） */
+const SPEC = {
+  R :{min:80,  max:220},
+  Gr:{min:144, max:216},
+  Gb:{min:144, max:216},
+  B :{min:80,  max:220},
+  bin:2201, grade:9,
+  errorMin:50, errorMax:241,
+  errorMinOpen:true, errorMaxOpen:true,
+  roi:{x:768,y:432,w:384,h:216},
+  plane:{w:1920,h:1080},
+  raw:{w:3840,h:2160}
+};
+
+const state = {
+  scene:0, t:0, playing:true, speed:1,
+  means:{ R:182.4, Gr:196.7, Gb:193.2, B:171.8 }
+};
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / 08 · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+/* =====================================================================
+   判定逻辑（严格按 C++ 的分支顺序）
+   ===================================================================== */
+function judge(){
+  const v = state.means;
+  const out = [], low = [], high = [];
+  CHLIST.forEach(ch=>{
+    if(v[ch] > SPEC[ch].max) out.push({ch, why:'high'});
+    if(v[ch] < SPEC[ch].min) out.push({ch, why:'low'});
+    if(SPEC.errorMinOpen && v[ch] < SPEC.errorMin) low.push(ch);
+    if(SPEC.errorMaxOpen && v[ch] > SPEC.errorMax) high.push(ch);
+  });
+  if(!out.length){
+    return { pass:true, bin:1, grade:0,
+      reason:'四个通道 ROI 均值都落在 Spec 区间内 → is_passed = true',
+      out:[] };
+  }
+  if(low.length){
+    return { pass:false, bin:161, grade:9, low, high,
+      reason:'有通道 < error_MIN(' + SPEC.errorMin + ')：' + low.join(' / ') + ' → bin = 161（死黑/不响应）',
+      out:out };
+  }
+  if(high.length){
+    return { pass:false, bin:162, grade:9, low, high,
+      reason:'有通道 > error_MAX(' + SPEC.errorMax + ')：' + high.join(' / ') + ' → bin = 162（饱和/过曝）',
+      out:out };
+  }
+  return { pass:false, bin:SPEC.bin, grade:SPEC.grade, low, high,
+    reason:'超出上下限但不触发 161/162 → bin = ' + SPEC.bin + '（配置的 response bin）',
+    out:out };
+}
+
+/* ROI 里的 30 个像素（保证平均值正好等于滑杆设定的值） */
+const OFFS0 = [-5,3,-2,7,0,4,-6,1,5,-3,2,-8,6,-1,3,0,-4,7,-2,5,1,-7,4,-3,8,-1,2,-6,0,3];
+const OFFS = (function(){
+  const m = OFFS0.reduce((a,b)=>a+b,0)/OFFS0.length;
+  return OFFS0.map(o=>o-m);
+})();
+function roiCells(ch){
+  const base = state.means[ch];
+  return OFFS.map(o => base + o*0.9);
+}
+
+/* =====================================================================
+   STEP 01 · 总览
+   ===================================================================== */
+function drawOverview(p){
+  header(0, '总览', '这一行代码，站在测试流水线的哪一站？');
+
+  const y = 246, h = 128, w = 169;
+  const stages = [
+    {t:'RAW 白帧',       d:['3840 × 2160','Bayer RG 排列'],       c:'#ffd166'},
+    {t:'Split_Channel',  d:['拆成 R / Gr / Gb / B','4 个 1920×1080 平面'], c:'#8fb8ff'},
+    {t:'Light_Response', d:['ROI 均值 vs Spec','本行代码在这一站'], c:'#6ea8fe', hl:true},
+    {t:'Calculate_',     d:['The_Final_Bin','汇总所有子项'],       c:'#c4b5fd'},
+    {t:'bin / grade',    d:['BrightTest 返回值','决定芯片分选'],   c:'#3ddc97'}
+  ];
+  const active = Math.min(4, Math.floor(seg(p,0.10,0.92)*5));
+
+  // 顶部代码条
+  const codeY = 150;
+  card(70, codeY-24, 860, 46, {fill:'rgba(255,255,255,0.03)', stroke:'rgba(255,255,255,0.07)', r:10});
+  ctx.font = '15px ' + MONO;
+  const pre = 'items_results.push_back( Algorithm_all[site_].';
+  const hl  = 'Light_Response';
+  const post= '(test_manage) );';
+  const x0 = 500 - (ctx.measureText(pre+hl+post).width)/2;
+  const wPre = ctx.measureText(pre).width;
+  const wHl  = ctx.measureText(hl).width;
+  txt(pre, x0, codeY+4, {size:15, font:MONO, color:'#93a3c4'});
+  ctx.save();
+  ctx.shadowColor = 'rgba(110,168,254,.8)'; ctx.shadowBlur = 12;
+  txt(hl, x0+wPre, codeY+4, {size:15, font:MONO, color:'#a9c8ff', weight:700});
+  ctx.restore();
+  txt(post, x0+wPre+wHl, codeY+4, {size:15, font:MONO, color:'#93a3c4'});
+
+  // 五个阶段
+  stages.forEach((s,i)=>{
+    const x = 40 + i*187;
+    const ap = ease(clamp01((p - i*0.09)/0.22));
+    const isAct = (i === active);
+    ctx.save();
+    ctx.globalAlpha = ap;
+    const yy = y + (1-ap)*14;
+    card(x, yy, w, h, {
+      fill: isAct ? 'rgba(110,168,254,0.13)' : 'rgba(255,255,255,0.035)',
+      stroke: isAct ? 'rgba(110,168,254,0.8)' : C.line,
+      lw: isAct ? 1.6 : 1,
+      glow: isAct ? 'rgba(110,168,254,0.55)' : null
+    });
+    ctx.fillStyle = s.c;
+    rr(x+16, yy+20, 26, 3, 2); ctx.fill();
+    txt(s.t, x+16, yy+50, {size:15, weight:700, color:'#f2f6ff'});
+    s.d.forEach((line,k)=> txt(line, x+16, yy+78+k*19, {size:11.5, color: isAct?'#cfe0ff':C.dim}));
+    if(i<4){
+      arrow(x+w+2, yy+h/2, x+184, yy+h/2, 'rgba(140,170,230,0.45)', 1.4, [5,5]);
+    }
+    ctx.restore();
+  });
+
+  // 指向 Light_Response
+  const bx = 40 + 2*187 + w/2;
+  const ptrA = ease(seg(p, 0.22, 0.40));
+  if(ptrA > 0){
+    ctx.save();
+    ctx.globalAlpha = ptrA;
+    ctx.fillStyle = C.accent;
+    ctx.beginPath();
+    ctx.moveTo(bx, 388); ctx.lineTo(bx-6, 398); ctx.lineTo(bx+6, 398);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    txt('↑ 本行代码在这里执行', bx, 412, {size:12, color:C.accent, align:'center', alpha:ptrA});
+  }
+
+  // items_results 收集箱
+  const boxY = 438;
+  card(40, boxY, 920, 132, {fill:'rgba(255,255,255,0.022)', stroke:'rgba(255,255,255,0.07)', r:14});
+  txt('items_results', 58, boxY+22, {size:12, font:MONO, color:'#dbe7ff', weight:700});
+  txt('本次 Bright Test 的结果清单（每个子项一条 Subitem_Result）', 158, boxY+22, {size:11.5, color:C.faint});
+
+  const chips = ['Light_Response','Relative_Illum.','Non_Uniformity','ImageDirt','Deadrow/Col','Color_Ratio',
+                 'Color_Shading','Color_GI','PKG_Test','Pixel_Defect','ROI_PRNU','Optical_Center'];
+  const cw = 132, gap = 8;
+  chips.forEach((name,i)=>{
+    const col = i % 6, row = Math.floor(i/6);
+    const x = 58 + col*(cw+gap);
+    const yy = boxY + 32 + row*42;
+    const hot = (i === 0);
+    card(x, yy, cw, 32, {
+      r:8,
+      fill: hot ? 'rgba(110,168,254,0.22)' : 'rgba(255,255,255,0.035)',
+      stroke: hot ? 'rgba(110,168,254,0.6)' : 'rgba(255,255,255,0.06)'
+    });
+    txt(name, x+cw/2, yy+21, {size:10.5, align:'center',
+      color: hot ? '#e9f2ff' : '#93a3c4', weight: hot?700:400});
+  });
+}
+
+/* =====================================================================
+   STEP 02 · 拆解一行代码
+   ===================================================================== */
+const L1 = [
+  {t:'items_results', c:'#ffd166', g:0},
+  {t:'.', c:'#7d8aa6'},
+  {t:'push_back', c:'#8fb8ff', g:1},
+  {t:'(', c:'#7d8aa6'}
+];
+const L2 = [
+  {t:'    ', c:''},
+  {t:'Algorithm_all', c:'#8fb8ff', g:2},
+  {t:'[', c:'#7d8aa6'},
+  {t:'site_', c:'#ffd166', g:2},
+  {t:']', c:'#7d8aa6'},
+  {t:'.', c:'#7d8aa6'},
+  {t:'Light_Response', c:'#3ddc97', g:3},
+  {t:'(', c:'#7d8aa6'},
+  {t:'test_manage', c:'#c9d4ea'},
+  {t:')', c:'#7d8aa6'},
+  {t:';', c:'#7d8aa6'}
+];
+
+const STEPS = [
+  { name:'items_results', color:'#ffd166',
+    lines:[
+      '类型是 std::vector<Subitem_Result>，在 TestFunc_Normal_Bright_ALL() 开头创建。',
+      '它要装下整帧图所有子项的判定结果，最后一起交给汇总函数。',
+      '可以把它想成一张「体检报告清单」。'
+    ]},
+  { name:'push_back(...)', color:'#8fb8ff',
+    lines:[
+      '把右边算出来的这个 Subitem_Result 追加到清单末尾，清单长度 +1。',
+      '不覆盖、不排序；push_back 自己返回 void，所以这一行「没有返回值」。',
+      '真正有返回值的是括号里的 Light_Response(...)。'
+    ]},
+  { name:'Algorithm_all[site_]', color:'#8fb8ff',
+    lines:[
+      'Algorithm_all 是全局数组，长度 Parallel_num = 4（4 个工位并行测试）。',
+      'Algorithm_all[site_] 取第 site_ 号工位的算法对象，它自己持有 R/Gr/Gb/B 图像缓冲。',
+      'site_ 由 BrightTest 构造时传入，工位之间互不干扰。'
+    ]},
+  { name:'Light_Response(test_manage)', color:'#3ddc97',
+    lines:[
+      '本子项的计算入口：按版本号分发到 Light_Response_V1_0()。',
+      '所有参数都打包在 test_manage（ParamManage）里：尺寸、Bayer、ROI、上下限、bin、grade。',
+      '内部算 ROI 四通道均值，再和 Spec 比较，得到通过 / 失败。'
+    ]},
+  { name:'Subitem_Result（返回值）', color:'#c4b5fd',
+    lines:[
+      '返回 5 个字段：{ name, is_passed, bin, grade, g_msg }。',
+      'g_msg = false 表示「子项没开启 / 版本不匹配」，汇总时会被直接跳过。',
+      'bin 是失效代码，grade 是严重程度，最终 bin 就靠 grade 比大小挑出来。'
+    ]}
+];
+
+function layoutTokens(tokens, x0, y, font){
+  ctx.save();
+  ctx.font = font;
+  let x = x0;
+  const out = [];
+  tokens.forEach(tk=>{
+    const w = ctx.measureText(tk.t).width;
+    out.push({t:tk.t, c:tk.c, g:tk.g, x:x, w:w, y:y});
+    x += w;
+  });
+  ctx.restore();
+  return out;
+}
+
+function drawCode(p){
+  header(1, '拆解', '把这一行拆成 5 块，每块只干一件事');
+
+  const font = '600 22px ' + MONO;
+  card(70, 150, 860, 132, {fill:'rgba(255,255,255,0.028)', stroke:'rgba(255,255,255,0.08)', r:14});
+  txt('BrightTest.cpp : 120', 92, 176, {size:10.5, font:MONO, color:C.faint});
+
+  const y1 = 214, y2 = 256, x0 = 104;
+  const t1 = layoutTokens(L1, x0, y1, font);
+  const t2 = layoutTokens(L2, x0, y2, font);
+
+  const sf = p*5;
+  const step = Math.min(4, Math.floor(sf));
+  const u = clamp01(sf - step);
+
+  // 高亮框
+  function highlight(tokens, g){
+    const hit = tokens.filter(t=>t.g === g);
+    if(!hit.length) return;
+    const x = hit[0].x - 6;
+    const x2 = hit[hit.length-1].x + hit[hit.length-1].w + 6;
+    ctx.save();
+    ctx.shadowColor = 'rgba(110,168,254,0.7)';
+    ctx.shadowBlur = 18;
+    rr(x, tokens[0].y-29, x2-x, 40, 8);
+    ctx.fillStyle = 'rgba(110,168,254,0.18)';
+    ctx.fill();
+    ctx.restore();
+    rr(x, tokens[0].y-29, x2-x, 40, 8);
+    ctx.strokeStyle = 'rgba(110,168,254,0.85)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+
+  if(step < 4){
+    if(step === 0) highlight(t1, 0);
+    if(step === 1) highlight(t1, 1);
+    if(step === 2) highlight(t2, 2);
+    if(step === 3) highlight(t2, 3);
+  } else {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(196,181,253,0.85)';
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([6,5]);
+    rr(88, 168, 824, 104, 10);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 代码
+  [t1,t2].forEach(line=>{
+    line.forEach(tk=>{
+      const isDim = (step < 4) && (tk.g === undefined || tk.g !== step);
+      txt(tk.t, tk.x, tk.y, {size:22, font:MONO, weight:600,
+        color: isDim ? 'rgba(160,176,204,0.55)' : tk.c});
+    });
+  });
+
+  // 说明卡
+  const info = STEPS[step];
+  const cy = 318;
+  card(70, cy, 860, 232, {
+    fill:'rgba(13,21,38,0.92)',
+    stroke:'rgba(110,168,254,0.28)', r:16
+  });
+  ctx.fillStyle = C.accent;
+  rr(70, cy, 4, 232, 2); ctx.fill();
+
+  txt('拆解 ' + (step+1) + ' / 5', 98, cy+32, {size:11.5, color:C.accent, weight:700});
+  txt(info.name, 98, cy+70, {size:23, font:MONO, color:info.color, weight:700});
+
+  const fade = clamp01(u*4.5);
+  info.lines.forEach((ln,i)=>{
+    txt('·', 98, cy+110+i*30, {size:15, color:C.faint, alpha:fade});
+    txt(ln, 114, cy+110+i*30, {size:14.5, color:'#c7d5ee', alpha:fade});
+  });
+
+  if(step === 4){
+    const fx = 640, fy = cy+42;
+    card(fx, fy, 262, 150, {fill:'rgba(196,181,253,0.08)', stroke:'rgba(196,181,253,0.4)', r:12});
+    txt('struct Subitem_Result', fx+16, fy+26, {size:11.5, font:MONO, color:'#c4b5fd', weight:700});
+    const fields = [
+      ['name','"Light_Response"'],
+      ['is_passed','true / false'],
+      ['bin','1 / 161 / 162 / 2201'],
+      ['grade','0 / 9'],
+      ['g_msg','true / false']
+    ];
+    fields.forEach((f,i)=>{
+      txt(f[0], fx+16, fy+50+i*20, {size:11, font:MONO, color:'#ffd166'});
+      txt(f[1], fx+112, fy+50+i*20, {size:11, font:MONO, color:'#b8c6e2'});
+    });
+  }
+
+  txt('提示：push_back 返回 void —— 「这一行没有返回值」，一切结果都来自右边的函数调用。', 40, 588,
+      {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 03 · 多工位
+   ===================================================================== */
+function drawSites(p){
+  header(2, '多工位', 'Algorithm_all[site_]：每个工位一台独立的算法对象');
+
+  const y = 168, h = 246, w = 205;
+  const activeSite = 2;
+
+  for(let i=0;i<4;i++){
+    const x = 60 + i*225;
+    const ap = ease(clamp01((p - 0.03 - i*0.05)/0.22));
+    const hot = (i === activeSite) && p > 0.30;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    const yy = y + (1-ap)*14;
+    card(x, yy, w, h, {
+      fill: hot ? 'rgba(110,168,254,0.11)' : 'rgba(255,255,255,0.03)',
+      stroke: hot ? 'rgba(110,168,254,0.8)' : C.line,
+      lw: hot ? 1.6 : 1,
+      glow: hot ? 'rgba(110,168,254,0.5)' : null
+    });
+
+    txt('SITE ' + i, x+16, yy+26, {size:12.5, weight:700, color: hot ? C.accent2 : '#9fb0d0'});
+
+    // 芯片图标
+    const dx = x + w/2 - 32, dy = yy + 42;
+    card(dx, dy, 64, 64, {r:6, fill:'rgba(110,168,254,0.08)', stroke:'rgba(110,168,254,0.3)'});
+    ctx.save();
+    ctx.strokeStyle = 'rgba(110,168,254,0.25)';
+    ctx.lineWidth = 1;
+    for(let k=1;k<4;k++){
+      ctx.beginPath(); ctx.moveTo(dx+k*16, dy); ctx.lineTo(dx+k*16, dy+64); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(dx, dy+k*16); ctx.lineTo(dx+64, dy+k*16); ctx.stroke();
+    }
+    ctx.restore();
+    for(let k=0;k<5;k++){
+      ctx.fillStyle = 'rgba(255,209,102,0.55)';
+      ctx.fillRect(dx-5, dy+8+k*11, 4, 3);
+      ctx.fillRect(dx+65, dy+8+k*11, 4, 3);
+    }
+
+    txt('AlgorithmItems', x+16, yy+136, {size:12, weight:600, color:'#c7d5ee'});
+    txt('site_ = ' + i, x+16, yy+156, {size:11, font:MONO, color: hot ? C.accent2 : C.faint});
+
+    // 缓冲
+    CHLIST.forEach((ch,k)=>{
+      const cx = x+16 + k*44;
+      card(cx, yy+170, 38, 22, {r:6, fill: withA(CH[ch],0.14), stroke: withA(CH[ch],0.4)});
+      txt(ch, cx+19, yy+185, {size:10, font:MONO, color:CH[ch], align:'center', weight:700});
+    });
+    txt('g_buf_r_ / gr_ / gb_ / b_', x+16, yy+212, {size:9.5, font:MONO, color:C.faint});
+    txt('各自 1920×1080', x+16, yy+229, {size:10, color:C.faint});
+    ctx.restore();
+  }
+
+  // 测试任务飞到 site 2
+  const jq = seg(p, 0.22, 0.50);
+  if(jq > 0 && jq < 1){
+    const sx = -140, tx = 60 + 2*225 + 30;
+    const x = lerp(sx, tx, ease(jq));
+    card(x, 132, 118, 26, {r:9, fill:'rgba(255,209,102,0.16)', stroke:'rgba(255,209,102,0.6)'});
+    txt('TEST JOB', x+59, 149, {size:10.5, font:MONO, color:'#ffe6a8', align:'center', weight:700});
+  }
+
+  // 结果对象飞进 items_results
+  const boxX = 300, boxY = 472, boxW = 400, boxH = 96;
+  card(boxX, boxY, boxW, boxH, {fill:'rgba(255,255,255,0.022)', stroke:'rgba(255,255,255,0.08)', r:14});
+  txt('items_results', boxX+18, boxY+24, {size:11.5, font:MONO, color:'#dbe7ff', weight:700});
+  txt('本工位、本次测试的结果清单', boxX+140, boxY+24, {size:11, color:C.faint});
+
+  for(let k=0;k<3;k++){
+    const q = seg(p, 0.56 + k*0.07, 0.90 + k*0.02);
+    if(q <= 0) continue;
+    const x1 = 60+2*225 + 102, y1 = 168 + 246;
+    const x2 = boxX + 30 + k*120, y2 = boxY + 58;
+    if(q >= 1){
+      card(x2-56, y2-14, 112, 28, {r:8, fill:'rgba(110,168,254,0.2)', stroke:'rgba(110,168,254,0.7)'});
+      txt('Subitem_Result', x2, y2+4, {size:9, font:MONO, color:'#dce9ff', align:'center'});
+    } else {
+      const x = lerp(x1, x2, ease(q));
+      const yr = lerp(y1, y2, ease(q)) - Math.sin(Math.PI*q)*46;
+      card(x-58, yr-13, 116, 26, {r:8, fill:'rgba(110,168,254,0.22)', stroke:'rgba(110,168,254,0.7)'});
+      txt('Subitem_Result', x, yr+4, {size:9.5, font:MONO, color:'#dce9ff', align:'center'});
+    }
+  }
+
+  txt('4 个工位并行跑同一套算法：共享代码，不共享缓冲。', 40, 596, {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 04 · 分通道
+   ===================================================================== */
+function drawSplit(p){
+  header(3, '分通道', 'Split_Channel：把 Bayer 马赛克拆成 4 个平面');
+
+  const cols = 8, rows = 6, cell = 44;
+  const ox = 62, oy = 176;
+
+  txt('RAW 帧（Bayer RG）', ox, oy-12, {size:12, color:'#c7d5ee', weight:600});
+  txt('3840 × 2160', ox+352, oy-12, {size:11, font:MONO, color:C.faint, align:'right'});
+
+  // 马赛克
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      let ch;
+      if(r%2===0) ch = (c%2===0) ? 'R' : 'Gr';
+      else        ch = (c%2===0) ? 'Gb' : 'B';
+      const x = ox + c*cell, y = oy + r*cell;
+      ctx.fillStyle = withA(CH[ch], 0.13);
+      ctx.fillRect(x+1, y+1, cell-2, cell-2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.strokeRect(x+1, y+1, cell-2, cell-2);
+      txt(ch, x+cell/2, y+cell/2+4, {size:11, font:MONO, align:'center', color:withA(CH[ch],0.95), weight:700});
+    }
+  }
+
+  // 平面卡片
+  const planeX = 545, planeW = 390, planeH = 62;
+  const gx = planeX + planeW - 78, gy0 = 0;
+  const mcell = 16;
+
+  CHLIST.forEach((ch,i)=>{
+    const y = 168 + i*72;
+    const ap = ease(clamp01((p - 0.06 - i*0.04)/0.2));
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(planeX, y, planeW, planeH, {r:12,
+      fill: withA(CH[ch], 0.06), stroke: withA(CH[ch], 0.28)});
+    txt(ch + ' 平面', planeX+16, y+24, {size:13, weight:700, color:CH[ch]});
+    txt('1920 × 1080', planeX+16, y+43, {size:10.5, font:MONO, color:C.faint});
+    ctx.restore();
+  });
+
+  // 逐块搬运
+  const total = 12;
+  const q = seg(p, 0.10, 0.90);
+  const bq = q*total;
+  const cur = Math.min(total-1, Math.floor(bq));
+  const frac = clamp01(bq - cur);
+
+  for(let b=0;b<total;b++){
+    const bc = b % 4, br = Math.floor(b/4);
+    const bx = ox + (2*bc)*cell, by = oy + (2*br)*cell;
+    const isCur = (b === cur) && (p < 0.94);
+
+    if(isCur){
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,209,102,0.8)';
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = 'rgba(255,209,102,0.95)';
+      ctx.lineWidth = 2;
+      rr(bx-2, by-2, cell*2+4, cell*2+4, 6);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 源点
+    const srcs = [
+      {ch:'R',  x:bx+cell/2,        y:by+cell/2},
+      {ch:'Gr', x:bx+cell*1.5,      y:by+cell/2},
+      {ch:'Gb', x:bx+cell/2,        y:by+cell*1.5},
+      {ch:'B',  x:bx+cell*1.5,      y:by+cell*1.5}
+    ];
+
+    // 平面 mini 格子
+    CHLIST.forEach((ch,i)=>{
+      const y = 168 + i*72;
+      const mgx = gx, mgy = y + 7;
+      const tx = mgx + bc*mcell + mcell/2;
+      const ty = mgy + br*mcell + mcell/2;
+      const uu = isCur ? clamp01((frac - 0.05 - i*0.10)/0.45) : 1;
+      const arrived = (b < cur) || (isCur && uu >= 1);
+
+      // 到位就填格
+      if(arrived){
+        ctx.fillStyle = withA(CH[ch], 0.55);
+        ctx.fillRect(mgx + bc*mcell+1, mgy + br*mcell+1, mcell-2, mcell-2);
+      }
+
+      // 飞行的点
+      if(isCur && uu > 0 && uu < 1){
+        const sx = srcs[i].x, sy = srcs[i].y;
+        const px = lerp(sx, tx, easeOut(uu));
+        const py = lerp(sy, ty, easeOut(uu)) - Math.sin(Math.PI*uu)*38;
+        ctx.save();
+        ctx.shadowColor = CH[ch];
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = CH[ch];
+        ctx.beginPath(); ctx.arc(px, py, 4.2, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+        // 轨迹
+        ctx.save();
+        ctx.globalAlpha = 0.16;
+        ctx.strokeStyle = CH[ch];
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for(let s=0;s<=1;s+=0.05){
+          const ax = lerp(sx, tx, easeOut(s));
+          const ay = lerp(sy, ty, easeOut(s)) - Math.sin(Math.PI*s)*38;
+          if(s===0) ctx.moveTo(ax,ay); else ctx.lineTo(ax,ay);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // mini 网格线
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = 0.7;
+      ctx.strokeRect(mgx + bc*mcell, mgy + br*mcell, mcell, mcell);
+    });
+  }
+
+  // mini 网格外框
+  CHLIST.forEach((ch,i)=>{
+    const y = 168 + i*72;
+    ctx.strokeStyle = withA(CH[ch], 0.3);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx, y+7, mcell*4, mcell*3);
+  });
+
+  // 底部公式
+  const fy = 520;
+  card(62, fy, 874, 62, {fill:'rgba(110,168,254,0.07)', stroke:'rgba(110,168,254,0.25)', r:12});
+  txt('split_channel()', 84, fy+27, {size:12, font:MONO, color:C.accent, weight:700});
+  txt('偶数行取 (R, Gr)，奇数行取 (Gb, B)：每 2×2 个 RAW 像素 → 每个平面各 1 个像素', 84, fy+47,
+      {size:12.5, color:'#c7d5ee'});
+  txt('3840×2160  ⇒  4 × (1920×1080)', 918, fy+27, {size:11.5, font:MONO, color:C.accent2, align:'right'});
+
+  txt('注意：分通道之后所有 ROI 坐标都是「平面坐标」（1920×1080），不是 RAW 坐标。', 40, 606,
+      {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 05 · ROI
+   ===================================================================== */
+function drawROI(p){
+  header(4, '取 ROI', 'ROI 只在中心区域量：避开暗角和边缘');
+
+  const plane = {x:196, y:145, w:604, h:340};
+  const roi = {
+    x: plane.x + plane.w * (SPEC.roi.x / SPEC.plane.w),
+    y: plane.y + plane.h * (SPEC.roi.y / SPEC.plane.h),
+    w: plane.w * (SPEC.roi.w / SPEC.plane.w),
+    h: plane.h * (SPEC.roi.h / SPEC.plane.h)
+  };
+
+  // 平面
+  card(plane.x, plane.y, plane.w, plane.h, {r:10,
+    fill:'rgba(110,168,254,0.05)', stroke:'rgba(110,168,254,0.28)'});
+  ctx.save();
+  ctx.strokeStyle = 'rgba(110,168,254,0.07)';
+  ctx.lineWidth = 1;
+  for(let x=plane.x; x<plane.x+plane.w; x+=38){
+    ctx.beginPath(); ctx.moveTo(x,plane.y); ctx.lineTo(x,plane.y+plane.h); ctx.stroke();
+  }
+  for(let y=plane.y; y<plane.y+plane.h; y+=38){
+    ctx.beginPath(); ctx.moveTo(plane.x,y); ctx.lineTo(plane.x+plane.w,y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 挖暗
+  const dimA = ease(seg(p, 0.15, 0.40)) * 0.62;
+  if(dimA > 0){
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plane.x, plane.y, plane.w, plane.h);
+    ctx.rect(roi.x, roi.y, roi.w, roi.h);
+    ctx.fillStyle = 'rgba(4,7,14,' + dimA + ')';
+    ctx.fill('evenodd');
+    ctx.restore();
+  }
+
+  // ROI
+  const glow = ease(seg(p, 0.20, 0.45));
+  ctx.save();
+  if(glow > 0){ ctx.shadowColor = 'rgba(110,168,254,' + (0.7*glow) + ')'; ctx.shadowBlur = 22; }
+  ctx.strokeStyle = 'rgba(110,168,254,0.95)';
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([7,5]);
+  ctx.lineDashOffset = -p*90;
+  ctx.strokeRect(roi.x, roi.y, roi.w, roi.h);
+  ctx.restore();
+
+  // ROI 内提示
+  txt('384 × 216 px', roi.x + roi.w/2, roi.y + roi.h/2 + 4,
+      {size:10, font:MONO, align:'center', color:'rgba(200,220,255,0.5)'});
+
+  // 四角
+  const cl = 16;
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 2.4;
+  [[roi.x,roi.y,1,1],[roi.x+roi.w,roi.y,-1,1],[roi.x,roi.y+roi.h,1,-1],[roi.x+roi.w,roi.y+roi.h,-1,-1]]
+  .forEach(c=>{
+    ctx.beginPath();
+    ctx.moveTo(c[0], c[1] + c[3]*cl);
+    ctx.lineTo(c[0], c[1]);
+    ctx.lineTo(c[0] + c[2]*cl, c[1]);
+    ctx.stroke();
+  });
+
+  // 标注
+  const lx = roi.x, ly = roi.y - 22;
+  card(lx-10, ly-22, 250, 34, {r:9, fill:'rgba(255,209,102,0.12)', stroke:'rgba(255,209,102,0.45)'});
+  txt('ROI  x=768  y=432  w=384  h=216', lx+4, ly, {size:12, font:MONO, color:'#ffe6a8'});
+
+  // 平面尺寸标注
+  txt('1920 px（平面宽度）', plane.x + plane.w/2, plane.y + plane.h + 26,
+      {size:11.5, align:'center', color:C.dim});
+  ctx.save();
+  ctx.translate(plane.x - 26, plane.y + plane.h/2);
+  ctx.rotate(-Math.PI/2);
+  txt('1080 px', 0, 0, {size:11.5, align:'center', color:C.dim});
+  ctx.restore();
+
+  txt('R 平面（channel buffer）', plane.x + 12, plane.y + 22, {size:11.5, color:'#9fb0d0'});
+
+  // 说明
+  const infoY = 528;
+  card(40, infoY, 920, 66, {fill:'rgba(255,255,255,0.025)', stroke:'rgba(255,255,255,0.08)', r:12});
+  txt('为什么只取中心？', 58, infoY+22, {size:11.5, color:C.accent, weight:700});
+  txt('镜头中心照度最均匀、最接近标称响应；边缘有暗角（Relative Illumination 另有子项负责）。', 58, infoY+45,
+      {size:12, color:'#c7d5ee'});
+  txt('防呆：GetROIMean 里 if (line+win_h >= height || col+win_w >= width) return -1;', 58, infoY+61,
+      {size:11, font:MONO, color:'#ffb3c0'});
+}
+
+/* =====================================================================
+   STEP 06 · 求均值
+   ===================================================================== */
+function drawMean(p){
+  header(5, '算均值', 'mean = Σ DN / N：四个通道各算一遍');
+
+  const cols = 6, rows = 5, cw = 62, chh = 50;
+  const ox = 64, oy = 168;
+
+  txt('ROI 放大（R 通道 6×5 示意）', ox, oy-12, {size:12, color:'#c7d5ee', weight:600});
+
+  const vals = roiCells('R');
+  const scanP = seg(p, 0.10, 0.66);
+  const idx = Math.floor(scanP * vals.length);
+  const done = scanP >= 1;
+
+  // 网格
+  for(let i=0;i<vals.length;i++){
+    const c = i % cols, r = Math.floor(i/cols);
+    const x = ox + c*cw, y = oy + r*chh;
+    const isScanned = i < idx || done;
+    const isCur = (i === idx) && !done;
+
+    ctx.fillStyle = isScanned ? 'rgba(255,122,122,0.16)' : 'rgba(255,255,255,0.025)';
+    ctx.fillRect(x+1, y+1, cw-2, chh-2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x+1, y+1, cw-2, chh-2);
+
+    if(isCur){
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,209,102,0.9)';
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = 'rgba(255,209,102,0.22)';
+      ctx.fillRect(x+1, y+1, cw-2, chh-2);
+      ctx.restore();
+    }
+    txt(Math.round(vals[i]), x+cw/2, y+chh/2+5, {
+      size:13, font:MONO, align:'center',
+      color: isScanned ? '#ffd0d0' : '#9fb0d0', alpha: isScanned?1:0.55
+    });
+  }
+
+  // 累加器
+  const ax = 550, ay = 150, aw = 386;
+  card(ax, ay, aw, 172, {fill:'rgba(255,255,255,0.025)', stroke:'rgba(255,255,255,0.08)', r:14});
+  txt('累加器（扫描到第 ' + Math.min(vals.length, done?vals.length:idx) + ' / 30 个像素）',
+      ax+18, ay+26, {size:11.5, color:C.dim});
+
+  const scanned = vals.slice(0, done ? vals.length : idx);
+  const sum = scanned.reduce((a,b)=>a+b,0);
+  const mean = scanned.length ? sum/scanned.length : 0;
+
+  txt('Σ DN', ax+18, ay+62, {size:12, font:MONO, color:'#c7d5ee'});
+  txt(sum.toFixed(1), ax+aw-18, ay+62, {size:15, font:MONO, color:'#ffd166', align:'right', weight:700});
+  txt('N', ax+18, ay+96, {size:12, font:MONO, color:'#c7d5ee'});
+  txt(scanned.length, ax+aw-18, ay+96, {size:15, font:MONO, color:'#ffd166', align:'right', weight:700});
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath(); ctx.moveTo(ax+18, ay+112); ctx.lineTo(ax+aw-18, ay+112); ctx.stroke();
+
+  txt('mean = Σ / N', ax+18, ay+142, {size:12, font:MONO, color:'#c7d5ee'});
+  txt(mean.toFixed(1) + ' DN', ax+aw-18, ay+146, {size:24, font:MONO, color:'#ff9c9c', align:'right', weight:700});
+
+  // 四通道均值（2×2）
+  CHLIST.forEach((ch,i)=>{
+    const x = 550 + (i%2)*194;
+    const y = 344 + Math.floor(i/2)*94;
+    const ap = ease(seg(p, 0.34 + i*0.07, 0.50 + i*0.07));
+    if(ap <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(x, y, 186, 84, {r:12, fill: withA(CH[ch],0.08), stroke: withA(CH[ch],0.32)});
+    txt(ch, x+16, y+30, {size:15, font:MONO, weight:700, color:CH[ch]});
+    txt('mean', x+16, y+52, {size:10, font:MONO, color:C.faint});
+    txt(state.means[ch].toFixed(1), x+144, y+32, {size:17, font:MONO, align:'right', color:'#e9f1ff', weight:700});
+    txt('DN', x+152, y+32, {size:9.5, font:MONO, color:C.faint});
+    const sp = SPEC[ch];
+    txt('Spec ' + sp.min + ' ~ ' + sp.max, x+170, y+56, {size:9.5, font:MONO, align:'right', color:C.faint});
+    ctx.restore();
+  });
+
+  txt('四个通道各起一个线程同时算（MultiThread::get_roi_channel_mean），结果写回 4 个 mean 变量。', 40, 558,
+      {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 07 · 判 Spec
+   ===================================================================== */
+function drawSpec(p){
+  header(6, '判 Spec', '四个均值逐一比对上下限，任何一项越界就 Fail');
+
+  const x0 = 280, x1 = 760;
+  const mapX = v => x0 + (v/255)*(x1-x0);
+  const rows = [160, 250, 340, 430];
+  const j = judge();
+
+  // 误差上下限参考线
+  [ {v:SPEC.errorMin, label:'error_MIN 50'}, {v:SPEC.errorMax, label:'error_MAX 241'} ]
+  .forEach((e,k)=>{
+    const x = mapX(e.v);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,95,126,0.35)';
+    ctx.setLineDash([4,5]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, 138); ctx.lineTo(x, 476); ctx.stroke();
+    ctx.restore();
+    txt(e.label, x + (k===0?6:-6), 132, {size:10, font:MONO,
+      color:'rgba(255,140,160,0.85)', align: k===0?'left':'right'});
+  });
+
+  CHLIST.forEach((ch,i)=>{
+    const y = rows[i];
+    const sp = SPEC[ch];
+    const v = state.means[ch];
+    const inRange = (v >= sp.min && v <= sp.max);
+    const animated = lerp(0, v, ease(seg(p, 0.08 + i*0.07, 0.40 + i*0.07)));
+    const mx = mapX(animated);
+
+    // 名称
+    txt(ch, 64, y+9, {size:26, font:MONO, weight:700, color:CH[ch]});
+    txt('Min ' + sp.min + '  Max ' + sp.max, 64, y+30, {size:10.5, font:MONO, color:C.faint});
+
+    // 轴
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+
+    // 刻度
+    [0,50,100,150,200,255].forEach(t=>{
+      const x = mapX(t);
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.beginPath(); ctx.moveTo(x, y-4); ctx.lineTo(x, y+4); ctx.stroke();
+      if(i === 3) txt(t, x, y+20, {size:9.5, font:MONO, color:C.faint, align:'center'});
+    });
+
+    // Spec 区间
+    const bx = mapX(sp.min), bw = mapX(sp.max) - mapX(sp.min);
+    ctx.save();
+    ctx.fillStyle = withA(CH[ch], 0.16);
+    rr(bx, y-9, bw, 18, 9); ctx.fill();
+    ctx.strokeStyle = withA(CH[ch], 0.45);
+    ctx.lineWidth = 1;
+    rr(bx, y-9, bw, 18, 9); ctx.stroke();
+    ctx.restore();
+
+    // 标记
+    ctx.save();
+    if(animated > 0.2){
+      ctx.shadowColor = inRange ? withA(CH[ch],0.9) : 'rgba(255,95,126,0.9)';
+      ctx.shadowBlur = 16;
+    }
+    ctx.fillStyle = inRange ? CH[ch] : '#ff5f7e';
+    ctx.beginPath();
+    ctx.moveTo(mx, y-8); ctx.lineTo(mx-7, y-20); ctx.lineTo(mx+7, y-20);
+    ctx.closePath(); ctx.fill();
+    ctx.fillRect(mx-1.2, y-8, 2.4, 16);
+    ctx.restore();
+
+    // 数值
+    txt(v.toFixed(1), 824, y+6, {size:14, font:MONO, weight:700, align:'right',
+      color: inRange ? '#dbe7ff' : '#ff9db0'});
+    txt('DN', 830, y+6, {size:9.5, font:MONO, color:C.faint});
+
+    // PASS / FAIL
+    const px = 860;
+    card(px, y-13, 78, 26, {r:8,
+      fill: inRange ? 'rgba(61,220,151,0.12)' : 'rgba(255,95,126,0.14)',
+      stroke: inRange ? 'rgba(61,220,151,0.5)' : 'rgba(255,95,126,0.55)'});
+    txt(inRange ? 'PASS' : 'FAIL', px+39, y+5, {size:11, font:MONO, align:'center', weight:700,
+      color: inRange ? C.pass : C.fail});
+  });
+
+  // 判定条
+  const by = 508;
+  const ap = ease(seg(p, 0.45, 0.66));
+  ctx.save();
+  ctx.globalAlpha = ap;
+  card(40, by, 920, 78, {r:14,
+    fill: j.pass ? 'rgba(61,220,151,0.10)' : 'rgba(255,95,126,0.10)',
+    stroke: j.pass ? 'rgba(61,220,151,0.45)' : 'rgba(255,95,126,0.45)',
+    glow: j.pass ? 'rgba(61,220,151,0.35)' : 'rgba(255,95,126,0.35)'});
+  txt(j.pass ? 'is_passed = true' : 'is_passed = false', 62, by+30,
+      {size:15, font:MONO, weight:700, color: j.pass ? C.pass : C.fail});
+  txt('bin = ' + j.bin + '   grade = ' + j.grade, 62, by+58,
+      {size:13, font:MONO, color:'#dbe7ff'});
+  txt(j.reason, 330, by+44, {size:12, color:'#c7d5ee'});
+  ctx.restore();
+
+  txt('分支顺序：先看 < error_MIN（161），再看 > error_MAX（162），最后才用配置的 bin_response。', 40, 608,
+      {size:11.5, color:C.faint});
+}
+
+/* =====================================================================
+   STEP 08 · 汇总
+   ===================================================================== */
+function drawResult(p){
+  header(7, '归档', '一个 Subitem_Result 进入清单，最后汇总成一颗芯片的 bin');
+
+  const j = judge();
+
+  // 结果对象
+  const cx = 50, cy = 150, cw = 286, chh = 250;
+  card(cx, cy, cw, chh, {fill:'rgba(110,168,254,0.07)', stroke:'rgba(110,168,254,0.35)', r:14});
+  txt('Subitem_Result', cx+18, cy+28, {size:12.5, font:MONO, color:C.accent, weight:700});
+  txt('Light_Response 的返回值', cx+18, cy+46, {size:10.5, color:C.faint});
+
+  const fields = [
+    ['name', '"Light_Response"'],
+    ['is_passed', j.pass ? 'true' : 'false'],
+    ['bin', String(j.bin)],
+    ['grade', String(j.grade)],
+    ['g_msg', 'true']
+  ];
+  fields.forEach((f,i)=>{
+    const y = cy + 78 + i*32;
+    txt(f[0], cx+18, y, {size:11, font:MONO, color:'#ffd166'});
+    txt(f[1], cx+cw-18, y, {size:11, font:MONO, color:'#dbe7ff', align:'right'});
+  });
+
+  // 箭头
+  arrow(cx+cw+6, cy+chh/2, cx+cw+34, cy+chh/2, 'rgba(140,170,230,0.55)', 1.8);
+
+  // 清单
+  const lx = 374, ly = 138, lw = 292, lh = 432;
+  card(lx, ly, lw, lh, {fill:'rgba(255,255,255,0.022)', stroke:'rgba(255,255,255,0.08)', r:14});
+  txt('items_results', lx+18, ly+26, {size:12, font:MONO, color:'#dbe7ff', weight:700});
+  txt('std::vector', lx+lw-18, ly+26, {size:10, font:MONO, color:C.faint, align:'right'});
+
+  const items = [
+    {n:'Light_Response', hot:true, pass:j.pass},
+    {n:'Relative_Illumination', pass:true},
+    {n:'Non_Uniformity', pass:true},
+    {n:'ImageDirt', pass:true},
+    {n:'Deadrow_Deadcol', pass:true},
+    {n:'Color_Ratio ×N', pass:true},
+    {n:'PKG_Test', pass:true},
+    {n:'ROI_PRNU', pass:true}
+  ];
+  items.forEach((it,i)=>{
+    const ap = ease(seg(p, 0.08 + i*0.055, 0.24 + i*0.055));
+    if(ap <= 0) return;
+    const y = ly + 42 + i*46;
+    const failed = (i === 0) && !j.pass;
+    ctx.save();
+    ctx.globalAlpha = ap;
+    card(lx+14, y, lw-28, 38, {r:9,
+      fill: it.hot ? (failed ? 'rgba(255,95,126,0.16)' : 'rgba(61,220,151,0.14)') : 'rgba(255,255,255,0.035)',
+      stroke: it.hot ? (failed ? 'rgba(255,95,126,0.55)' : 'rgba(61,220,151,0.45)') : 'rgba(255,255,255,0.07)'});
+    txt(it.n, lx+28, y+24, {size:11, font:MONO,
+      color: it.hot ? '#eaf2ff' : '#9fb0d0', weight: it.hot?700:400});
+    txt(it.hot ? (failed?'FAIL':'PASS') : 'PASS', lx+lw-28, y+24, {size:10, font:MONO, align:'right',
+      color: (it.hot && failed) ? C.fail : C.pass, weight:700});
+    ctx.restore();
+  });
+
+  // 汇总函数
+  const fx = 702, fy = 150, fw = 258;
+  card(fx, fy, fw, 216, {fill:'rgba(196,181,253,0.07)', stroke:'rgba(196,181,253,0.35)', r:14});
+  txt('Calculate_The_Final_Bin()', fx+16, fy+26, {size:11, font:MONO, color:'#c4b5fd', weight:700});
+  const lines = [
+    'final = {bin:1, grade:0}',
+    'for (item : items) {',
+    '  if (g_msg == false) skip;',
+    '  if (!passed &&',
+    '      grade > final.grade)',
+    '     final = item;',
+    '}'
+  ];
+  lines.forEach((ln,i)=> txt(ln, fx+16, fy+54+i*22, {size:10, font:MONO, color:'#b8c6e2'}));
+
+  // 最终结果
+  const ry = 386;
+  card(fx, ry, fw, 140, {r:14,
+    fill: j.pass ? 'rgba(61,220,151,0.10)' : 'rgba(255,95,126,0.10)',
+    stroke: j.pass ? 'rgba(61,220,151,0.45)' : 'rgba(255,95,126,0.45)',
+    glow: j.pass ? 'rgba(61,220,151,0.35)' : 'rgba(255,95,126,0.35)'});
+  txt('return code = bin', fx+16, ry+28, {size:11, font:MONO, color:C.dim});
+  txt(String(j.bin), fx+16, ry+80, {size:40, font:MONO, weight:700,
+    color: j.pass ? C.pass : C.fail});
+  txt(j.pass ? 'PASS · 良品' : 'FAIL · grade ' + j.grade, fx+fw-16, ry+80, {size:12, font:MONO,
+    align:'right', color: j.pass ? C.pass : C.fail});
+
+  txt('没开启（g_msg=false）的子项会被 skip：这就是 Light_Response 在 open_mode≠1 时返回 g_msg=false 的原因。',
+      40, 604, {size:11, color:C.faint});
+}
+
+/* =====================================================================
+   场景定义
+   ===================================================================== */
+const SCENES = [
+  {
+    kicker:'总览', dur:11, draw:drawOverview,
+    caption:p => p < 0.35 ? '① 一张 3840×2160 的 Bayer 白帧进入算法'
+             : p < 0.55 ? '② Split_Channel 把马赛克拆成 R / Gr / Gb / B 四个平面'
+             : p < 0.78 ? '③ 本行代码在这里执行：Light_Response 取 ROI 均值并比对 Spec'
+             : '④ 所有子项结果汇总成最终 bin —— 一颗芯片的「体检结论」',
+    html: `
+      <h3>这一行在流水线的哪里？</h3>
+      <p>它不是孤立的函数调用，而是<b>白帧测试（Bright Test）</b>流水线上的一站。一次 Bright Test 会依次跑十几个子项，这里只有第一项。</p>
+      <ol>
+        <li><b>RAW 白帧</b>：点亮均匀光源，采一帧 3840×2160 的 Bayer 原始图。</li>
+        <li><b>Split_Channel</b>：拆成 R / Gr / Gb / B 四个 1920×1080 平面。</li>
+        <li><b>Light_Response</b>：中心 ROI 四个通道的平均亮度（DN）与 Spec 比较。</li>
+        <li><b>Calculate_The_Final_Bin</b>：汇总所有子项，取最严重的失败项作为最终 bin。</li>
+      </ol>
+      <pre><code>// BrightTest::TestFunc_Normal_Bright_ALL()  BrightTest.cpp
+std::vector&lt;Subitem_Result&gt; items_results;
+items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
+// ... 还有十几个子项 ...
+Subitem_Result bright_result =
+    Algorithm_all[site_].Calculate_The_Final_Bin(items_results);
+int code = bright_result.bin;      // 返回给机台分选</code></pre>
+      <p class="tip">所以这一行的返回值只是「一项体检结论」，不是最终分选结果。</p>
+    `
+  },
+  {
+    kicker:'拆解代码', dur:15, draw:drawCode,
+    caption:p => '按语序拆开：' + STEPS[Math.min(4, Math.floor(p*5))].name,
+    html: `
+      <h3>一行代码，五个部件</h3>
+      <ul>
+        <li><code>items_results</code>：<code>std::vector&lt;Subitem_Result&gt;</code>，装整帧所有子项的结果。</li>
+        <li><code>push_back(...)</code>：把结果追加到末尾，返回 <code>void</code>。</li>
+        <li><code>Algorithm_all[site_]</code>：第 <code>site_</code> 号工位的算法对象（全局数组，4 个工位）。</li>
+        <li><code>Light_Response(test_manage)</code>：真正的计算，参数全在 <code>ParamManage</code> 里。</li>
+        <li>返回 <code>Subitem_Result{name, is_passed, bin, grade, g_msg}</code>。</li>
+      </ul>
+      <pre><code>class Subitem_Result {          // algorithmitems.h:98
+public:
+    std::string name;   // 子项名
+    bool is_passed;     // 通过?
+    int  bin;           // 失效代码
+    int  grade;         // 严重程度
+    bool g_msg;         // false = 不参与汇总
+};</code></pre>
+      <p class="tip">记住这 5 个字段，后面所有判定都在填这张表。</p>
+    `
+  },
+  {
+    kicker:'多工位', dur:13, draw:drawSites,
+    caption:p => p < 0.32 ? '4 个工位各自持有一个 AlgorithmItems 对象'
+             : p < 0.55 ? '测试任务到达 site_ = 2 号工位'
+             : p < 0.82 ? '该工位用自己缓冲里的图像执行 Light_Response'
+             : '结果对象被 push_back 进本工位的结果清单',
+    html: `
+      <h3>为什么是 Algorithm_all[site_]？</h3>
+      <p>这是一台「一拖四」的测试机台：4 个探针工位同时测 4 颗芯片。</p>
+      <pre><code>// FTAlgorithm.cpp:29
+AlgorithmItems Algorithm_all[Parallel_num];   // Parallel_num = 4
+// 每个工位：Algorithm_all[i].set_site(i)</code></pre>
+      <p><code>site_</code> 就是工位号。<b>全局数组 + 工位下标</b>让 4 个工位共用同一套代码，但各用各的图像缓冲（<code>g_buf_r_ / gr_ / gb_ / b_</code>）和日志。</p>
+      <p class="tip">排查现场问题：如果 <code>site_</code> 和机台通道对不上，就会拿别的工位的图来算 —— 现象是「图像正常但结果乱飞」。</p>
+    `
+  },
+  {
+    kicker:'分通道', dur:16, draw:drawSplit,
+    caption:p => p < 0.2 ? 'RAW 图里每个像素只有一个颜色（Bayer 马赛克）'
+             : p < 0.75 ? 'Split_Channel 按 2×2 周期把像素搬进四个平面'
+             : '拆完后每个平面是 W/2 × H/2：3840×2160 → 4 × 1920×1080',
+    html: `
+      <h3>为什么要先分通道？</h3>
+      <p>传感器输出的是 Bayer 原始图：每个像素前面只盖了一种颜色的滤光片，<code>RG / GB</code> 两个绿点位置不同（Gr、Gb）。</p>
+      <pre><code>// TestItem::split_channel()  testitems.cpp:57
+for (int i=0; i&lt;h; i+=2)
+  for (int j=0; j&lt;w; j+=2) {
+    *pb1++ = raw[w*i + j];       // R
+    *pb2++ = raw[w*i + j+1];     // Gr
+  }
+// 奇数行同理 → Gb / B</code></pre>
+      <p>拆完后每个平面是 <b>W/2 × H/2</b>。之后所有 ROI、均值都在这个半尺寸平面上算。</p>
+      <p class="tip">关键坐标概念：配置文件里 <code>ROI_X=768</code> 是在 <b>1920 宽的平面</b>上量的，不是 3840 的 RAW。<code>bayer</code> 配错（RG/GB）会导致 R 和 B 互换，值就会整体错位。</p>
+    `
+  },
+  {
+    kicker:'取 ROI', dur:12, draw:drawROI,
+    caption:p => p < 0.22 ? '在通道平面上划出中心 ROI'
+             : p < 0.6 ? 'ROI 来自 LightResponse.data：x=768 y=432 w=384 h=216'
+             : '只统计矩形内的像素，边缘暗角交给别的子项',
+    html: `
+      <h3>ROI：只看中心，不看边缘</h3>
+      <p>镜头中心照度最均匀，最能代表标称响应；边缘有暗角（roll-off），由 Relative Illumination 子项单独卡控。</p>
+      <pre><code>test_roi_channel_mean(w, h,
+    roi_x, roi_y, roi_w, roi_h, ...);
+
+// AlgorithmFuncs::GetROIMean()  cpalgorithmraw.cpp:7949
+if (line+win_h &gt;= height || col+win_w &gt;= width)
+    return -1;                     // 防呆：越界 → -1
+for (...) mean_t += pData[width*i+j];
+return mean_t/cnt;</code></pre>
+      <p class="tip">越界很危险：函数返回 <code>-1</code>，均值 -1 必然越过下限，若 <code>error_min_open</code> 打开就直接落 <b>bin 161</b>。看到「明明图像很亮却报 161」，先查 ROI 是否越界。</p>
+    `
+  },
+  {
+    kicker:'算均值', dur:14, draw:drawMean,
+    caption:p => p < 0.4 ? '逐像素累加 Σ DN 与计数 N'
+             : p < 0.7 ? 'mean = Σ / N，四个通道各算一次'
+             : '四个均值就是这一子项的「测量值」',
+    html: `
+      <h3>DN 是什么？</h3>
+      <p>DN（Digital Number）就是像素的灰度量化值。本例是 8 bit，范围 0~255；10/12 bit 则是 0~1023 / 0~4095。</p>
+      <pre><code>// 四个通道各开一个线程，互不等待
+MultiThread::get_roi_channel_mean
+    -&gt; GetROIMean(data, w, h, x, y, w, h);
+
+mean = Σ DN / N</code></pre>
+      <p>均值代表<b>整体响应灵敏度</b>：偏暗说明光电转换弱 / 曝光不足，偏亮说明增益过大或接近饱和。</p>
+      <p class="tip">均值会「稀释」个别坏点：一个 255 的亮点平均到几十万像素里几乎看不出来。所以坏点由 Pixel_Defect、DAG 等子项负责 —— 每个子项各管一件事。</p>
+    `
+  },
+  {
+    kicker:'判 Spec', dur:14, draw:drawSpec,
+    caption:p => {
+      const j = judge();
+      return p < 0.55 ? '每个均值与 Min / Max 比较，任一越界即 is_passed = false'
+           : (j.pass ? '判定：PASS → bin 保持初值 1，grade 0'
+                     : '判定：FAIL → bin = ' + j.bin + '，grade = ' + j.grade);
+    },
+    html: `
+      <h3>判定树（代码里的分支顺序）</h3>
+      <pre><code>if (mean_r &gt; max_r || mean_r &lt; min_r ||
+    ... 四个通道任一越界 ...) {
+    res.is_passed = false;
+
+    if (error_min_open &amp;&amp; (... &lt; error_min))
+        { bin = 161; grade = 9; }       // 死黑 / 不响应
+    else if (error_max_open &amp;&amp; (... &gt; error_max))
+        { bin = 162; grade = 9; }       // 饱和 / 过曝
+    else
+        { bin = bin_response;           // 配置值，本例 2201
+          grade = grade_response; }     // 本例 9
+}</code></pre>
+      <p>本例配置：R/B 的 80~220，Gr/Gb 的 144~216，<code>error_MIN=50</code>、<code>error_MAX=241</code>、<code>bin_response=2201</code>。</p>
+      <p class="tip">先判 161 再判 162：即使某个通道同时满足「低于 50」和「另一通道高于 241」，也只会落 <b>161</b>。这是代码顺序决定的，不是巧合。</p>
+    `
+  },
+  {
+    kicker:'归档汇总', dur:15, draw:drawResult,
+    caption:p => p < 0.35 ? 'Light_Response 返回的 Subitem_Result 被 push_back 进清单'
+             : p < 0.68 ? '十几个子项陆续进清单，各带自己的 bin / grade'
+             : 'Calculate_The_Final_Bin 取 grade 最大的失败项 → BrightTest 返回它的 bin',
+    html: `
+      <h3>最后，bin 是怎么定下来的？</h3>
+      <pre><code>Subitem_Result final_result("The initial value", true, 1, 0, true);
+for (item : items_results) {
+    if (item.g_msg == false) continue;          // 未开启 → 跳过
+    if (!item.is_passed &amp;&amp;
+        item.grade &gt; final_result.grade)        // 只挑更严重的
+        final_result = item;
+}
+return bright_result.bin;                       // BrightTest.cpp:79</code></pre>
+      <ul>
+        <li>全通过 → 返回初值 <code>bin=1, grade=0</code>（良品）。</li>
+        <li>有失败 → 取 <b>grade 最大</b>的那一项的 bin；同级取先出现的。</li>
+        <li><code>g_msg=false</code>（未开启 / 版本不匹配）的子项不参与竞争。</li>
+      </ul>
+      <p class="tip">Light_Response 在 <code>response_open_mode≠1</code> 或版本号不是 <code>LightResponse_V1.0</code> 时返回 <code>g_msg=false</code>：不是「通过」，而是「不表态」。现场查「为什么这项没卡住」先看这里。</p>
+    `
+  }
+];
+
+/* =====================================================================
+   渲染 / 控制
+   ===================================================================== */
+let dpr = 1;
+
+function resize(){
+  const r = canvas.getBoundingClientRect();
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = SCENES[state.scene];
+  sc.draw(clamp01(state.t / sc.dur));
+  const cap = sc.caption(clamp01(state.t / sc.dur));
+  const el = document.getElementById('caption');
+  if(el.textContent !== cap) el.textContent = cap;
+}
+
+let last = performance.now();
+function tick(now){
+  const dt = Math.min(0.05, (now - last)/1000);
+  last = now;
+  const sc = SCENES[state.scene];
+  if(state.playing){
+    state.t += dt * state.speed;
+    if(state.t >= sc.dur){
+      if(state.scene < SCENES.length - 1){
+        gotoScene(state.scene + 1, true);
+      } else {
+        state.t = sc.dur;
+        state.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  const sc = SCENES[state.scene];
+  const overall = (state.scene + clamp01(state.t/sc.dur)) / SCENES.length;
+  document.getElementById('bar').style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  btn.textContent = state.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+function gotoScene(i, autoplay){
+  state.scene = Math.max(0, Math.min(SCENES.length-1, i));
+  state.t = 0;
+  state.playing = autoplay !== false;
+  syncPlayButton();
+  document.getElementById('explain').innerHTML = SCENES[state.scene].html;
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === state.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+}
+
+/* ---------- 章节按钮 ---------- */
+const chaptersEl = document.getElementById('chapters');
+SCENES.forEach((s,i)=>{
+  const b = document.createElement('button');
+  b.className = 'chapter';
+  b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') + '</span><span class="name">' + s.kicker + '</span>';
+  b.addEventListener('click', ()=> gotoScene(i, true));
+  chaptersEl.appendChild(b);
+});
+
+/* ---------- 控制器 ---------- */
+document.getElementById('play').addEventListener('click', ()=>{
+  if(!state.playing && state.t >= SCENES[state.scene].dur - 0.01) state.t = 0;
+  state.playing = !state.playing;
+  syncPlayButton();
+});
+document.getElementById('prev').addEventListener('click', ()=> gotoScene(state.scene-1, true));
+document.getElementById('next').addEventListener('click', ()=> gotoScene(state.scene+1, true));
+document.getElementById('replay').addEventListener('click', ()=> gotoScene(0, true));
+
+document.querySelectorAll('.speed button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.speed = parseFloat(b.dataset.speed);
+    document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+  });
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if(e.code === 'Space'){ e.preventDefault(); document.getElementById('play').click(); }
+  if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(state.scene+1, true); }
+  if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(state.scene-1, true); }
+});
+
+/* ---------- 滑杆 ---------- */
+const slidersEl = document.getElementById('sliders');
+CHLIST.forEach(ch=>{
+  const lab = document.createElement('label');
+  lab.className = 'slider';
+  lab.style.setProperty('--c', CH[ch]);
+  lab.innerHTML =
+    '<span class="ch">' + ch + '</span>' +
+    '<input type="range" min="0" max="255" step="0.1" value="' + state.means[ch] + '" data-ch="' + ch + '">' +
+    '<output>' + state.means[ch].toFixed(1) + '</output>';
+  slidersEl.appendChild(lab);
+  const input = lab.querySelector('input');
+  const out = lab.querySelector('output');
+  input.addEventListener('input', ()=>{
+    state.means[ch] = parseFloat(input.value);
+    out.textContent = state.means[ch].toFixed(1);
+  });
+});
+
+const PRESETS = [
+  { n:'正常片',   v:{R:182.4, Gr:196.7, Gb:193.2, B:171.8} },
+  { n:'偏暗',     v:{R:96.5,  Gr:92.1,  Gb:90.8,  B:74.3} },
+  { n:'极暗 <50', v:{R:42.1,  Gr:45.6,  Gb:43.9,  B:38.2} },
+  { n:'偏亮',     v:{R:231.2, Gr:228.4, Gb:229.7, B:225.5} },
+  { n:'过曝 >241',v:{R:248.6, Gr:245.1, Gb:246.9, B:243.3} },
+  { n:'只有 R 超限', v:{R:228.9, Gr:196.2, Gb:192.7, B:118.4} }
+];
+const presetsEl = document.getElementById('presets');
+PRESETS.forEach(p=>{
+  const b = document.createElement('button');
+  b.textContent = p.n;
+  b.addEventListener('click', ()=>{
+    CHLIST.forEach(ch=>{ state.means[ch] = p.v[ch]; });
+    document.querySelectorAll('.slider input').forEach(inp=>{
+      const ch = inp.dataset.ch;
+      inp.value = state.means[ch];
+      inp.parentElement.querySelector('output').textContent = state.means[ch].toFixed(1);
+    });
+  });
+  presetsEl.appendChild(b);
+});
+
+/* ---------- 启动 ---------- */
+if(window.ResizeObserver){
+  new ResizeObserver(resize).observe(canvas);
+} else {
+  window.addEventListener('resize', resize);
+}
+resize();
+gotoScene(0, true);
+requestAnimationFrame(tick);
+
+/* 调试钩子（截图 / 逐帧检查用，不影响播放） */
+window.__LR = { state:state, SCENES:SCENES, render:render, gotoScene:gotoScene };
+})();
+</script>
+</body>
+</html>
