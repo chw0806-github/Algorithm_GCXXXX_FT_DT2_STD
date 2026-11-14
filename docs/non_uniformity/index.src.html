@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Non_Uniformity 动画讲解 · 图像传感器 FT 测试</title>
+<link rel="stylesheet" href="../shared/player.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 不均匀性（Non_Uniformity）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>NonUniformity.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">① 每个通道分格，观察局部亮度波动</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head">
+          <h2>模拟一个格子的局部不均匀性</h2>
+          <span>改变左上角示例格子的值，观察均值、极值与镜像差</span>
+        </div>
+        <div class="sliders two" id="sliders"><label class="slider" style="--c:#ffd166"><span class="ch">格</span><input id="cellvalue" type="range" min="0" max="100" step="1" value="12"><output id="cellout">12%</output></label></div>
+        <div class="presets" id="presets"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <div class="explain" id="explain">
+        <h3>这一页在讲什么</h3>
+        <p><code>Non_Uniformity</code> 把四个颜色通道各自分格：每格计算标准差除以均值，得到局部波动百分比；再比较格子的平均、最大及对称位置差异，按配置判断是否超限。</p>
+        <p class="cue">动画无法启动时，可看<a href="storyboard.html">不依赖脚本的静态分镜</a>。</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    教学示意：只展示一个通道的 4×3 网格；真实参数由 <code>NonUniformity.data</code> 决定。
+    示例配置为 GC8613T 白帧：RAW 格大小 96×54；数据与像素分布均非产线实测。
+  </footer>
+</div>
+
+<script src="../shared/player.js"></script>
+<script>
+/* 教学网格只模拟一个通道的格子百分比，不模拟原始像素。 */
+const state = AlgoAnim.state;
+state.cell = 12;
+const COLS=4, ROWS=3, LIMITS=[5,30,50,50];
+function vals(){ const a=Array(COLS*ROWS).fill(2); a[0]=state.cell; return a; }
+function metrics(){
+  const a=vals(); let mirror=0, vertical=0;
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const v=a[y*COLS+x];
+    mirror=Math.max(mirror,Math.abs(v-a[y*COLS+(COLS-1-x)]));
+    vertical=Math.max(vertical,Math.abs(v-a[(ROWS-1-y)*COLS+x]));
+  }
+  const m=[a.reduce((s,v)=>s+v,0)/a.length,Math.max.apply(null,a),mirror,vertical];
+  const failed=m.map((v,i)=>v>LIMITS[i]);
+  // 这份配置四项 grade 均为 6。C++ 以严格大于更新 grade，相等时保留先触发项。
+  const first=failed.indexOf(true);
+  return {m,failed,bin:first<0?1:2203+first,grade:first<0?0:6};
+}
+function panel(x,y,w,h,title,lines,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.20)'});
+  txt(title,x+20,y+33,{size:16,weight:700,color:color||C.accent});
+  lines.forEach((s,i)=>txt(s,x+20,y+67+i*28,{size:14,color:i===0?C.ink:C.dim}));
+}
+function grid(mode,p){
+  const a=vals(), x0=65, y0=158, w=100, h=76, gap=8;
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    let i=y*COLS+x, hot=(i===0 || (mode==='mirror' && i===3) || (mode==='vertical' && i===8));
+    let alpha=clamp01((p*1.6)-(i*.035));
+    ctx.save(); ctx.globalAlpha=alpha;
+    card(x0+x*(w+gap),y0+y*(h+gap),w,h,{fill:hot?'rgba(255,209,102,.16)':'rgba(110,168,254,.07)',stroke:hot?'rgba(255,209,102,.7)':C.line});
+    txt(a[i].toFixed(0)+'%',x0+x*(w+gap)+w/2,y0+y*(h+gap)+45,{size:20,align:'center',weight:700,color:hot?C.accent2:C.ink});
+    ctx.restore();
+  }
+  txt('示意网格：4 × 3；数值是各格的局部不均匀性',65,435,{size:12,color:C.dim});
+}
+function drawIntro(p){
+  header(0,'定位','白帧的第三站：从“亮不亮”转向“局部波动大不大”');
+  panel(65,158,400,230,'前两项',['Light_Response：中心区域的亮度','Relative_Illumination：角落相对中心','两项关注亮度及空间衰减'],C.accent);
+  panel(535,158,400,230,'Non_Uniformity',['每个通道分格并计算格内波动','汇总平均、最大、左右及上下对称差','任一指标超过配置上限即可判失败'],C.accent2);
+  arrow(474,270,524,270,C.accent,2);
+  txt('下面展示的数字都是教学示意，不代表产线测量。',65,460,{size:14,color:C.dim,alpha:ease(seg(p,.1,.5))});
+}
+function drawGrid(p){
+  header(1,'分通道与分格','先拆四个颜色通道，再给每张通道图铺上格子');
+  grid('grid',p);
+  panel(545,158,390,258,'真实配置与示意图',['RAW 格大小：96 × 54 像素','每通道图及格宽、高均除以 2','通道内格子为 48 × 27 像素','四通道分别启动线程计算','完整格数量按整数除法计算'],C.accent);
+  txt('动画网格并非实际网格数量',545,455,{size:13,color:C.dim});
+}
+function drawCell(p){
+  header(2,'计算每格','每个格子：先求平均亮度和标准差');
+  grid('grid',p);
+  panel(545,158,390,260,'格内局部不均匀性',['例如：均值 200，标准差 24','24 ÷ 200 × 100 = 12%','标准差是格内像素的总体标准差','均值 ≤ 0.001 时分母取 0.001'],C.accent2);
+  txt('数值越大：该格内部像素波动越大',545,455,{size:13,color:C.dim});
+}
+function drawSummary(p){
+  header(3,'平均与最大','把所有格子的百分比，汇总成两个指标');
+  grid('grid',p); const m=metrics().m;
+  panel(545,158,390,260,'当前示意计算',['所有格子平均：'+m[0].toFixed(2)+'%','单格最大值：'+m[1].toFixed(2)+'%','分别与 5% 和 30% 比较','记录最大值的位置（格索引）'],C.accent);
+}
+function drawMirror(p){
+  header(4,'左右对称','比较左右镜像格子的“不均匀性”，不是比较亮度');
+  grid('mirror',p); const m=metrics().m;
+  panel(545,158,390,255,'左右镜像差',['左上与右上：|'+state.cell+' − 2| = '+Math.abs(state.cell-2)+'','所有镜像格差取最大：'+m[2].toFixed(2),'与配置上限 50 比较','记录最大差对应的格索引'],C.accent2);
+}
+function drawVertical(p){
+  header(5,'上下对称','再比较上下镜像格子，找出最大差');
+  grid('vertical',p); const m=metrics().m;
+  panel(545,158,390,255,'上下镜像差',['左上与左下：|'+state.cell+' − 2| = '+Math.abs(state.cell-2),'所有上下格差取最大：'+m[3].toFixed(2),'与配置上限 50 比较','左右差和上下差是两套独立指标'],C.accent2);
+}
+function drawResult(p){
+  header(6,'判定与汇总','四项依次检查，任一通道任一指标超限即失败');
+  const r=metrics(), names=['格均值','单格最大','左右镜像差','上下镜像差'];
+  for(let i=0;i<4;i++){
+    const y=145+i*78; card(65,y,560,62,{fill:r.failed[i]?'rgba(255,95,126,.09)':'rgba(61,220,151,.06)'});
+    txt(names[i],85,y+38,{size:16,weight:700});
+    txt(r.m[i].toFixed(2)+' / '+LIMITS[i],330,y+38,{size:17,color:C.ink});
+    txt(r.failed[i]?'超限':'通过',535,y+38,{size:15,color:r.failed[i]?C.fail:C.pass,weight:700});
+  }
+  panel(660,160,275,250,'示例结果',[r.bin===1?'PASS':'FAIL','bin  '+r.bin,'grade  '+r.grade,'其余通道假设全部通过'],r.bin===1?C.pass:C.fail);
+  txt('示例配置四项 grade 均为 6；同时超限时先触发项保留。',65,515,{size:13,color:C.dim});
+}
+const SCENES=[
+ {kicker:'定位',dur:11,draw:drawIntro,caption:()=> '① 白帧第三项：观察各通道局部波动，而非只看平均亮度',html:'<h3>先搞清在测什么</h3><p>白帧先后进入 <code>Light_Response</code>、<code>Relative_Illumination</code> 和 <code>Non_Uniformity</code>。本项检查通道图各格内部的像素波动。</p>'},
+ {kicker:'分格',dur:13,draw:drawGrid,caption:()=> '② 四个通道各自分格；图中 4×3 只是演示',html:'<h3>数据怎么来</h3><p><code>Split_Channel</code> 已得到 R、Gr、Gb、B 四张通道图。测试启动四个线程，各自将通道图划分为完整格子。</p><p>示例配置的 RAW 格大小是 96×54；通道图尺寸与格尺寸均除以 2，因此每个通道格是 48×27。</p>'},
+ {kicker:'格内波动',dur:14,draw:drawCell,caption:()=> '③ 单格不均匀性 = 格内标准差 ÷ 格内均值 × 100',html:'<h3>每格算什么</h3><p>每个格子先求像素均值，再求总体标准差；<code>标准差 / 均值 × 100</code> 得到该格的百分比。若均值不大于 0.001，计算分母使用 0.001。</p><p>示意格的均值为 200、标准差为 24，所以值是 12%。滑杆直接修改一个格子的百分比，并不模拟原始像素。</p>'},
+ {kicker:'汇总',dur:13,draw:drawSummary,caption:()=> '④ 计算全部格子的百分比平均值和单格最大值',html:'<h3>两个汇总指标</h3><p>一个通道内，对全部格子的百分比取算术平均，同时找出最大百分比及位置。示例配置中，四通道分别检查平均值是否大于 5、单格最大值是否大于 30。</p>'},
+ {kicker:'左右对称',dur:13,draw:drawMirror,caption:()=> '⑤ 左右镜像格的不均匀性做差，取绝对值中的最大值',html:'<h3>左右镜像差</h3><p>相同一行的左右对称格，比较它们的<b>局部不均匀性百分比</b>，不是直接比较像素亮度。所有绝对差取最大值，并记录位置；示例上限为 50。</p>'},
+ {kicker:'上下对称',dur:13,draw:drawVertical,caption:()=> '⑥ 上下镜像格做同样比较，取最大的绝对差',html:'<h3>上下镜像差</h3><p>比较相同一列的上下对称格，取不均匀性百分比差的绝对值中的最大值，记录位置；示例上限为 50。左右和上下是独立检查。</p>'},
+ {kicker:'判定',dur:15,draw:drawResult,caption:()=> '⑦ 任一指标超上限即失败；grade 控制本项 bin 的选择',html:'<h3>判定规则</h3><p>依次检查平均、最大、左右差和上下差；四个通道中任一超限即失败。<b>等于上限不算超限</b>，因为源码使用严格大于。</p><p>示例配置的 bin 依次是 2203、2204、2205、2206，grade 均为 6。若多项同时失败，后项只有 grade 严格更大才覆盖，因此同级时保留先触发项。最终还会与其他测试子项汇总。</p><p>版本不匹配或 open_mode 不为 1 时，此项不会正常参与有效判定。</p>'}
+];
+const slider=document.getElementById('cellvalue'), out=document.getElementById('cellout');
+slider.addEventListener('input',()=>{state.cell=Number(slider.value);out.textContent=state.cell+'%';AlgoAnim.render();});
+AlgoAnim.start({scenes:SCENES});
+</script>
+</body>
+</html>

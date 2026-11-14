@@ -29,6 +29,8 @@ JS_SAFE = JS.replace('</script>', '<\\/script>')
 PAGES = [
     (ROOT / 'light_response' / 'index.src.html',          ROOT / 'light_response' / 'index.html'),
     (ROOT / 'relative_illumination' / 'index.src.html',   ROOT / 'relative_illumination' / 'index.html'),
+    (ROOT / 'non_uniformity' / 'index.src.html',          ROOT / 'non_uniformity' / 'index.html'),
+    (ROOT / 'deadrow_deadcol_bright' / 'index.src.html', ROOT / 'deadrow_deadcol_bright' / 'index.html'),
     (ROOT / 'catalog.src.html',                            ROOT / 'index.html'),
 ]
 

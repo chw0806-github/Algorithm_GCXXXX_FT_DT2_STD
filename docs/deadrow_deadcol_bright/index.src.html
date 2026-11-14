@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deadrow_Deadcol_bright 动画讲解 · 图像传感器 FT 测试</title>
+<link rel="stylesheet" href="../shared/player.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 白帧坏行坏列（Deadrow_Deadcol_bright）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Deadrow_Deadcol_bright(test_manage));</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>LineDefect.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">① 白帧按通道检测异常行与列</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head">
+          <h2>模拟单条异常行与列</h2>
+          <span>假设两侧背景均值为 200，其他异常类型计数为 0</span>
+        </div>
+        <div class="sliders two" id="sliders">
+          <label class="slider" style="--c:#ffd166"><span class="ch">行</span><input id="rowval" type="range" min="180" max="220" step="1" value="200"><output id="rowout">200</output></label>
+          <label class="slider" style="--c:#6ea8fe"><span class="ch">列</span><input id="colval" type="range" min="180" max="220" step="1" value="200"><output id="colout">200</output></label>
+        </div>
+        <div class="presets" id="presets"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <div class="explain" id="explain">
+        <h3>这一页在讲什么</h3>
+        <p><code>Deadrow_Deadcol_bright</code> 在白帧的四个颜色通道中，分别检查行和列的亮度异常、DOL 与断线指标，再汇总计数并选择 bin。</p>
+        <p class="cue">动画无法启动时，可看<a href="storyboard.html">不依赖脚本的静态分镜</a>。</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    教学示意：基于 GC8613T 白帧 <code>LineDefect.data</code> 和 V1.0，默认背景值 200；非产线数据。
+    动画只模拟居中孤立行、列的比例差异，假设其他异常计数为零；实际算法还检查 DOL 和断线。
+  </footer>
+</div>
+
+<script src="../shared/player.js"></script>
+<script>
+/* 仅模拟两个孤立中心线，假设周围背景均为 200，DOL 与断线为 0。 */
+const state=AlgoAnim.state;
+state.row=200; state.col=200;
+function result(){
+  const rowDiff=Math.abs(state.row-200)/200, colDiff=Math.abs(state.col-200)/200;
+  const badRow=rowDiff>0.025, badCol=colDiff>0.03;
+  return {rowDiff,colDiff,badRow,badCol,bin:badCol?2208:(badRow?2210:1),grade:(badRow||badCol)?7:0};
+}
+function panel(x,y,w,h,title,lines,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.05)',stroke:'rgba(110,168,254,.22)'});
+  txt(title,x+22,y+34,{size:16,weight:700,color:color||C.accent});
+  lines.forEach((s,i)=>txt(s,x+22,y+72+i*30,{size:14,color:i===0?C.ink:C.dim}));
+}
+function sample(mode,p){
+  const x=70,y=155,w=410,h=260;
+  card(x,y,w,h,{fill:'rgba(110,168,254,.06)'});
+  for(let i=0;i<9;i++){
+    ctx.fillStyle=(i===4 && mode==='row')?'rgba(255,209,102,.7)':'rgba(110,168,254,.13)';
+    ctx.fillRect(x+18,y+20+i*24,w-36,18);
+  }
+  if(mode==='col'){
+    ctx.fillStyle='rgba(110,168,254,.76)';ctx.fillRect(x+195,y+18,22,h-36);
+  }
+  txt(mode==='col'?'列方向示意':'行方向示意',x+18,y+h+30,{size:13,color:C.dim});
+  const f=ease(seg(p,.04,.4));
+  txt('目标线',x+18,y+h-15,{size:13,color:C.ink,alpha:f});
+}
+function intro(p){
+  header(0,'定位','白帧中的线缺陷：不是单个坏点，而是一整行或列异常');
+  sample('row',p);
+  panel(540,155,390,260,'本项在做什么',['先得到 R / Gr / Gb / B 四通道','对每个通道分别检查行和列','同时检查线内波动和断线指标','汇总各通道计数，返回子项结果'],C.accent2);
+  txt('边缘线缺陷由另一个子项处理。',540,455,{size:13,color:C.dim});
+}
+function separate(p){
+  header(1,'分通道','四张通道图分别执行行检测与列检测');
+  const colors=[CH.R,CH.Gr,CH.Gb,CH.B];
+  ['R','Gr','Gb','B'].forEach((v,i)=>{
+    const x=65+i*225, alpha=ease(seg(p,i*.12,.45+i*.12));ctx.save();ctx.globalAlpha=alpha;
+    card(x,170,200,220,{fill:'rgba(110,168,254,.06)',stroke:colors[i]});
+    txt(v,x+100,223,{size:25,color:colors[i],align:'center',weight:700,font:MONO});
+    txt('按行统计',x+30,278,{size:15});txt('按列统计',x+30,320,{size:15});
+    txt('并行线程',x+30,358,{size:13,color:C.dim});ctx.restore();
+  });
+  txt('通道图的宽、高是原始 Bayer 图宽、高的一半。',65,455,{size:14,color:C.dim});
+}
+function row(p){
+  header(2,'检测行','目标行均值与上下邻近行均值比较');
+  sample('row',p);const r=result();
+  panel(540,155,390,300,'示意：目标行与背景',['目标行均值：'+state.row+'；邻近行：200','两侧各取 5 行算邻近均值','取两侧相对差异中的较大者','|'+state.row+' − 200| ÷ 200 = '+(r.rowDiff*100).toFixed(2)+'%','超过 2.5% 才记为异常行'],C.accent2);
+}
+function col(p){
+  header(3,'检测列','目标列均值与左右邻近列均值比较');
+  sample('col',p);const r=result();
+  panel(540,155,390,300,'示意：目标列与背景',['目标列均值：'+state.col+'；邻近列：200','左右各取 5 列算邻近均值','取两侧相对差异中的较大者','|'+state.col+' − 200| ÷ 200 = '+(r.colDiff*100).toFixed(2)+'%','超过 3.0% 才记为异常列'],C.accent);
+}
+function extra(p){
+  header(4,'其他线异常','除了整行整列差异，还检查线内波动和断线指标');
+  panel(65,160,405,265,'DOL：线内波动',['计算每一行或列像素标准差','超过通道各自的 DOL 阈值则计数','R / B 上限为 80','Gr / Gb 上限为 90'],C.accent2);
+  panel(530,160,405,265,'断线指标',['将线分为两半计算均值序列','检查连续线均值变化的二次差','示例阈值为 10','超过阈值时计数'],C.accent);
+  txt('这里仅展示判断思路；本页滑杆假设这两类计数为零。',65,470,{size:14,color:C.dim,alpha:ease(seg(p,.05,.35))});
+}
+function decision(p){
+  header(5,'选择 bin','异常计数决定是否失败，grade 决定后续覆盖');
+  const rows=[['异常列','2208','7'],['异常行','2210','7'],['DOL','2212','6'],['断线','2213','5']];
+  rows.forEach((v,i)=>{
+    let y=155+i*67;card(65,y,500,53,{fill:'rgba(110,168,254,.06)'});
+    txt(v[0],85,y+34,{size:15,weight:700});txt('bin '+v[1],285,y+34,{size:15});txt('grade '+v[2],415,y+34,{size:14,color:C.dim});
+  });
+  panel(605,155,330,270,'覆盖顺序',['先处理列，再处理行','接着处理 DOL 和断线','后项 grade 必须严格更大','行列同为 7，列先保留','表格是示例配置中的常见分支'],C.accent2);
+  txt('源码也有低等级 MA 分支；本示例 TA / MA 阈值相同，已触发时走上表分支。',65,485,{size:12,color:C.dim});
+}
+function finish(p){
+  header(6,'互动判定','拖动行、列均值，观察比例差异与示例 bin');
+  const r=result();
+  panel(65,155,400,270,'行检测',['邻近行均值：200','目标行均值：'+state.row,'比例差：'+(r.rowDiff*100).toFixed(2)+'%','上限：2.5%','结果：'+(r.badRow?'异常':'正常')],r.badRow?C.fail:C.pass);
+  panel(535,155,400,270,'列检测',['邻近列均值：200','目标列均值：'+state.col,'比例差：'+(r.colDiff*100).toFixed(2)+'%','上限：3.0%','结果：'+(r.badCol?'异常':'正常')],r.badCol?C.fail:C.pass);
+  txt((r.bin===1?'PASS':'FAIL')+'    bin '+r.bin+'    grade '+r.grade,65,488,{size:22,weight:700,color:r.bin===1?C.pass:C.fail});
+  txt('假设 DOL、断线与其他通道计数为 0；不模拟原始图像。',65,525,{size:13,color:C.dim});
+}
+const SCENES=[
+ {kicker:'定位',dur:11,draw:intro,caption:()=> '① 白帧中的行列异常按四个颜色通道分别检测',html:'<h3>在测试流程中的位置</h3><p><code>BrightTest.cpp</code> 调用 <code>Deadrow_Deadcol_bright</code>，传入已拆通道的白帧。它检查线缺陷；边缘线缺陷是另一个子项。</p>'},
+ {kicker:'分通道',dur:12,draw:separate,caption:()=> '② 四个通道分别处理，先做行检测，再做列检测',html:'<h3>四通道并行</h3><p>行检测和列检测分别启动 R、Gr、Gb、B 四个线程，并在返回前等待。传入通道图的宽高分别为 RAW 宽高的一半。</p><p>本文针对示例 <code>LineDefect.data</code> 的 V1.0；项目也支持 V1.1。</p>'},
+ {kicker:'检测行',dur:14,draw:row,caption:()=> '③ 比较每行均值和上下邻行均值的比例差',html:'<h3>怎么判断一行</h3><p>对每行计算均值；前后各取 <code>radius=5</code> 行求邻近均值，计算两侧相对差并取最大。超过该通道阈值就累加异常行。</p><p>示例四通道 TA 行阈值都是 0.025，即 2.5%。边缘邻行不足时源码会用当前行均值；邻近均值为 0 时差值记为 -1。</p>'},
+ {kicker:'检测列',dur:14,draw:col,caption:()=> '④ 对列使用相同思路，比较左右邻列',html:'<h3>怎么判断一列</h3><p>先求每列均值，再与左右各 5 列的邻近均值比较。示例四通道 TA 列阈值均为 0.030，即 3.0%；严格大于阈值才计数。</p><p>动画只模拟背景均值为 200 的孤立中心线，并未对真实图像执行算法。</p>'},
+ {kicker:'线内及断线',dur:14,draw:extra,caption:()=> '⑤ 同时检查线内标准差（DOL）与半线均值二次差',html:'<h3>不止检查均值差</h3><p>源码还计算每条线内的标准差并与 DOL 阈值比较；断线指标把每行或列分为两半，对每半的均值序列计算相邻差值的变化量，再按阈值计数。</p><p>这些计数来自四通道，最终也影响是否失败和 bin。</p>'},
+ {kicker:'选择 bin',dur:14,draw:decision,caption:()=> '⑥ 汇总异常计数：列、行、DOL、断线按顺序比较 grade',html:'<h3>如何选择结果</h3><p>任一异常行、异常列、DOL 或断线计数大于 0，本项即失败。先判断列，再判断行、DOL 和断线；后项只有 grade 严格更大才覆盖当前结果。示例行与列均为 grade 7，所以同时触发时保留列 bin 2208。</p><p>V1.0 还有低等级 MA 分支；示例的 TA 和 MA 阈值相等，触发 TA 检测时对应最大差已达到 MA 阈值，因此进入常见 bin 分支。其他配置可能不同。</p>'},
+ {kicker:'互动判定',dur:15,draw:finish,caption:()=> '⑦ 试着拖动行、列的示例均值：等于阈值不算异常',html:'<h3>动手试一下</h3><p>拖动滑杆改变目标行、列的均值，背景两侧固定为 200。行超过 2.5% 或列超过 3% 才判异常；如果两者同时异常，示例选择列的 bin 2208。</p><p>本互动假设 DOL、断线、其他通道均无异常，仅演示判定思路，不会对图像做完整检测。</p>'}
+];
+['row','col'].forEach(k=>{const input=document.getElementById(k+'val'),out=document.getElementById(k+'out'); input.addEventListener('input',()=>{state[k]=Number(input.value);out.textContent=input.value;AlgoAnim.render();});});
+AlgoAnim.start({scenes:SCENES});
+</script>
+</body>
+</html>

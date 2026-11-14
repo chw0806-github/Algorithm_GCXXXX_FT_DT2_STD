@@ -16,7 +16,7 @@
    之后（可选）把 PNG 量化到 96 色，单帧从 ~220 KB 降到 ~60 KB：
      python3 - <<'EOF'
      from PIL import Image; import glob
-     for f in glob.glob('docs/*/story/*.png'):
+     for f in glob.glob('docs/' + '*' + '/story/' + '*.png'):
          im = Image.open(f).convert('RGB')
          im.quantize(colors=96, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) \
            .save(f, optimize=True, compress_level=9)
