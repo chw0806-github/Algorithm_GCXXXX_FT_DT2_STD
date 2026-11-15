@@ -40,8 +40,26 @@ tilesDrawn = 0;
 sandbox.__ANIM.scenes[4].draw(1);
 assert.strictEqual(tilesDrawn,1600, '分格画面须绘制完整 40×40 格');
 tilesDrawn = 0;
-sandbox.__ANIM.scenes[5].draw(1);
-assert.strictEqual(tilesDrawn,1296, '像素画面须绘制完整 48×27 像素');
+sandbox.__ANIM.scenes[5].draw(0);
+assert.strictEqual(tilesDrawn,1600, '放大前应显示 40×40 个格子');
+tilesDrawn = 0;
+sandbox.__ANIM.scenes[5].draw(0.4);
+assert.strictEqual(tilesDrawn,1600+1296, '放大后应显示完整 48×27 个像素');
+assert.notStrictEqual(sandbox.__ANIM.scenes[5].caption(0),sandbox.__ANIM.scenes[5].caption(0.6));
+let words=[];
+ctx.fillText = text => { words.push(String(text)); };
+for(const i of [6,7,8,9,10,11,12]){
+  words=[]; sandbox.__ANIM.scenes[i].draw(0);
+  const early=words.slice();
+  words=[]; sandbox.__ANIM.scenes[i].draw(0.78);
+  assert.ok(words.length>early.length, `第 ${i+1} 幕应逐步呈现内容`);
+  assert.notStrictEqual(sandbox.__ANIM.scenes[i].caption(0),sandbox.__ANIM.scenes[i].caption(0.78));
+}
+for(const i of [10,11]){
+  words=[];sandbox.__ANIM.scenes[i].draw(0.4);const first=words.find(s=>s.includes('扫描第'));
+  words=[];sandbox.__ANIM.scenes[i].draw(0.7);const later=words.find(s=>s.includes('扫描第'));
+  assert.ok(first && later && first!==later,'镜像对扫描应随时间移动');
+}
 let circles=[];
 ctx.arc=(x,y)=>{circles.push([x,y]);};
 sandbox.__ANIM.scenes[2].draw(0);
