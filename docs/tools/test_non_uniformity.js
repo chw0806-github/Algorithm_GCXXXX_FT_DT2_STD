@@ -31,16 +31,28 @@ const sandbox = {document, performance:{now:()=>0}, requestAnimationFrame: fn =>
 sandbox.window=sandbox;
 vm.createContext(sandbox);
 scripts.forEach((s,i) => new vm.Script(s,{filename:'non_uniformity:script'+i}).runInContext(sandbox));
-assert.strictEqual(sandbox.__ANIM.scenes.length,10);
+assert.strictEqual(sandbox.__ANIM.scenes.length,13);
 let tilesDrawn = 0;
 ctx.fillRect = () => { tilesDrawn++; };
-sandbox.__ANIM.scenes[1].draw(1);
+sandbox.__ANIM.scenes[4].draw(0.1875);
+assert.strictEqual(tilesDrawn,400, '逐行动画在铺格进度 25% 时显示 10 行');
+tilesDrawn = 0;
+sandbox.__ANIM.scenes[4].draw(1);
 assert.strictEqual(tilesDrawn,1600, '分格画面须绘制完整 40×40 格');
 tilesDrawn = 0;
-sandbox.__ANIM.scenes[2].draw(1);
+sandbox.__ANIM.scenes[5].draw(1);
 assert.strictEqual(tilesDrawn,1296, '像素画面须绘制完整 48×27 像素');
+let circles=[];
+ctx.arc=(x,y)=>{circles.push([x,y]);};
+sandbox.__ANIM.scenes[2].draw(0);
+const start=circles.slice(); circles=[];
+sandbox.__ANIM.scenes[2].draw(1);
+assert.strictEqual(start.length,4);
+assert.strictEqual(circles.length,4);
+assert.notDeepStrictEqual(circles,start, '四个通道的像素应随播放移动');
+assert.notStrictEqual(sandbox.__ANIM.scenes[2].caption(0),sandbox.__ANIM.scenes[2].caption(1));
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
-for(let i=0;i<10;i++){
+for(let i=0;i<13;i++){
   sandbox.__ANIM.gotoScene(i,true);
   for(const p of [0,0.3,0.78,1]){
     sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;
@@ -81,4 +93,4 @@ presetHandlers['preset-normal']();
 assert.strictEqual(vm.runInContext('metrics().bin',sandbox),1);
 assert.strictEqual(vm.runInContext('pixelExample().mean',sandbox),200);
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
-console.log('OK：10 幕、1600 格、1296 像素、双滑杆及阈值边界');
+console.log('OK：13 幕、拆通道动画、逐行铺格、1296 像素、双滑杆及阈值边界');
