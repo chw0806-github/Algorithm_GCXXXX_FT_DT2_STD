@@ -96,7 +96,16 @@
   .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
 
   /* ---------- side ---------- */
-  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
   .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
     font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
@@ -197,6 +206,7 @@
 
     <aside class="side">
       <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
       <div class="explain" id="explain">
         <h3>这一页在讲什么</h3>
         <p><code>Algorithm_all[site_].Light_Response(test_manage)</code> 是<b>白帧测试（Bright Test）</b>里的第一个子项：
@@ -521,6 +531,20 @@ function syncPlayButton(){
   if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
 }
 
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
 function gotoScene(i, autoplay){
   if(!scenes.length) return;
   PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
@@ -529,6 +553,7 @@ function gotoScene(i, autoplay){
   syncPlayButton();
   const ex = document.getElementById('explain');
   if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
   document.querySelectorAll('.chapter').forEach((b,k)=>{
     b.classList.toggle('active', k === PState.scene);
   });
@@ -612,6 +637,7 @@ const AlgoAnim = {
   }
 };
 window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 35, "last": 40, "note": "push_back 把此工位的子项结果放入结果集合；site_ 是工位索引。", "code": "   35      std::vector<Subitem_Result> items_results;   //各测试子项 测试结果集合\n   36  \n   37      logMsg (\"Start flow test!\",0);\n   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));\n   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));\n   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 35, "last": 40, "note": "push_back 把此工位的子项结果放入结果集合；site_ 是工位索引。", "code": "   35      std::vector<Subitem_Result> items_results;   //各测试子项 测试结果集合\n   36  \n   37      logMsg (\"Start flow test!\",0);\n   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));\n   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));\n   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp", "first": 25, "last": 29, "note": "全局数组用工位索引选择对应算法对象。", "code": "   25  std::vector<std::string> g_str_logtmp(Parallel_num);\n   26  std::vector<std::string> g_str_msg_all(Parallel_num);\n   27  std::vector<std::string> g_str_log_all(Parallel_num);\n   28  \n   29  AlgorithmItems Algorithm_all[Parallel_num];"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 64, "last": 78, "note": "循环每次跨两行、两列，把 2×2 各位置写入对应通道。", "code": "   64      distribute_pointer_by_RGB_BAYER(bayer,&pb1,&pb2,&pb3,&pb4,\n   65                                      g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);\n   66  \n   67      for (int i=0; i<h; i=i+2)\n   68      {\n   69          for (int j=0; j<w; j=j+2)\n   70          {\n   71              *pb1++ = g_buf_raw_[w*i+ j];\n   72              *pb2++ = g_buf_raw_[w*i+ j+1];\n   73          }\n   74          for (int j=0; j<w; j=j+2)\n   75          {\n   76              *pb3++ = g_buf_raw_[w*(i+1)+ j];\n   77              *pb4++ = g_buf_raw_[w*(i+1)+ j+1];\n   78          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 908, "last": 915, "note": "这里将 ROI 的位置和尺寸以及四个通道缓冲区传给计算函数。", "code": "  908          //---------------------Whole Region Light Response------------------\n  909          TestItem::test_roi_channel_mean( w,h,\n  910                                           manage.param_light_response_.roi_x_,\n  911                                           manage.param_light_response_.roi_y_,\n  912                                           manage.param_light_response_.roi_w_,\n  913                                           manage.param_light_response_.roi_h_,\n  914                                           mean_r_roi,mean_gr_roi,mean_gb_roi,mean_b_roi,\n  915                                           g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7951, "last": 7963, "note": "循环累加 ROI 像素并计数；返回总和除以个数。", "code": " 7951      int cnt = 0;\n 7952      double mean_t = 0;\n 7953      if(line+win_h>=height || col+win_w>=width)\n 7954          return -1;\n 7955      for (int i=line; i<=line+win_h; ++i)\n 7956      {\n 7957          for (int j=col; j<=col+win_w; ++j)\n 7958          {\n 7959              mean_t+=pData[width*i+j];\n 7960              cnt+=1;\n 7961          }\n 7962      }\n 7963      return mean_t/cnt;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 933, "last": 942, "note": "四通道均值与各自上下限比较；超出任一范围则失败。", "code": "  933          if (mean_r_roi>manage.param_light_response_.limit_r_max_ ||\n  934                  mean_r_roi<manage.param_light_response_.limit_r_min_ ||\n  935                  mean_gr_roi>manage.param_light_response_.limit_gr_max_ ||\n  936                  mean_gr_roi<manage.param_light_response_.limit_gr_min_ ||\n  937                  mean_gb_roi>manage.param_light_response_.limit_gb_max_ ||\n  938                  mean_gb_roi<manage.param_light_response_.limit_gb_min_ ||\n  939                  mean_b_roi>manage.param_light_response_.limit_b_max_ ||\n  940                  mean_b_roi<manage.param_light_response_.limit_b_min_)\n  941          {\n  942              res.is_passed=false;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 960, "last": 964, "note": "对应分支把配置的 bin 和 grade 写入子项结果。", "code": "  960              else\n  961              {\n  962                  res.bin=manage.param_light_response_.bin_response_;\n  963                  res.grade=manage.param_light_response_.grade_response_;\n  964              }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5903, "last": 5926, "note": "遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。", "code": " 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector<Subitem_Result>& items_results)\n 5904  {\n 5905      Subitem_Result final_result(\"The initial value\",true,1,0,true);\n 5906  \n 5907      for(int i=0;i!=items_results.size();++i)\n 5908      {\n 5909          const Subitem_Result& item=items_results[i];\n 5910  \n 5911          if(item.g_msg == false)\n 5912              continue;\n 5913  \n 5914          std::string item_log =item.name;\n 5915          QString log_;\n 5916          if(item.is_passed)\n 5917              log_+=\" is Pass. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5918          else\n 5919              log_+=\" is Failed. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5920  \n 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();\n 5922  \n 5923          if(!item.is_passed && item.grade>final_result.grade)\n 5924              final_result=item;\n 5925      }\n 5926      return final_result;"}]];
 </script>
 <script>
 /* ----------------------------------------------------------------------

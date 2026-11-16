@@ -302,6 +302,20 @@ function syncPlayButton(){
   if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
 }
 
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
 function gotoScene(i, autoplay){
   if(!scenes.length) return;
   PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
@@ -310,6 +324,7 @@ function gotoScene(i, autoplay){
   syncPlayButton();
   const ex = document.getElementById('explain');
   if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
   document.querySelectorAll('.chapter').forEach((b,k)=>{
     b.classList.toggle('active', k === PState.scene);
   });

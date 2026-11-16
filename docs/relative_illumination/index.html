@@ -96,7 +96,16 @@
   .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
 
   /* ---------- side ---------- */
-  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
   .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
     font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
@@ -197,6 +206,7 @@
 
     <aside class="side">
       <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
       <div class="explain" id="explain">
         <h3>这一页在讲什么</h3>
         <p><code>Relative_Illumination</code> 是白帧测试里排在 <code>Light_Response</code> 之后的子项：
@@ -521,6 +531,20 @@ function syncPlayButton(){
   if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
 }
 
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
 function gotoScene(i, autoplay){
   if(!scenes.length) return;
   PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
@@ -529,6 +553,7 @@ function gotoScene(i, autoplay){
   syncPlayButton();
   const ex = document.getElementById('explain');
   if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
   document.querySelectorAll('.chapter').forEach((b,k)=>{
     b.classList.toggle('active', k === PState.scene);
   });
@@ -612,6 +637,7 @@ const AlgoAnim = {
   }
 };
 window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 38, "last": 40, "note": "这一步调用相对照度子项；下面章节进入具体计算。", "code": "   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));\n   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));\n   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 1587, "last": 1595, "note": "ROI_3 的循环展示左上窗口的取样与求均值；其他窗口同理。", "code": " 1587      for (int i=0; i<h_win; ++i)\n 1588      {\n 1589          for (int j=0; j<w_win; ++j)\n 1590          {\n 1591              ROI_3+=pData[w*i+j];\n 1592              cnt+=1;\n 1593          }\n 1594      }\n 1595      ROI_3/=cnt;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 1630, "last": 1639, "note": "中心窗口按中心位置计算；四角与中心共五个窗口。", "code": " 1630      cnt = 0;\n 1631      for (int i=h/2-h_win/2; i<h/2-h_win/2+h_win; ++i)\n 1632      {\n 1633          for (int j=w/2-w_win/2; j<w/2-w_win/2+w_win; ++j)\n 1634          {\n 1635              ROI_2+=pData[w*i+j];\n 1636              cnt+=1;\n 1637          }\n 1638      }\n 1639      ROI_2/=cnt;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 1587, "last": 1595, "note": "ROI_3 的循环展示左上窗口的取样与求均值；其他窗口同理。", "code": " 1587      for (int i=0; i<h_win; ++i)\n 1588      {\n 1589          for (int j=0; j<w_win; ++j)\n 1590          {\n 1591              ROI_3+=pData[w*i+j];\n 1592              cnt+=1;\n 1593          }\n 1594      }\n 1595      ROI_3/=cnt;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 1640, "last": 1649, "note": "ROI_2 是中心均值，darkest 实际是四角均值的平均；先处理极端情况，再返回百分比。", "code": " 1640      if (ROI_2<0.001)\n 1641          ROI_2 = 0.001;\n 1642  \n 1643      double darkest = (ROI_3 + ROI_4 + ROI_5 + ROI_6)/4;\n 1644      if (ROI_2<darkest/10)\n 1645          return 1000;\n 1646      else if (ROI_2>darkest*10)\n 1647          return 10;\n 1648      else\n 1649          return 100*darkest/ROI_2;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 1640, "last": 1647, "note": "中心均值的下限与极端比例返回值用于特殊情况。", "code": " 1640      if (ROI_2<0.001)\n 1641          ROI_2 = 0.001;\n 1642  \n 1643      double darkest = (ROI_3 + ROI_4 + ROI_5 + ROI_6)/4;\n 1644      if (ROI_2<darkest/10)\n 1645          return 1000;\n 1646      else if (ROI_2>darkest*10)\n 1647          return 10;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 1332, "last": 1340, "note": "计算结果与上下限比较；超出则设置失败、bin、grade。", "code": " 1332          double RelIllum = AlgorithmFuncs::TestRelativeIlumination (\n 1333                      g_buf_raw_,w,h,manage.param_relative_illu_.w_win_,\n 1334                      manage.param_relative_illu_.h_win_);\n 1335          if (RelIllum>manage.param_relative_illu_.limit_max_ratio_ ||\n 1336                  RelIllum<manage.param_relative_illu_.limit_min_ratio_)\n 1337          {\n 1338              res.is_passed = false;\n 1339              res.bin=manage.param_relative_illu_.bin_;\n 1340              res.grade= manage.param_relative_illu_.grade_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 1342, "last": 1346, "note": "计算结果与子项名称被追加到日志。", "code": " 1342          g_str_msg_all[site_]+=boost::str(boost::format(\"Relative Illumination:%.2f\\n\")\n 1343                                 % RelIllum);\n 1344          g_str_log_all[site_]+=boost::str(boost::format(\"%.2f|\")\n 1345                                 % RelIllum);\n 1346          g_str_log_all[site_]+=boost::str(boost::format(\"%s|\") % res.name.c_str());"}]];
 </script>
 <script>
 /* =====================================================================

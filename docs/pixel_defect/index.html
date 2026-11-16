@@ -96,7 +96,16 @@
   .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
 
   /* ---------- side ---------- */
-  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
   .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
     font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
@@ -197,6 +206,7 @@
 
     <aside class="side">
       <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
       <div class="explain" id="explain">
         <h3>这一页在讲什么</h3>
         <p><code>Pixel_Defect_Test</code> 在四个通道逐像素比较四个邻域，再把二值结果映射回 Bayer 图，统计单点、团簇及 blemish；本页讲解示例配置的 V1.0。</p>
@@ -516,6 +526,20 @@ function syncPlayButton(){
   if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
 }
 
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
 function gotoScene(i, autoplay){
   if(!scenes.length) return;
   PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
@@ -524,6 +548,7 @@ function gotoScene(i, autoplay){
   syncPlayButton();
   const ex = document.getElementById('explain');
   if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
   document.querySelectorAll('.chapter').forEach((b,k)=>{
     b.classList.toggle('active', k === PState.scene);
   });
@@ -607,6 +632,7 @@ const AlgoAnim = {
   }
 };
 window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 154, "last": 157, "note": "这条白帧分支调用 Pixel_Defect_Test；项目存在其他测试分支。", "code": "  154      items_results.push_back(Algorithm_all[site_].PKG_Test(test_manage));\n  155      items_results.push_back(Algorithm_all[site_].Blemish_Test(test_manage));\n  156      items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage,External_Configuration));\n  157      items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));//只想卡单点，且可以分梯度"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9164, "last": 9184, "note": "四个滑动邻域的和除以 r*r 得均值，再计算目标与各邻域的比例差。", "code": " 9164          for (int j=skipCnt; j<w-skipCnt; ++j)\n 9165          {\n 9166  \n 9167              if( j>r && j< w-r)\n 9168              {\n 9169                  sum_t[0] = sum_t[0] - vec_up[j-r-1]   + vec_up[j-1] ;\n 9170                  sum_t[1] = sum_t[1] - vec_done[j-r-1] + vec_done[j-1] ;\n 9171                  sum_t[2] = sum_t[2] - vec_up[j]       + vec_up[j+r] ;\n 9172                  sum_t[3] = sum_t[3] - vec_done[j]     + vec_done[j+r] ;\n 9173              }\n 9174  \n 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9175, "last": 9198, "note": "Ratio 模式计算绝对差与邻域均值的比；任何一个超过 spec 就增加 flag。", "code": " 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];\n 9185              }\n 9186              else if(mode==DN)\n 9187              {\n 9188                  for(int n=0; n<4; n++)\n 9189                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n]);\n 9190              }\n 9191  \n 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);\n 9194  \n 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9195, "last": 9217, "note": "主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。", "code": " 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;\n 9199  \n 9200  \n 9201              if (flag>0)\n 9202              {\n 9203                  out_raw8[w*i+j] = 255;\n 9204                  out_blemish[w*i+j] = 0;\n 9205              }\n 9206              else\n 9207              {\n 9208                  out_raw8[w*i+j] = 0;\n 9209  \n 9210                  int flag_b=0;\n 9211                  for(int n=0; n<4; n++)\n 9212                      if(compareValue[n]>spec_b)\n 9213                          flag_b++;\n 9214                  if(flag_b>0)\n 9215                      out_blemish[w*i+j] = 255;\n 9216                  else\n 9217                      out_blemish[w*i+j] = 0;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9192, "last": 9193, "note": "四邻域均值的平均用于计算亮暗方向的 delta；团簇统计另有其他代码。", "code": " 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3550, "last": 3568, "note": "这里只展示前几种团簇结果分支；完整判定还有其他分支。", "code": " 3550          if (paticle>0)\n 3551          {\n 3552              res.bin = manage.param_pixel_defect_.bin3_;\n 3553              res.grade = manage.param_pixel_defect_.grade3_;\n 3554          }\n 3555          else if(other_cluster>0)\n 3556          {\n 3557              res.bin = manage.param_pixel_defect_.bin2_;\n 3558              res.grade = manage.param_pixel_defect_.grade2_;\n 3559          }\n 3560          else if (cnt_2x4_pix >0)\n 3561          {\n 3562              res.bin = manage.param_pixel_defect_.bin2x4_;\n 3563              res.grade  = manage.param_pixel_defect_.grade4_;\n 3564          }\n 3565          else if (cnt_2x2_pix >0)\n 3566          {\n 3567               res.bin  = manage.param_pixel_defect_.bin2x2_global_;\n 3568              res.grade  = manage.param_pixel_defect_.grade9_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9175, "last": 9198, "note": "Ratio 模式计算绝对差与邻域均值的比；任何一个超过 spec 就增加 flag。", "code": " 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];\n 9185              }\n 9186              else if(mode==DN)\n 9187              {\n 9188                  for(int n=0; n<4; n++)\n 9189                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n]);\n 9190              }\n 9191  \n 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);\n 9194  \n 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9195, "last": 9217, "note": "主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。", "code": " 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;\n 9199  \n 9200  \n 9201              if (flag>0)\n 9202              {\n 9203                  out_raw8[w*i+j] = 255;\n 9204                  out_blemish[w*i+j] = 0;\n 9205              }\n 9206              else\n 9207              {\n 9208                  out_raw8[w*i+j] = 0;\n 9209  \n 9210                  int flag_b=0;\n 9211                  for(int n=0; n<4; n++)\n 9212                      if(compareValue[n]>spec_b)\n 9213                          flag_b++;\n 9214                  if(flag_b>0)\n 9215                      out_blemish[w*i+j] = 255;\n 9216                  else\n 9217                      out_blemish[w*i+j] = 0;"}]];
 </script>
 <script>
 /* 理想中心点示例：四个 Gr 邻域均为 180，其他点与团簇都假设正常。 */

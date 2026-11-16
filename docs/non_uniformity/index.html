@@ -96,7 +96,16 @@
   .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
 
   /* ---------- side ---------- */
-  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
   .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
     font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
@@ -188,13 +197,14 @@
       <div class="tuner">
         <div class="tuner-head">
           <h2>模拟 1600 个格子的局部不均匀性</h2>
-          <span>修改左上格和其余 1599 格；像素算例独立且固定</span>
+          <span>默认左上格来自前面像素算例；滑杆直接修改格子百分比</span>
         </div>
         <div class="sliders two" id="sliders">
-          <label class="slider" style="--c:#ffd166"><span class="ch">角</span><input id="cellvalue" type="range" min="0" max="100" step="1" value="12"><output id="cellout">12%</output></label>
+          <label class="slider" style="--c:#ffd166"><span class="ch">角</span><input id="cellvalue" type="range" min="0" max="100" step="0.01" value="7.91"><output id="cellout">7.91%</output></label>
           <label class="slider" style="--c:#6ea8fe"><span class="ch">余</span><input id="basevalue" type="range" min="0" max="100" step="1" value="2"><output id="baseout">2%</output></label>
         </div>
         <div class="presets" id="presets">
+          <button id="preset-example">恢复算例：角7.91 / 余2</button>
           <button id="preset-normal">正常：角2 / 余2</button>
           <button id="preset-max">单格超限：角31 / 余2</button>
           <button id="preset-mean">平均超限：角39 / 余6</button>
@@ -205,6 +215,7 @@
 
     <aside class="side">
       <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
       <div class="explain" id="explain">
         <h3>这一页在讲什么</h3>
         <p><code>Non_Uniformity</code> 把四个颜色通道各自分格：每格计算标准差除以均值，得到局部波动百分比；再比较格子的平均、最大及对称位置差异，按配置判断是否超限。</p>
@@ -215,7 +226,7 @@
 
   <footer class="foot">
     数量按 GC8613T 配置：3840×2160 RAW、每通道 1920×1080、每格 48×27、每通道 40×40 格。
-    所有像素值及格子百分比均为模拟，不是产线实测；像素算例与滑杆控制的百分比网格互相独立。
+    所有数值为模拟；默认把像素算例结果四舍五入后放到左上格，其余格假设为 2%；拖动滑杆不会改变像素。
   </footer>
 </div>
 
@@ -524,6 +535,20 @@ function syncPlayButton(){
   if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
 }
 
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
 function gotoScene(i, autoplay){
   if(!scenes.length) return;
   PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
@@ -532,6 +557,7 @@ function gotoScene(i, autoplay){
   syncPlayButton();
   const ex = document.getElementById('explain');
   if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
   document.querySelectorAll('.chapter').forEach((b,k)=>{
     b.classList.toggle('active', k === PState.scene);
   });
@@ -615,11 +641,12 @@ const AlgoAnim = {
   }
 };
 window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 38, "last": 40, "note": "这一步调用不均匀性子项；画面数值只是教学示例。", "code": "   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));\n   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));\n   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));"}], [{"path": "STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data", "first": 1, "last": 3, "note": "这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。", "code": "    1  [width]=3840\n    2  [height]=2160\n    3  [bayer]=RG"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 64, "last": 78, "note": "循环每次跨两行、两列，把 2×2 各位置写入对应通道。", "code": "   64      distribute_pointer_by_RGB_BAYER(bayer,&pb1,&pb2,&pb3,&pb4,\n   65                                      g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);\n   66  \n   67      for (int i=0; i<h; i=i+2)\n   68      {\n   69          for (int j=0; j<w; j=j+2)\n   70          {\n   71              *pb1++ = g_buf_raw_[w*i+ j];\n   72              *pb2++ = g_buf_raw_[w*i+ j+1];\n   73          }\n   74          for (int j=0; j<w; j=j+2)\n   75          {\n   76              *pb3++ = g_buf_raw_[w*(i+1)+ j];\n   77              *pb4++ = g_buf_raw_[w*(i+1)+ j+1];\n   78          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1422, "last": 1425, "note": "四通道尺寸和格尺寸均传入一半；这是不均匀性线程的参数。", "code": " 1422      p_non_uniformity[R]->setparam(g_buf_r_,w/2,h/2,w_cell/2,h_cell/2);\n 1423      p_non_uniformity[Gr]->setparam(g_buf_gr_,w/2,h/2,w_cell/2,h_cell/2);\n 1424      p_non_uniformity[Gb]->setparam(g_buf_gb_,w/2,h/2,w_cell/2,h_cell/2);\n 1425      p_non_uniformity[B]->setparam(g_buf_b_,w/2,h/2,w_cell/2,h_cell/2);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7582, "last": 7591, "note": "h/h_cell 与 w/w_cell 决定格子行列数；双重循环逐格处理。", "code": " 7582      QVector<double> mean_each_cell;\n 7583      QVector<double> stdv_each_cell;\n 7584      int cnt_vertical = h/h_cell;\n 7585      int cnt_horizontal = w/w_cell;\n 7586      for (int i=0; i<cnt_vertical; ++i)\n 7587      {\n 7588          for (int j=0; j<cnt_horizontal; ++j)\n 7589          {\n 7590              int x_start = w_cell*j;\n 7591              int y_start = h_cell*i;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7594, "last": 7604, "note": "遍历格内像素，累加并计数；均值保存在 mean_each_cell。", "code": " 7594              for (int index_row=y_start; index_row<y_start+h_cell; index_row++)\n 7595              {\n 7596                  for (int index_col=x_start; index_col<x_start+w_cell; index_col+=2)\n 7597                  {\n 7598                      cnt_tmp+=2;\n 7599                      mean_tmp+=(double)(pData[w*index_row+index_col]);\n 7600                      mean_tmp+=(double)(pData[w*index_row+index_col+1]);\n 7601                  }\n 7602              }\n 7603              mean_tmp/=cnt_tmp;\n 7604              mean_each_cell.push_back (mean_tmp);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7594, "last": 7604, "note": "遍历格内像素，累加并计数；均值保存在 mean_each_cell。", "code": " 7594              for (int index_row=y_start; index_row<y_start+h_cell; index_row++)\n 7595              {\n 7596                  for (int index_col=x_start; index_col<x_start+w_cell; index_col+=2)\n 7597                  {\n 7598                      cnt_tmp+=2;\n 7599                      mean_tmp+=(double)(pData[w*index_row+index_col]);\n 7600                      mean_tmp+=(double)(pData[w*index_row+index_col+1]);\n 7601                  }\n 7602              }\n 7603              mean_tmp/=cnt_tmp;\n 7604              mean_each_cell.push_back (mean_tmp);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7605, "last": 7616, "note": "每个像素与格内均值之差平方；除以像素数后开平方，是总体标准差。", "code": " 7605              double stdv_tmp = 0.0;\n 7606              for (int index_row=y_start; index_row<y_start+h_cell; ++index_row)\n 7607              {\n 7608                  for (int index_col=x_start; index_col<x_start+w_cell; ++index_col)\n 7609                  {\n 7610                      stdv_tmp+=(mean_tmp-(double)(pData[w*index_row+index_col]))*\n 7611                              (mean_tmp-(double)(pData[w*index_row+index_col]));\n 7612                  }\n 7613              }\n 7614              stdv_tmp/=cnt_tmp;\n 7615              stdv_tmp = sqrt (stdv_tmp);\n 7616              stdv_each_cell.push_back (stdv_tmp);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7621, "last": 7632, "note": "格内标准差除以均值再乘 100；均值过小时仅对分母设置下限。", "code": " 7621      for (QVector<double>::size_type i=0;\n 7622           i<mean_each_cell.size ();\n 7623           ++i)\n 7624      {\n 7625          double mean_tmp = mean_each_cell.at (i);\n 7626          if (mean_tmp <= 0.001)\n 7627                  mean_tmp = 0.001;\n 7628          double tmp = stdv_each_cell.at (i)/mean_tmp*100;\n 7629          n_uniform_tmp+= tmp;\n 7630          n_uniform_eachcell.push_back(tmp);\n 7631      }\n 7632      n_uniform_tmp/=mean_each_cell.size ();"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7628, "last": 7635, "note": "每格百分比求平均，并查找最大值与位置。", "code": " 7628          double tmp = stdv_each_cell.at (i)/mean_tmp*100;\n 7629          n_uniform_tmp+= tmp;\n 7630          n_uniform_eachcell.push_back(tmp);\n 7631      }\n 7632      n_uniform_tmp/=mean_each_cell.size ();\n 7633  \n 7634      n_uniform_eachcell_max = * max_element(n_uniform_eachcell.begin(),n_uniform_eachcell.end());\n 7635      max_pos = n_uniform_eachcell.indexOf(n_uniform_eachcell_max);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7639, "last": 7645, "note": "同一格的数据按反转列或反转行写入镜像数组。", "code": " 7639      for (int i=0; i<cnt_vertical; ++i)\n 7640      {\n 7641          for (int j=0; j<cnt_horizontal; ++j)\n 7642          {\n 7643              double tmp = n_uniform_eachcell.at(i*cnt_horizontal+j);\n 7644              n_uniform_mirror_eachcell.replace(i*cnt_horizontal+cnt_horizontal-j-1,tmp);\n 7645              n_uniform_updown_eachcell.replace((cnt_vertical-i-1)*cnt_horizontal+j,tmp);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7649, "last": 7663, "note": "原数组与镜像数组逐格相减取绝对值，然后分别查找最大差。", "code": " 7649      for (int i=0; i<cnt_vertical; ++i)\n 7650      {\n 7651          for (int j=0; j<cnt_horizontal; ++j)\n 7652          {\n 7653              double mirror = std::abs(n_uniform_eachcell.at(i*cnt_horizontal+j) - n_uniform_mirror_eachcell.at(i*cnt_horizontal+j));\n 7654              double updown = std::abs(n_uniform_eachcell.at(i*cnt_horizontal+j) - n_uniform_updown_eachcell.at(i*cnt_horizontal+j));\n 7655              n_uniform_mirror_diff_eachcell.append(mirror);\n 7656              n_uniform_updown_diff_eachcell.append(updown);\n 7657          }\n 7658      }\n 7659      n_uniform_mirror_diff_eachcell_max = * max_element(n_uniform_mirror_diff_eachcell.begin(),n_uniform_mirror_diff_eachcell.end());\n 7660      max_pos_mirror_diff = n_uniform_mirror_diff_eachcell.indexOf(n_uniform_mirror_diff_eachcell_max);\n 7661  \n 7662      n_uniform_updown_diff_eachcell_max = * max_element(n_uniform_updown_diff_eachcell.begin(),n_uniform_updown_diff_eachcell.end());\n 7663      max_pos_updown_diff = n_uniform_updown_diff_eachcell.indexOf(n_uniform_updown_diff_eachcell_max);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7639, "last": 7645, "note": "同一格的数据按反转列或反转行写入镜像数组。", "code": " 7639      for (int i=0; i<cnt_vertical; ++i)\n 7640      {\n 7641          for (int j=0; j<cnt_horizontal; ++j)\n 7642          {\n 7643              double tmp = n_uniform_eachcell.at(i*cnt_horizontal+j);\n 7644              n_uniform_mirror_eachcell.replace(i*cnt_horizontal+cnt_horizontal-j-1,tmp);\n 7645              n_uniform_updown_eachcell.replace((cnt_vertical-i-1)*cnt_horizontal+j,tmp);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7649, "last": 7663, "note": "原数组与镜像数组逐格相减取绝对值，然后分别查找最大差。", "code": " 7649      for (int i=0; i<cnt_vertical; ++i)\n 7650      {\n 7651          for (int j=0; j<cnt_horizontal; ++j)\n 7652          {\n 7653              double mirror = std::abs(n_uniform_eachcell.at(i*cnt_horizontal+j) - n_uniform_mirror_eachcell.at(i*cnt_horizontal+j));\n 7654              double updown = std::abs(n_uniform_eachcell.at(i*cnt_horizontal+j) - n_uniform_updown_eachcell.at(i*cnt_horizontal+j));\n 7655              n_uniform_mirror_diff_eachcell.append(mirror);\n 7656              n_uniform_updown_diff_eachcell.append(updown);\n 7657          }\n 7658      }\n 7659      n_uniform_mirror_diff_eachcell_max = * max_element(n_uniform_mirror_diff_eachcell.begin(),n_uniform_mirror_diff_eachcell.end());\n 7660      max_pos_mirror_diff = n_uniform_mirror_diff_eachcell.indexOf(n_uniform_mirror_diff_eachcell_max);\n 7661  \n 7662      n_uniform_updown_diff_eachcell_max = * max_element(n_uniform_updown_diff_eachcell.begin(),n_uniform_updown_diff_eachcell.end());\n 7663      max_pos_updown_diff = n_uniform_updown_diff_eachcell.indexOf(n_uniform_updown_diff_eachcell_max);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 1562, "last": 1569, "note": "四通道平均分别与阈值比较，超限时设置子项结果；其他指标还有后续分支。", "code": " 1562          if (non_uniformity_r>manage.param_non_uniformity_.spec_n_uniform_r_ ||\n 1563                  non_uniformity_gr>manage.param_non_uniformity_.spec_n_uniform_gr_ ||\n 1564                  non_uniformity_gb>manage.param_non_uniformity_.spec_n_uniform_gb_ ||\n 1565                  non_uniformity_b>manage.param_non_uniformity_.spec_n_uniform_b_)\n 1566          {\n 1567              res.is_passed = false;\n 1568              res.bin= manage.param_non_uniformity_.bin_mean_;\n 1569              res. grade = manage.param_non_uniformity_.grade_mean_;"}]];
 </script>
 <script>
 /* 教学网格只模拟一个通道的格子百分比，不模拟原始像素。 */
 const state = AlgoAnim.state;
-state.cell = 12; state.base = 2;
+state.cell = 7.91; state.base = 2;
 const COLS=40, ROWS=40, LIMITS=[5,30,50,50];
 function vals(){ const a=Array(COLS*ROWS).fill(state.base); a[0]=state.cell; return a; }
 function metrics(){
@@ -674,17 +701,24 @@ function grid(mode,p){
   if(mirror||vertical) txt('绿色：'+(mirror?'右上':'左下')+'镜像格 '+state.base+'%',65,513,{size:12,color:C.pass});
 }
 function drawIntro(p){
-  header(0,'定位','不均匀性：同一个小区域里的像素，亮度有多分散？');
-  card(65,155,400,235,{fill:'rgba(110,168,254,.06)',stroke:C.accent});
-  txt('① 像素亮度相近',85,190,{size:17,weight:700,color:C.accent});
-  [198,200,202].forEach((v,i)=>{card(85+i*105,220,90,72,{fill:'rgba(110,168,254,.22)'});txt(''+v,130+i*105,265,{size:22,align:'center',weight:700});});
-  txt('都接近 200：波动小',85,340,{size:15});
-  if(p>=.25){ctx.save();ctx.globalAlpha=ease(seg(p,.25,.42));
-    card(535,155,400,235,{fill:'rgba(255,209,102,.06)',stroke:C.accent2});
-    txt('② 像素亮度相差较大',555,190,{size:17,weight:700,color:C.accent2});
-    [100,200,300].forEach((v,i)=>{card(555+i*105,220,90,72,{fill:'rgba(255,209,102,'+(.08+i*.11)+')'});txt(''+v,600+i*105,265,{size:22,align:'center',weight:700});});
-    txt('平均同样是 200：但波动大',555,340,{size:15});ctx.restore();}
-  if(p>=.55) txt('上面只用 3 个数说明“波动”；实际每格有 1296 个像素。',65,460,{size:14,color:C.dim});
+  header(0,'定位','这项算法做什么？先把一个格子里的像素变成一个数');
+  const boxes=[
+    {x:48,t:'① 看一格',a:'48 × 27 个像素',b:'1296 个亮度值',c:C.accent},
+    {x:283,t:'② 算这格',a:'像素亮度有多分散',b:'得到 7.91%',c:C.accent2},
+    {x:518,t:'③ 看整张',a:'每格都算一次',b:'1600 个百分比',c:C.accent},
+    {x:753,t:'④ 做判定',a:'平均 / 最大 / 镜像差',b:'分别比较上限',c:C.pass}
+  ];
+  boxes.forEach((b,i)=>{
+    if(p < i*.16) return;
+    ctx.save();ctx.globalAlpha=ease(seg(p,i*.16,i*.16+.12));
+    card(b.x,205,199,170,{fill:withA(b.c,.08),stroke:b.c});
+    txt(b.t,b.x+16,245,{size:17,weight:700,color:b.c});
+    txt(b.a,b.x+16,290,{size:13,color:C.ink});
+    txt(b.b,b.x+16,320,{size:13,color:C.dim});ctx.restore();
+    if(i>0) arrow(b.x-32,290,b.x-7,290,C.dim,2);
+  });
+  if(p>=.52){txt('重点：7.91% 表示一个格子里像素的波动，不是亮度，也不是坏点比例。',48,455,{size:14,color:C.ink});
+    txt('以下示例只用 R 通道讲解；其他三个通道按相同方法各自计算。',48,490,{size:13,color:C.dim});}
 }
 function bayerBlock(x,y,size){
   const labels=['R','Gr','Gb','B'], colors=[CH.R,CH.Gr,CH.Gb,CH.B];
@@ -831,30 +865,69 @@ function drawPixels(p){
   }
 }
 function drawPixelMean(p){
-  header(6,'求像素均值','先求这一格的平均亮度：把像素值加起来，再除以个数');
-  pixelTiles(1); const ex=PIXEL_EXAMPLE;
-  stepPanel(525,155,410,300,'一格内 1296 个像素',['① 四种亮度各有 324 个','② 总和 = 324 × (180+190+210+220)','③ 总和 = 259200 DN','④ 平均 = 259200 ÷ 1296','⑤ 平均亮度 = '+ex.mean+' DN'],p,C.accent);
-  txt('结果 200 DN 是像素亮度，不是格子百分比。',525,495,{size:13,color:C.dim});
+  header(6,'求像素均值','先求这一格的平均亮度：1296 个亮度相加，再除以 1296');
+  txt('同一格：4 种模拟亮度，各 324 个',60,165,{size:15,weight:700,color:C.accent});
+  const levels=[180,190,210,220], colors=['#46709c','#6087b1','#84a8cd','#b3d0ea'];
+  const active=Math.min(3,Math.floor(clamp01(p/.6)*4));
+  levels.forEach((v,i)=>{
+    const y=190+i*65;card(60,y,390,52,{fill:withA(C.accent,i===active?.22:.06),stroke:i===active?C.accent:'rgba(110,168,254,.20)'});
+    ctx.fillStyle=colors[i];ctx.fillRect(78,y+14,24,24);
+    txt(v+' DN × 324 个',120,y+33,{size:16,color:C.ink});
+    if(i===active) txt('正在计入总和',300,y+33,{size:12,color:C.accent2});
+  });
+  stepPanel(500,155,435,295,'把 1296 个亮度平均',['① 180、190、210、220 各有 324 个','② 总和 = 324 × (180+190+210+220)','③ 总和 = 259200 DN','④ 259200 ÷ 1296 = 200 DN','⑤ 得到格内平均亮度：200 DN'],p,C.accent);
+  txt('左侧只是把 1296 个像素按相同数值归类，没有减少像素数量。',60,510,{size:13,color:C.dim});
 }
 function drawPixelStd(p){
-  header(7,'求标准差','像素离平均亮度有多远？先求偏差，再求标准差');
-  pixelTiles(1); const ex=PIXEL_EXAMPLE;
-  stepPanel(525,145,410,335,'以均值 200 DN 为中心',['① 像素值 − 均值：−20、−10、+10、+20','② 平方：400、100、100、400','③ 每种各 324 个：平方和 324000','④ 除以 1296：平方均值 = 250','⑤ 开平方：标准差 ≈ '+ex.std.toFixed(2)+' DN','平方避免正负偏差互相抵消'],p,C.accent2);
-  txt('除以全部像素数 N，不是 N−1。',525,515,{size:13,color:C.dim});
+  header(7,'求标准差','离均值 200 有多远？先算偏差，平方后再汇总');
+  txt('同一格的 4 类像素，各 324 个',60,165,{size:15,weight:700,color:C.accent});
+  const levels=[180,190,210,220],diff=['−20','−10','+10','+20'],sq=[400,100,100,400];
+  const shown=Math.min(4,1+Math.floor(clamp01(p/.55)*4));
+  for(let i=0;i<shown;i++){
+    const y=188+i*62;card(60,y,400,49,{fill:'rgba(110,168,254,.07)',stroke:'rgba(110,168,254,.18)'});
+    txt(levels[i]+' − 200',78,y+30,{size:15,color:C.ink});arrow(185,y+24,220,y+24,C.accent,1.5);
+    txt(diff[i],232,y+30,{size:15,color:C.accent2});arrow(285,y+24,320,y+24,C.dim,1.5);
+    txt('平方 '+sq[i],330,y+30,{size:14,color:C.ink});
+  }
+  const q=seg(p,.25,.72);
+  stepPanel(500,155,435,315,'把四类偏差汇总',['① 平方避免正负偏差互相抵消','② 平方和 = 324 × (400+100+100+400)','③ 平方和 324000 ÷ 1296 = 250','④ 开平方：√250 ≈ 15.81 DN','⑤ 这就是这格像素的总体标准差'],q,C.accent2);
+  txt('标准差越大，说明这一格里像素离均值通常越分散。',60,510,{size:13,color:C.dim});
 }
 function drawCell(p){
-  header(8,'算局部百分比','把这一格的波动，与这一格的平均亮度相比');
-  pixelTiles(1); const ex=PIXEL_EXAMPLE;
-  stepPanel(525,155,410,290,'从像素到一个格子的百分比',['① 上一幕标准差 ≈ '+ex.std.toFixed(2)+' DN','② 上上幕平均亮度 = '+ex.mean+' DN','③ '+ex.std.toFixed(2)+' ÷ '+ex.mean+' × 100','④ 这一格的不均匀性 ≈ '+ex.percent.toFixed(2)+'%','⑤ 每一格都按自己的像素重复计算'],p,C.accent);
-  txt('分母最低取 0.001；像素算例与滑杆模型独立。',525,495,{size:12,color:C.dim});
+  header(8,'算局部百分比','把刚才算出的两个数相除，给这个格子一个结果');
+  const ex=PIXEL_EXAMPLE;
+  card(60,170,255,100,{fill:'rgba(110,168,254,.07)',stroke:C.accent});
+  txt('这格的平均亮度',80,205,{size:14,color:C.dim});txt('200 DN',80,247,{size:24,weight:700,color:C.accent});
+  card(60,295,255,100,{fill:'rgba(255,209,102,.07)',stroke:C.accent2});
+  txt('这格的标准差',80,330,{size:14,color:C.dim});txt('≈ 15.81 DN',80,372,{size:24,weight:700,color:C.accent2});
+  if(p>=.2){arrow(330,280,388,280,C.accent2,2);card(400,190,260,175,{fill:'rgba(255,209,102,.08)',stroke:C.accent2});
+    txt('标准差 ÷ 平均 × 100',420,230,{size:15});txt('≈ '+ex.percent.toFixed(2)+'%',420,290,{size:30,weight:700,color:C.accent2});
+    txt('这一个格子的结果',420,335,{size:13,color:C.dim});}
+  if(p>=.48){
+    const gx=720,gy=220,dx=5,dy=2.8;
+    arrow(675,280,705,280,C.accent2,2);
+    const progress=ease(seg(p,.48,.72));
+    for(let y=0;y<40;y++)for(let x=0;x<40;x++){
+      ctx.fillStyle=x===0&&y===0&&progress>=1?C.accent2:'#27486e';ctx.fillRect(gx+x*dx,gy+y*dy,4.6,2.5);
+    }
+    // 黄色圆点表示这一格的计算结果正在回到原位置；不是额外的格子。
+    ctx.fillStyle=C.accent2;ctx.beginPath();ctx.arc(lerp(650,gx+2,progress),lerp(280,gy+1,progress),5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=C.accent2;ctx.lineWidth=2;ctx.beginPath();ctx.arc(gx+2,gy+1,9,0,Math.PI*2);ctx.stroke();
+    txt('放回左上角那一格',720,365,{size:13,weight:700});
+    txt('其余 1599 格也分别计算',720,390,{size:12,color:C.dim});
+  }
+  if(p>=.7){
+    txt('默认把约 '+ex.percent.toFixed(2)+'% 四舍五入后放进黄色格；其余格假设 2%。',60,475,{size:14,color:C.ink});
+    txt(state.cell===7.91?'当前黄色格为 7.91%；其余格当前设为 '+state.base+'%。':'滑杆已把黄色格改为 '+state.cell+'%；固定像素算例仍是 7.91%。',60,510,{size:13,color:C.dim});
+    txt('实际使用未四舍五入的结果；分母最低取 0.001。',60,540,{size:12,color:C.dim});
+  }
 }
 function drawSummary(p){
-  header(9,'平均与最大','现在每格都有一个百分比：求 1600 格的平均和最大值');
+  header(9,'平均与最大','回到整张通道图：1600 个格子各有一个百分比');
   grid('grid',1); const m=metrics().m;
-  stepPanel(545,158,390,300,'另一组模拟值：滑杆可改变',['① 黄色左上格：'+state.cell+'%','② 其他 1599 格：各 '+state.base+'%','③ 平均 = ('+state.cell+' + 1599 × '+state.base+') ÷ 1600','④ 格子百分比平均 = '+m[0].toFixed(5)+'%','⑤ 1600 格中的最大值 = '+m[1].toFixed(2)+'%','平均和最大分别与各自上限比较'],p,C.accent);
-  txt('此模型独立于前面 7.91% 的像素算例。',545,500,{size:12,color:C.dim});
+  stepPanel(545,158,390,300,'接着汇总这些格子',['① 黄色左上格：'+state.cell+'%','② 假设其余 1599 格：各 '+state.base+'%','③ ('+state.cell+' + 1599 × '+state.base+') ÷ 1600','④ 格子百分比平均 = '+m[0].toFixed(5)+'%','⑤ 1600 格中最大值 = '+m[1].toFixed(2)+'%','这是格子百分比的平均，不是像素均值'],p,C.accent);
+  txt(state.cell===7.91?'黄色格来自上一幕的 7.91%（已四舍五入）。':'黄色格已由滑杆改为 '+state.cell+'%；像素算例不变。',545,500,{size:12,color:C.dim});
 }
-// 同一行/列的镜像对逐对扫描；不改变实际 40×40 数量。
 function scanPairs(p,vertical){
   if(p<.34) return;
   const n=Math.min(799,Math.floor(clamp01((p-.34)/.38)*800));
@@ -872,7 +945,7 @@ function drawMirror(p){
   grid('mirror',1); const m=metrics().m;
   if(p>=.14){arrow(82,179,490,179,C.accent2,2);}
   scanPairs(p,false);
-  stepPanel(545,158,390,300,'先比较第一对，再比较其他对',['① 左上第 1 格 ↔ 右上第 40 格','② |'+state.cell+'% − '+state.base+'%| = '+Math.abs(state.cell-state.base)+' 个百分点','③ 同一行继续向中间比较','④ 所有 40 行都重复：取最大差','⑤ 此模拟的最大差 = '+m[2].toFixed(2),'⑥ 再与上限 50 比较'],p,C.accent2);
+  stepPanel(545,158,390,300,'先比较第一对，再比较其他对',['① 左上第 1 格 ↔ 右上第 40 格','② |'+state.cell+'% − '+state.base+'%| = '+Math.abs(state.cell-state.base).toFixed(2)+' 个百分点','③ 同一行继续向中间比较','④ 所有 40 行都重复：取最大差','⑤ 此模拟的最大差 = '+m[2].toFixed(2),'⑥ 再与上限 50 比较'],p,C.accent2);
   txt('比较的是格子的百分比，不是像素亮度。',545,500,{size:12,color:C.dim});
 }
 function drawVertical(p){
@@ -880,7 +953,7 @@ function drawVertical(p){
   grid('vertical',1); const m=metrics().m;
   if(p>=.14){arrow(70,193,70,410,C.accent2,2);}
   scanPairs(p,true);
-  stepPanel(545,158,390,300,'先比较第一对，再比较其他对',['① 左上第 1 行 ↔ 左下第 40 行','② |'+state.cell+'% − '+state.base+'%| = '+Math.abs(state.cell-state.base)+' 个百分点','③ 同一列继续向中间比较','④ 所有 40 列都重复：取最大差','⑤ 此模拟的最大差 = '+m[3].toFixed(2),'⑥ 再与上限 50 比较'],p,C.accent2);
+  stepPanel(545,158,390,300,'先比较第一对，再比较其他对',['① 左上第 1 行 ↔ 左下第 40 行','② |'+state.cell+'% − '+state.base+'%| = '+Math.abs(state.cell-state.base).toFixed(2)+' 个百分点','③ 同一列继续向中间比较','④ 所有 40 列都重复：取最大差','⑤ 此模拟的最大差 = '+m[3].toFixed(2),'⑥ 再与上限 50 比较'],p,C.accent2);
   txt('上下差与上一幕的左右差分别求、分别判断。',545,500,{size:12,color:C.dim});
 }
 function drawResult(p){
@@ -898,18 +971,18 @@ function drawResult(p){
   txt('本配置四项 grade 均为 6；同时超限时保留先触发项。',65,520,{size:13,color:C.dim});
 }
 const SCENES=[
- {kicker:'定位',dur:20,draw:drawIntro,caption:p=>p<.25?'① 左边三个亮度接近 200：波动小':p<.55?'① 右边平均也是 200，但亮度相差更大：波动大':'① 这只是理解波动的三个示例数；实际每格有 1296 像素',html:'<h3>平均一样，为什么结果可能不同？</h3><p>左边 198、200、202 的平均是 200，三个数很接近；右边 100、200、300 的平均也是 200，但三个数差得更远。这就是<b>亮度波动</b>。此处只用三个模拟数解释概念，实际每格有 1296 个像素。</p><p><code>Non_Uniformity</code> 分别计算四个通道中每格像素相对于本格均值的波动。随后汇总格子的平均、最大值及镜像差。</p><p>此页展示 GC8613T 示例配置的实际图像、格子与像素数量；所有像素数值是模拟值，并非测量数据。</p>'},
+ {kicker:'定位',dur:20,draw:drawIntro,caption:p=>p<.25?'① 先看一个格子：里面有 1296 个像素':p<.52?'① 这一格变成一个百分比；所有格都各算一次':'① 最后汇总 1600 格，检查平均、最大和镜像差',html:'<h3>先记住一条主线</h3><ol><li>从一个颜色通道中取出一格：包含 1296 个像素。</li><li>用格内亮度均值和标准差算出一个百分比，表示这格内部有多不均匀。</li><li>对 1600 格分别重复，再汇总平均、最大值和镜像差，比较上限。</li></ol><p>动画从 R 通道出发，最后对其他三个通道分别做同样的事。所有数值都是模拟。</p>'},
  {kicker:'认识 RAW',dur:18,draw:drawRaw,caption:p=>p<0.4?'② 白帧 RAW 是 3840×2160，先放大左上角的一个 Bayer 块':'② 放大后看到 R / Gr / Gb / B 四个位置，示例为 RG 排列',html:'<h3>先认识原图</h3><p><code>Basic.data</code> 配置 RAW 宽 3840、高 2160、Bayer 排列 <code>RG</code>。图像由像素组成，颜色位置按 2×2 块重复。</p><p>本幕把一个块放大：左上 R、右上 Gr、左下 Gb、右下 B。左侧缩略图只表示排列方式，<b>不是完整显示 3840×2160 个像素</b>。</p>'},
  {kicker:'拆四通道',dur:20,draw:drawSplit,caption:p=>p<0.7?'③ 每个 2×2 块分别取 R、Gr、Gb、B；彩点正移动到对应通道':'③ 全部像素拆完后，每个通道是 1920×1080',html:'<h3>四张图是怎么来的？</h3><ol><li>取所有 2×2 块中左上角的 R 像素，按原来的块位置排列成 R 图。</li><li>同理取 Gr、Gb、B，形成另外三张图。</li><li>每 2 列原始像素对应每通道 1 列；每 2 行对应 1 行。</li></ol><p>所以每通道宽 <code>3840÷2=1920</code>，高 <code>2160÷2=1080</code>。动画中的圆点表示位置移动，通道图外框是示意。此页针对标准 RG Bayer 拆分路径。</p>'},
  {kicker:'一格从哪来',dur:20,draw:drawRegion,caption:p=>p<0.5?'④ 先从 RAW 取 96×54 的区域，数一数里面有多少 2×2 块':'④ 横向 48 块、纵向 27 块；每块取一个 R 像素得到一格',html:'<h3>为什么格子尺寸也除以 2？</h3><p>配置的 RAW 对应格尺寸为 <code>96×54</code>。一个 Bayer 块宽 2、高 2，因此这个区域包含 <code>96÷2=48</code> 列、<code>54÷2=27</code> 行 Bayer 块。</p><p>每块给 R 图提供一个 R 像素，所以 R 图的对应区域就是 <b>48×27 像素</b>。其他通道同理。示意框只画了形状与尺寸，不代表屏幕上每一个原始像素。</p>'},
  {kicker:'逐行铺格',dur:20,draw:drawGrid,caption:p=>p<0.75?'⑤ 沿通道图逐行铺 48×27 的格子，画面正在依次出现':'⑤ 40 列 × 40 行 = 1600 格；四通道各自处理',html:'<h3>把一个格子铺满通道图</h3><ol><li>通道宽 1920，每格宽 48：一行放 <code>1920÷48=40</code> 格。</li><li>通道高 1080，每格高 27：一列放 <code>1080÷27=40</code> 格。</li><li>所以每通道 <b>40×40=1600 格</b>。画面逐行出现的每个小矩形就是一格。</li></ol><p>长宽比例按 48:27 示意；四张通道图分别进行同样操作。颜色和百分比为模拟值，不是实测。</p>'},
- {kicker:'放大像素',dur:22,draw:drawPixels,caption:p=>p<0.18?'⑥ 先在 1600 个格子中，选左上角这 1 格':p<0.55?'⑥ 把这 1 格放大：里面有 48×27 = 1296 个像素':p<0.70?'⑥ 再放大其中 1 个像素：它的模拟亮度是 180 DN':'⑥ 本格的四种模拟亮度各出现 324 次；这些值不是实测',html:'<h3>这三幅图是什么关系？</h3><ol><li><b>左边是一整张通道图：</b>40×40 个小格，一共 1600 格。黄色圈出左上角的一格。</li><li><b>中间是这一格放大后的内部：</b>48 列、27 行，共 1296 个像素；每个小方块是一个像素，而不是一个格子。</li><li><b>右边是其中一个像素：</b>这里给它模拟的亮度值为 180 DN。DN 表示像素数值，不是格子数量或百分比。</li></ol><p>为演示后续计算，假设整格中 180、190、210、220 DN 各有 324 个。颜色深浅用于区分四种亮度；数据不是实测，也不是四个颜色通道。</p><p>这个像素算例与后面滑杆控制的格子百分比互相独立。</p>'},
+ {kicker:'放大像素',dur:22,draw:drawPixels,caption:p=>p<0.18?'⑥ 先在 1600 个格子中，选左上角这 1 格':p<0.55?'⑥ 把这 1 格放大：里面有 48×27 = 1296 个像素':p<0.70?'⑥ 再放大其中 1 个像素：它的模拟亮度是 180 DN':'⑥ 本格的四种模拟亮度各出现 324 次；这些值不是实测',html:'<h3>这三幅图是什么关系？</h3><ol><li><b>左边是一整张通道图：</b>40×40 个小格，一共 1600 格。黄色圈出左上角的一格。</li><li><b>中间是这一格放大后的内部：</b>48 列、27 行，共 1296 个像素；每个小方块是一个像素，而不是一个格子。</li><li><b>右边是其中一个像素：</b>这里给它模拟的亮度值为 180 DN。DN 表示像素数值，不是格子数量或百分比。</li></ol><p>为演示后续计算，假设整格中 180、190、210、220 DN 各有 324 个。颜色深浅用于区分四种亮度；数据不是实测，也不是四个颜色通道。</p><p>默认把此像素算例的 7.91% 四舍五入后作为后面左上格的值；其余格的 2% 是假设。滑杆直接改格子百分比，不会改变这里的模拟像素。</p>'},
  {kicker:'求均值',dur:25,draw:drawPixelMean,caption:p=>p<.3?'⑦ 四种模拟亮度各 324 个；先把 1296 个亮度加起来':p<.6?'⑦ 总亮度 259200 ÷ 像素个数 1296':'⑦ 得到这一格的平均像素亮度：200 DN',html:'<h3>第一步：求格内像素均值</h3><p>四种值各有 324 个，所以总和为 <code>324 × (180+190+210+220) = 259200</code>。除以 1296 个像素，均值是 <b>200 DN</b>。</p><p>这是一格内的<b>像素亮度均值</b>，不是稍后对 1600 格的百分比求的平均。</p>'},
  {kicker:'求标准差',dur:30,draw:drawPixelStd,caption:p=>p<.24?'⑧ 每个像素减去均值 200，得到偏差':p<.48?'⑧ 偏差平方，避免正负抵消，再把全部结果加起来':p<.72?'⑧ 除以像素总数 1296，得到平方均值 250':'⑧ 开平方，得到标准差约 15.81 DN',html:'<h3>第二步：求格内总体标准差</h3><p>四类像素减均值 200，偏差分别为 −20、−10、+10、+20；平方后为 400、100、100、400。</p><p>每类各 324 个，所以平方和为 <code>324 × 1000 = 324000</code>；除以 1296 得到 250，开平方得到 <b>约 15.81 DN</b>。源码使用总体标准差，除以 N 而非 N−1。</p>'},
- {kicker:'格内百分比',dur:24,draw:drawCell,caption:p=>p<.3?'⑨ 拿到这格的标准差和平均亮度':p<.6?'⑨ 标准差 ÷ 平均亮度 × 100':'⑨ 这一格约 7.91%；其他格子也各自计算',html:'<h3>第三步：换成百分比</h3><p><code>标准差 / 像素均值 × 100</code>；此格约 <b>7.91%</b>。每个通道的 1600 个格子各自计算一次。</p><p>若均值 ≤ 0.001，只把除法的分母改为 0.001；标准差仍用原始均值。此像素分布是模拟数据，与后面的百分比滑杆模型独立。</p>'},
- {kicker:'平均与最大',dur:26,draw:drawSummary,caption:p=>p<.3?'⑩ 切换到另一组模拟值：左上格与其余格由滑杆设定':p<.6?'⑩ 1600 格的百分比加起来，再除以 1600':'⑩ 同时找出 1600 格中的最大值',html:'<h3>所有格子的百分比</h3><p>这里用 40×40 的另一个模拟通道：默认左上格 12%，其余 1599 格各 2%。平均为 <code>(12 + 1599 × 2) / 1600 = 2.00625%</code>，最大为 12%。</p><p>滑杆可以分别调整左上角和其余格子的百分比；这些值直接用于模拟汇总，不从前面像素例子推导。配置平均上限 5%、单格最大上限 30%。</p>'},
- {kicker:'左右镜像',dur:25,draw:drawMirror,caption:p=>p<.3?'第 11 步：从左上和右上这一对格子开始':p<.6?'第 11 步：两格百分比相减，取绝对值':'第 11 步：比较所有左右镜像对，取最大的差',html:'<h3>左右镜像差</h3><p>40×40 网格中，黄色左上格和绿色右上格为左右镜像。默认 12% 和 2% 相差 <b>10 个百分点</b>；对全部对应位置求绝对差，取最大。</p><p>绿圈会扫描 40 行中各 20 对，共 800 对；重复比较左右两侧的对应格，取最大差。比较的是格子的<b>局部不均匀性百分比</b>，不是格子亮度均值。配置上限为 50。</p>'},
- {kicker:'上下镜像',dur:25,draw:drawVertical,caption:p=>p<.3?'第 12 步：从左上和左下这一对格子开始':p<.6?'第 12 步：两格百分比相减，取绝对值':'第 12 步：比较所有上下镜像对，取最大的差',html:'<h3>上下镜像差</h3><p>黄色左上格和绿色左下格是上下镜像。默认 12% 和 2% 差 10 个百分点。绿圈扫描 40 列中各 20 对，共 800 对；对所有上下镜像对取最大差，上限 50。左右和上下独立判断。</p>'},
+ {kicker:'格内百分比',dur:24,draw:drawCell,caption:p=>p<.3?'⑨ 拿到这格的标准差和平均亮度':p<.6?'⑨ 标准差 ÷ 平均亮度 × 100':'⑨ 这一格约 7.91%；其他格子也各自计算',html:'<h3>第三步：换成百分比</h3><p><code>标准差 / 像素均值 × 100</code>；此格约 <b>7.91%</b>。每个通道的 1600 个格子各自计算一次。</p><p>若均值 ≤ 0.001，只把除法的分母改为 0.001；标准差仍用原始均值。此像素分布是模拟数据；默认将结果四舍五入为 7.91%，放到下一幕黄色格。滑杆改变百分比时，不改变这些像素。</p>'},
+ {kicker:'平均与最大',dur:26,draw:drawSummary,caption:p=>p<.3?'⑩ 默认沿用上一幕左上格 7.91%，假设其他格为 2%' :p<.6?'⑩ 1600 格的百分比加起来，再除以 1600':'⑩ 同时找出 1600 格中的最大值',html:'<h3>上一幕的结果去了哪里？</h3><p>黄色左上格默认使用上一幕算出的 <b>7.91%</b>（先四舍五入）；其余 1599 格假设各 2%。每个格子的真实百分比都应由各自像素计算，这里只是假设以便演示。</p><p>默认平均为 <code>(7.91 + 1599 × 2) / 1600 = 2.00369375%</code>，最大为 7.91%。滑杆会直接替换这些百分比，不会改变前面固定的像素例子；需要回到默认值可点“恢复算例”。</p>'},
+ {kicker:'左右镜像',dur:25,draw:drawMirror,caption:p=>p<.3?'第 11 步：从左上和右上这一对格子开始':p<.6?'第 11 步：两格百分比相减，取绝对值':'第 11 步：比较所有左右镜像对，取最大的差',html:'<h3>左右镜像差</h3><p>40×40 网格中，黄色左上格和绿色右上格为左右镜像。默认 7.91% 和 2% 相差 <b>5.91 个百分点</b>；对全部对应位置求绝对差，取最大。</p><p>绿圈会扫描 40 行中各 20 对，共 800 对；重复比较左右两侧的对应格，取最大差。比较的是格子的<b>局部不均匀性百分比</b>，不是格子亮度均值。配置上限为 50。</p>'},
+ {kicker:'上下镜像',dur:25,draw:drawVertical,caption:p=>p<.3?'第 12 步：从左上和左下这一对格子开始':p<.6?'第 12 步：两格百分比相减，取绝对值':'第 12 步：比较所有上下镜像对，取最大的差',html:'<h3>上下镜像差</h3><p>黄色左上格和绿色左下格是上下镜像。默认 7.91% 和 2% 差 5.91 个百分点。绿圈扫描 40 列中各 20 对，共 800 对；对所有上下镜像对取最大差，上限 50。左右和上下独立判断。</p>'},
  {kicker:'判定与互动',dur:24,draw:drawResult,caption:p=>p<.65?'第 13 步：依次把四项指标与各自上限比较':'第 13 步：显示该模拟的结果；可用滑杆和预设再试',html:'<h3>最后如何判定？</h3><p>四个通道任一指标<b>严格大于</b>其上限则失败；等于不算超限。这里仅模拟一个通道，其余通道假设通过。</p><p>左上 31%、其余 2% 时，单格最大值超限，bin 2204。左上 39%、其余 6% 时，平均和最大都超限，示例 grade 均为 6，因此保留先判断的平均项 bin 2203。</p><p>左上 53%、其余 2% 时，镜像差和单格最大值均超限；不能将此预设视作只触发镜像差。最终 bin 还需与其他子项汇总。</p>'}
 ];
 const slider=document.getElementById('cellvalue'), out=document.getElementById('cellout');
@@ -921,7 +994,7 @@ function setValues(cell,base){
 }
 slider.addEventListener('input',()=>setValues(slider.value,baseSlider.value));
 baseSlider.addEventListener('input',()=>setValues(slider.value,baseSlider.value));
-[['preset-normal',2,2],['preset-max',31,2],['preset-mean',39,6],['preset-mirror',53,2]].forEach(pair=>{
+[['preset-example',7.91,2],['preset-normal',2,2],['preset-max',31,2],['preset-mean',39,6],['preset-mirror',53,2]].forEach(pair=>{
   document.getElementById(pair[0]).addEventListener('click',()=>setValues(pair[1],pair[2]));
 });
 AlgoAnim.start({scenes:SCENES});

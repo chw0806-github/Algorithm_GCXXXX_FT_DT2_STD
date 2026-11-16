@@ -14,13 +14,13 @@ const ctx = new Proxy({}, { get(t, k) {
 } });
 const canvas = { style: {}, getContext: () => ctx, getBoundingClientRect: () => ({width:1000,height:620}) };
 const handlers = {};
-const slider = { value: '12', addEventListener: (name, fn) => { handlers[name] = fn; } };
+const slider = { value: '7.91', addEventListener: (name, fn) => { handlers[name] = fn; } };
 const out = { textContent: '' }, baseOut = {textContent:''}, caption = {textContent:''}, explain = {innerHTML:''};
 const baseHandlers = {};
 const baseSlider = {value:'2',addEventListener:(name,fn)=>{baseHandlers[name]=fn;}};
 const elements = {stage:canvas, cellvalue:slider, cellout:out, basevalue:baseSlider, baseout:baseOut, caption, explain, bar:{style:{}}};
 const presetHandlers = {};
-['preset-normal', 'preset-max', 'preset-mean', 'preset-mirror'].forEach(id => {
+['preset-example', 'preset-normal', 'preset-max', 'preset-mean', 'preset-mirror'].forEach(id => {
   elements[id] = { addEventListener: (name, fn) => { presetHandlers[id] = fn; } };
 });
 const document = {getElementById: id => elements[id] || null, querySelectorAll: () => [],
@@ -32,6 +32,10 @@ sandbox.window=sandbox;
 vm.createContext(sandbox);
 scripts.forEach((s,i) => new vm.Script(s,{filename:'non_uniformity:script'+i}).runInContext(sandbox));
 assert.strictEqual(sandbox.__ANIM.scenes.length,13);
+assert.strictEqual(vm.runInContext('state.cell',sandbox), Number(vm.runInContext('PIXEL_EXAMPLE.percent.toFixed(2)',sandbox)), '默认左上格应来自像素算例四舍五入');
+const initial=vm.runInContext('metrics()',sandbox);
+assert.ok(Math.abs(initial.m[0]-2.00369375)<1e-10);
+assert.ok(Math.abs(initial.m[2]-5.91)<1e-10);
 let tilesDrawn = 0;
 ctx.fillRect = () => { tilesDrawn++; };
 sandbox.__ANIM.scenes[4].draw(0.1875);
@@ -60,6 +64,10 @@ for(const i of [10,11]){
   words=[];sandbox.__ANIM.scenes[i].draw(0.7);const later=words.find(s=>s.includes('扫描第'));
   assert.ok(first && later && first!==later,'镜像对扫描应随时间移动');
 }
+let bridge=[];ctx.arc=(x,y)=>bridge.push([x,y]);
+sandbox.__ANIM.scenes[8].draw(0.50);const position=bridge[0];
+bridge=[];sandbox.__ANIM.scenes[8].draw(0.68);
+assert.notDeepStrictEqual(bridge[0],position,'格内结果应动态移动回原来的格子');
 let circles=[];
 ctx.arc=(x,y)=>{circles.push([x,y]);};
 sandbox.__ANIM.scenes[2].draw(0);
@@ -109,6 +117,10 @@ assert.strictEqual(vm.runInContext('metrics().m[2]',sandbox),51);
 assert.strictEqual(vm.runInContext('metrics().bin',sandbox),2204);
 presetHandlers['preset-normal']();
 assert.strictEqual(vm.runInContext('metrics().bin',sandbox),1);
+presetHandlers['preset-example']();
+assert.strictEqual(out.textContent,'7.91%');
+assert.strictEqual(baseOut.textContent,'2%');
+assert.ok(Math.abs(vm.runInContext('metrics().m[0]',sandbox)-2.00369375)<1e-10);
 assert.strictEqual(vm.runInContext('pixelExample().mean',sandbox),200);
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
 console.log('OK：13 幕、拆通道动画、逐行铺格、1296 像素、双滑杆及阈值边界');

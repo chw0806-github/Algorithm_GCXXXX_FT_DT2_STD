@@ -7,7 +7,7 @@ const gradient={addColorStop(){}};
 const ctx=new Proxy({}, {get(t,k){if(k in t)return t[k];if(k==='createLinearGradient'||k==='createRadialGradient')return ()=>gradient;return ()=>{};}});
 const canvas={style:{},getContext:()=>ctx,getBoundingClientRect:()=>({width:1000,height:620})};
 const handlers={};
-const elements={stage:canvas,caption:{textContent:''},explain:{innerHTML:''},bar:{style:{}}};
+const elements={stage:canvas,caption:{textContent:''},explain:{innerHTML:''},bar:{style:{}},'code-guide':{innerHTML:''}};
 for(const id of ['row','col']){
   elements[id+'val']={value:'200',addEventListener:(name,fn)=>{handlers[id]=fn;}};
   elements[id+'out']={textContent:''};
@@ -18,6 +18,12 @@ const sandbox={document,performance:{now:()=>0},requestAnimationFrame:fn=>{frame
 sandbox.window=sandbox;vm.createContext(sandbox);
 scripts.forEach((s,i)=>new vm.Script(s,{filename:'deadrow:script'+i}).runInContext(sandbox));
 assert.strictEqual(sandbox.__ANIM.scenes.length,14);
+assert.strictEqual(sandbox.__CODE_GUIDE.length,14);
+assert.ok(elements['code-guide'].innerHTML.includes('Deadrow_Deadcol_bright'));
+sandbox.__ANIM.gotoScene(3,true);
+assert.ok(elements['code-guide'].innerHTML.includes('each_row_.push_back'));
+sandbox.__ANIM.gotoScene(10,true);
+assert.ok(elements['code-guide'].innerHTML.includes('delta2-delta1'));
 assert.strictEqual((960*180+960*200)/1920,190);
 assert.strictEqual((960*50+960*250)/1920,150);
 assert.ok(Math.abs(Math.sqrt(1920*10000/1919)-100.026)<0.001);

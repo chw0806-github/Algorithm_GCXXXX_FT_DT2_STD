@@ -22,7 +22,8 @@ const canvas = {
 const caption = { textContent: '' };
 const bar = { style: {} };
 const explain = { innerHTML: '' };
-const elements = { stage: canvas, caption, bar, explain };
+const guide = { innerHTML: '' };
+const elements = { stage: canvas, caption, bar, explain, 'code-guide': guide };
 const document = {
   getElementById: id => elements[id] || null,
   querySelectorAll: () => [],
@@ -38,6 +39,10 @@ const sandbox = {
   devicePixelRatio: 1
 };
 sandbox.window = sandbox;
+sandbox.__CODE_GUIDE = [
+  [{path:'Params/first.cpp', first:1, last:1, note:'第一幕', code:'if (a < b && c > 0)'}],
+  [{path:'Params/second.cpp', first:2, last:2, note:'第二幕', code:'second();'}]
+];
 vm.createContext(sandbox);
 const source = fs.readFileSync(path.join(__dirname, '../shared/player.js'), 'utf8');
 new vm.Script(source, { filename: 'player.js' }).runInContext(sandbox);
@@ -51,6 +56,8 @@ assert.strictEqual(sandbox.AlgoAnim.canvas, canvas);
 assert.strictEqual(sandbox.AlgoAnim.ctx, ctx);
 assert.strictEqual(caption.textContent, '字幕一');
 assert.strictEqual(explain.innerHTML, '讲解一');
+assert.ok(guide.innerHTML.includes('Params/first.cpp:1–1'));
+assert.ok(guide.innerHTML.includes('a &lt; b &amp;&amp; c &gt; 0'), '代码中的 HTML 字符必须转义');
 assert.ok(draws > 0, '第一幕未绘制');
 assert.strictEqual(typeof nextFrame, 'function', '动画帧未安排');
 nextFrame(100);
@@ -58,5 +65,7 @@ assert.strictEqual(sandbox.AlgoAnim.state.t, 0.05);
 sandbox.AlgoAnim.gotoScene(1, true);
 assert.strictEqual(caption.textContent, '字幕二');
 assert.strictEqual(explain.innerHTML, '讲解二');
+assert.ok(guide.innerHTML.includes('Params/second.cpp:2–2'), '章节切换后应显示对应代码');
+assert.ok(!guide.innerHTML.includes('Params/first.cpp'), '切换章节应移除旧代码');
 assert.deepStrictEqual(Array.from(sandbox.__ERR), [], '播放过程中出现错误');
 console.log('OK：严格模式下启动、绘制、动画帧和切换章节均通过');

@@ -15,9 +15,11 @@
   任意 <link rel="stylesheet" href="...shared/player.css">  →  <style>…</style>
   任意 <script src="...shared/player.js"></script>          →  <script>…</script>
 """
+import json
 import re
 import sys
 from pathlib import Path
+from code_guides import GUIDES, EXPECTED_KICKERS, get_guides
 
 ROOT = Path(__file__).resolve().parent
 CSS = (ROOT / 'shared' / 'player.css').read_text(encoding='utf-8').strip()
@@ -83,9 +85,20 @@ def build_one(src: Path, dst: Path) -> str:
         lambda m: '<style>\n' + CSS + '\n</style>',
         html, count=1)
 
+    page = src.parent.name
+    guide_js = ''
+    if page in GUIDES:
+        guides = get_guides(page)
+        # 检查章节数，避免增减章节后代码与动画错位。
+        scene_source = html.split('const SCENES', 1)[1].split('AlgoAnim.start', 1)[0]
+        kickers = re.findall(r'\bkicker\s*:\s*[\'\"]([^\'\"]+)[\'\"]', scene_source)
+        if kickers != EXPECTED_KICKERS[page] or len(kickers) != len(guides):
+            raise SystemExit(f'{page}: 章节名称或顺序已变化，请复核代码映射: {kickers}')
+        guide_js = '\nwindow.__CODE_GUIDE = ' + json.dumps(guides, ensure_ascii=False).replace('</', '<\\/') + ';'
+
     html, n_js = re.subn(
         r'<script[^>]+src="[^"]*shared/player\.js"[^>]*>\s*</script>',
-        lambda m: '<script>\n' + JS_SAFE + '\n</script>',
+        lambda m: '<script>\n' + JS_SAFE + guide_js + '\n</script>',
         html, count=1)
 
     # 目录页只用到 CSS，没有播放器脚本
