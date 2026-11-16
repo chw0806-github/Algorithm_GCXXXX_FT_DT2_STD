@@ -27,9 +27,9 @@ frame(50);assert.ok(Math.abs(sandbox.__ANIM.state.t-.15)<1e-10,'3× 播放应在
 normal.click();assert.strictEqual(sandbox.__ANIM.state.speed,1);assert.ok(normal.classList.contains('on'));assert.ok(!triple.classList.contains('on'));
 frame(100);assert.ok(Math.abs(sandbox.__ANIM.state.t-.2)<1e-10,'切回 1× 后应正常推进');
 assert.strictEqual(run('N'),25560);
-for(const [ch,min,avg] of [['R',81,90.5],['Gr',180,189.5],['Gb',182,191.5],['B',108,117.5]]){
- const a=Array.from(run(`sample('${ch}')`));assert.strictEqual(a.length,25560);assert.strictEqual(new Set(a).size,20);
- for(let v=min;v<min+20;v++)assert.strictEqual(a.filter(x=>x===v).length,1278);
+for(const [ch,low,avg] of [['R',90,90.5],['Gr',189,189.5],['Gb',191,191.5],['B',117,117.5]]){
+ const a=Array.from(run(`sample('${ch}')`));assert.strictEqual(a.length,25560);
+ assert.ok(a.every((v,i)=>v===low+i%2));
  assert.strictEqual(a.reduce((x,y)=>x+y,0)/a.length,avg);
 }
 const pitchX=Math.floor(1920/9),pitchY=Math.floor(1080/9),roi=[];
@@ -74,17 +74,27 @@ for(let i=0;i<5;i++){
 close(run("regionCompare(FIVE[2],'RG').raw"),run('ratios(90.5).rg'));
 close(run("regionCompare(FIVE[2],'BG').raw"),run('ratios(90.5).bg'));
 close(run("regionCompare(FIVE[2],'GG').raw"),run('ratios(90.5).gg'));
-// 五个 ROI 的四个通道，均有 20 个不同模拟值，每个出现 1278 次。
+// 使用实际按位置遍历的像素逐个相加，独立核验前缀和、行边界及最终和。
 for(let i=0;i<5;i++)for(const ch of ['r','gr','gb','b']){
- const groups=Array.from(run(`regionGroups(FIVE[${i}],'${ch}')`));
- assert.strictEqual(groups.length,20);assert.strictEqual(new Set(groups).size,20);
- assert.ok(groups.every(x=>Number.isInteger(x)&&x>=0&&x<=255));
- close(groups.reduce((a,b)=>a+b,0)/20,points[i][ch]);
- close(run(`groupSum(FIVE[${i}],'${ch}',0)`),.1);
- close(run(`groupSum(FIVE[${i}],'${ch}',20)`),points[i][ch]*25560+.1);
- close(run(`groupSum(FIVE[${i}],'${ch}',10)`),groups.slice(0,10).reduce((a,b)=>a+b,0)*1278+.1);
- if(i===2)assert.deepStrictEqual(groups,Array.from(run(`sample('${{r:'R',gr:'Gr',gb:'Gb',b:'B'}[ch]}').slice(0,20)`)));
+ const m=points[i][ch],low=Math.floor(m);
+ let integerSum=0;
+ for(let n=0;n<=25560;n++){
+  if([0,1,2,3,4,212,213,214,12779,12780,25559,25560].includes(n))
+   close(run(`pixelSum(FIVE[${i}],'${ch}',${n})`),integerSum+.1);
+  if(n<25560){
+   const value=run(`regionPixel(FIVE[${i}],'${ch}',${n})`);
+   assert.strictEqual(value,low+(Number.isInteger(m)?0:n%2));
+   assert.ok(Number.isInteger(value)&&value>=0&&value<=255);
+   integerSum+=value;
+  }
+ }
+ close(integerSum+.1,m*25560+.1);
+ if(i===2)assert.deepStrictEqual(Array.from({length:20},(_,n)=>run(`regionPixel(FIVE[${i}],'${ch}',${n})`)),Array.from(run(`sample('${{r:'R',gr:'Gr',gb:'Gb',b:'B'}[ch]}').slice(0,20)`)));
 }
+assert.strictEqual(run('pixelCount(0)'),0);assert.strictEqual(run('pixelCount(.08)'),0);
+assert.strictEqual(run('pixelCount(.09)'),1);assert.strictEqual(run('pixelCount(.115)'),2);
+assert.strictEqual(run('pixelCount(.14)'),3);assert.strictEqual(run('pixelCount(.165)'),4);
+assert.strictEqual(run('pixelCount(.36)'),25560);
 // 逐幕核验文字确实随进度依次出现，而不是只列出结果。
 for(let i=0;i<5;i++){
  const index=12+i;
@@ -92,10 +102,12 @@ for(let i=0;i<5;i++){
  assert.ok(sandbox.__ANIM.scenes[index].dur>=60);
  sandbox.__ANIM.gotoScene(index,true);
  function renderAt(p){drawn=[];sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[index].dur;sandbox.__ANIM.render();return drawn.slice();}
- let text=renderAt(0);assert.ok(text.includes('当前第 0 / 20 组，每组 1278 个'));
+ let text=renderAt(0);assert.ok(text.includes('等待第一个像素'));assert.ok(text.includes('已累加：0 / 25560 个 / 通道'));assert.ok(text.includes('0.1（初始）'));
  assert.ok(!text.some(x=>x.startsWith('加偏移 ')));
- text=renderAt(.2);assert.ok(text.some(x=>x.includes(' / 20 组')));assert.ok(!text.includes('当前第 20 / 20 组，每组 1278 个'));
- text=renderAt(.38);assert.ok(text.includes('当前第 20 / 20 组，每组 1278 个'));assert.ok(text.some(x=>x.startsWith('= (')));
+ text=renderAt(.09);assert.ok(text.includes('刚累加：第 1 行，第 1 列'));assert.ok(text.includes(`0.1 + ${Math.floor(points[i].r)} = ${(0.1+Math.floor(points[i].r)).toFixed(1)}`));
+ text=renderAt(.115);assert.ok(text.includes('刚累加：第 1 行，第 2 列'));
+ text=renderAt(.2);assert.ok(text.some(x=>x.startsWith('刚累加：第 ')));assert.ok(!text.includes('已累加：25560 / 25560 个 / 通道'));
+ text=renderAt(.38);assert.ok(text.includes('刚累加：第 120 行，第 213 列'));assert.ok(text.includes('已累加：25560 / 25560 个 / 通道'));assert.ok(text.some(x=>x.startsWith('= (')));
  for(const [progress,offsets,ranges] of [[.43,0,0],[.47,1,0],[.52,1,1],[.56,1,1],[.60,2,1],[.65,2,2],[.69,2,2],[.73,3,2],[.78,3,3]]){
   text=renderAt(progress);
   assert.strictEqual(text.filter(x=>x.startsWith('加偏移 ')).length,offsets,`${points[i].name} ${progress} offset`);

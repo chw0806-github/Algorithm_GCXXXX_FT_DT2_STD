@@ -92,7 +92,7 @@ GUIDES = {
   [S(TEST,1813,1835,'total_roi_cnt/2','先从 81 块各自的计算结果选出五点，并非区域两两相减。'),S(ITEM,2080,2091,'RG_Ratio_target_offset','每点修正后分别与该点目标范围比较。')],
   [S(RAW,7829,7849,'sum_g_average','每块 ROI 独立累加四通道并求绿色平均和；画面的四角使用模拟像素。')],
   *[[S(TEST,1813,1835,'total_roi_cnt/2',name+'是选出的五点之一；代码先得到每个区域的比值。'),
-      S(RAW,7829,7849,'sum_g_average','源码逐位置累加四通道，每个和从 0.1 开始；画面按亮度分组只是教学。'),
+      S(RAW,7829,7849,'sum_g_average','源码按行列逐位置累加四通道，每个和从 0.1 开始；画面像素值为模拟，后续位置加速展示。'),
       S(RAW,7851,7867,'r_g = sum_r/sum_g_average','分别计算 RG、BG 和 GG；此算例没有触发极端比例保护。'),
       S(ITEM,2080,2091,'RG_Ratio_target_offset','RG 修正值和目标范围比较；BG、GG 使用对应类型配置。'),
       S(ITEM,2120,2130,'BG_Ratio_target_offset','BG 使用对应位置的偏移与目标范围。'),

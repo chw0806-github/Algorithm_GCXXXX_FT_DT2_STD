@@ -6,6 +6,23 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+// 所有动画的源文件和构建产物都应提供同一组倍速按钮。
+const pages = ['light_response', 'relative_illumination', 'non_uniformity',
+  'deadrow_deadcol_bright', 'edge_deadrow_deadcol_bright', 'pixel_defect', 'color_ratio'];
+for (const page of pages) for (const file of ['index.src.html', 'index.html']) {
+  const html = fs.readFileSync(path.join(__dirname, '..', page, file), 'utf8');
+  const buttons = Array.from(html.matchAll(/<button data-speed="([\d.]+)"(?: class="([^"]+)")?>([^<]+)<\/button>/g));
+  assert.deepStrictEqual(buttons.map(b => [b[1], b[3]]), [['0.5','0.5×'],['1','1×'],['2','2×'],['3','3×']], `${page}/${file} 倍速按钮`);
+  assert.deepStrictEqual(buttons.filter(b => b[2] === 'on').map(b => b[1]), ['1'], `${page}/${file} 默认倍速`);
+}
+const speedButtons = ['0.5', '1', '2', '3'].map(speed => {
+  const classes = new Set(speed === '1' ? ['on'] : []);
+  return { dataset: {speed}, classList: {
+    toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+    contains: name => classes.has(name)
+  }, addEventListener(event, fn) { if (event === 'click') this.click = fn; } };
+});
+
 const gradient = { addColorStop() {} };
 const ctx = new Proxy({}, {
   get(target, key) {
@@ -26,7 +43,7 @@ const guide = { innerHTML: '' };
 const elements = { stage: canvas, caption, bar, explain, 'code-guide': guide };
 const document = {
   getElementById: id => elements[id] || null,
-  querySelectorAll: () => [],
+  querySelectorAll: selector => selector === '.speed button' ? speedButtons : [],
   querySelector: () => null,
   addEventListener() {}
 };
@@ -62,6 +79,18 @@ assert.ok(draws > 0, '第一幕未绘制');
 assert.strictEqual(typeof nextFrame, 'function', '动画帧未安排');
 nextFrame(100);
 assert.strictEqual(sandbox.AlgoAnim.state.t, 0.05);
+speedButtons[3].click();
+assert.strictEqual(sandbox.AlgoAnim.state.speed, 3);
+assert.ok(speedButtons[3].classList.contains('on'));
+assert.ok(!speedButtons[1].classList.contains('on'));
+nextFrame(150);
+assert.ok(Math.abs(sandbox.AlgoAnim.state.t - 0.20) < 1e-10, '3× 在 50ms 内应推进 150ms');
+speedButtons[1].click();
+assert.strictEqual(sandbox.AlgoAnim.state.speed, 1);
+assert.ok(speedButtons[1].classList.contains('on'));
+assert.ok(!speedButtons[3].classList.contains('on'));
+nextFrame(200);
+assert.ok(Math.abs(sandbox.AlgoAnim.state.t - 0.25) < 1e-10, '切回 1× 后正常推进');
 sandbox.AlgoAnim.gotoScene(1, true);
 assert.strictEqual(caption.textContent, '字幕二');
 assert.strictEqual(explain.innerHTML, '讲解二');
