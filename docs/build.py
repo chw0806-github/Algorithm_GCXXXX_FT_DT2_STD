@@ -34,6 +34,7 @@ PAGES = [
     (ROOT / 'relative_illumination' / 'index.src.html',   ROOT / 'relative_illumination' / 'index.html'),
     (ROOT / 'non_uniformity' / 'index.src.html',          ROOT / 'non_uniformity' / 'index.html'),
     (ROOT / 'deadrow_deadcol_bright' / 'index.src.html', ROOT / 'deadrow_deadcol_bright' / 'index.html'),
+    (ROOT / 'color_ratio' / 'index.src.html', ROOT / 'color_ratio' / 'index.html'),
     (ROOT / 'edge_deadrow_deadcol_bright' / 'index.src.html', ROOT / 'edge_deadrow_deadcol_bright' / 'index.html'),
     (ROOT / 'pixel_defect' / 'index.src.html',           ROOT / 'pixel_defect' / 'index.html'),
     (ROOT / 'catalog.src.html',                            ROOT / 'index.html'),

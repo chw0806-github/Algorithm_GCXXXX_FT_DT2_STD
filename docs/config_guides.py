@@ -7,6 +7,11 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = Path('STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps')
 # 字段解释只是阅读提示；数值始终从原文件读取，不写死在讲解里。
 CONFIGS = {
+    'color_ratio': ('ColorRatio.data', [
+        ('Skip', 'ROI 跳过边缘'), ('ROI_X_Cnt', '横向区域数'), ('ROI_Y_Cnt', '纵向区域数'),
+        ('TargetRatioRG_center', '中心 RG 目标'), ('TargetRatioRG_center_offset', '中心 RG 偏移'),
+        ('Factor_Center_Class2', '中心 Class2 系数'), ('Factor_Center_Gr_Gb_Ratio', '中心 GG 加严'),
+        ('Factor_Golden', 'Golden 系数'), ('Gr_Gb_Diff', '绿色差阈值'), ('ratio_open_mode', '开关')]),
     'light_response': ('LightResponse.data', [
         ('MinMeanR', 'R 均值下限'), ('MaxMeanR', 'R 均值上限'),
         ('MinMeanGr', 'Gr 均值下限'), ('MaxMeanGr', 'Gr 均值上限'),
@@ -54,7 +59,8 @@ CSS = '''
 def get_config(page):
     filename, fields = CONFIGS[page]
     files = []
-    for name in (filename, 'Basic.data'):
+    names = [filename, 'Basic.data'] + (['LightResponse.data'] if page == 'color_ratio' else [])
+    for name in names:
         path = CONFIG_DIR / name
         text = (ROOT / path).read_text(encoding='utf-8')
         files.append({'path': str(path), 'name': name, 'text': text})

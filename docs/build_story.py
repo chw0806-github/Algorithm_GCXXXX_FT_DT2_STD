@@ -28,6 +28,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
     {
+        "dir": "color_ratio",
+        "title": "Color_Ratio",
+        "sub": "颜色比例：81 个区域、五点判定和多个子项",
+        "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+        "lead": "16 幕定格图、逐幕源码与配置原文；中心数值仅为模拟。",
+    },
+    {
         "dir": "edge_deadrow_deadcol_bright",
         "title": "Edge_Deadrow_Deadcol_bright",
         "sub": "边缘坏行坏列：实际选区与假设算例",

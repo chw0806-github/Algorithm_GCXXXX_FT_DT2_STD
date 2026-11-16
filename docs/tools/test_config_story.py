@@ -16,7 +16,7 @@ for page in CONFIGS:
         html = (DOCS / page / filename).read_text(encoding='utf-8')
         assert html.index('class="config-panel"') < html.index('<main'), (page, filename)
         blocks = re.findall(r'<section class="config-file">(.*?)</section>', html, re.S)
-        assert len(blocks) == 2, (page, filename)
+        assert len(blocks) == len(files), (page, filename)
         for block, file in zip(blocks, files):
             assert file['path'] in unescape(block)
             code = re.search(r'<pre\b[^>]*><code>(.*?)</code></pre>', block, re.S)
