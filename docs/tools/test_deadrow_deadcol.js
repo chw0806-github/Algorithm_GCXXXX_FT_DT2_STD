@@ -17,10 +17,24 @@ let frame;
 const sandbox={document,performance:{now:()=>0},requestAnimationFrame:fn=>{frame=fn;},setTimeout(){},addEventListener(){},devicePixelRatio:1};
 sandbox.window=sandbox;vm.createContext(sandbox);
 scripts.forEach((s,i)=>new vm.Script(s,{filename:'deadrow:script'+i}).runInContext(sandbox));
-assert.strictEqual(sandbox.__ANIM.scenes.length,7);
-for(let i=0;i<7;i++){
+assert.strictEqual(sandbox.__ANIM.scenes.length,14);
+assert.strictEqual((960*180+960*200)/1920,190);
+assert.strictEqual((960*50+960*250)/1920,150);
+assert.ok(Math.abs(Math.sqrt(1920*10000/1919)-100.026)<0.001);
+assert.ok(Math.abs((210-190)/210-0.095238095238)<1e-9);
+assert.strictEqual(Math.abs((220-200)-(200-200)),20);
+for(let i=0;i<14;i++){
  sandbox.__ANIM.gotoScene(i,true);
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
+}
+let fills=0;ctx.fillRect=()=>{fills++;};
+sandbox.__ANIM.scenes[3].draw(1);assert.strictEqual(fills,1920,'行均值画面应绘出完整 1920 像素');
+fills=0;sandbox.__ANIM.scenes[8].draw(1);assert.strictEqual(fills,1920,'DOL 示例应绘出完整 1920 像素');
+let texts=[];ctx.fillText=text=>texts.push(String(text));
+for(const i of [3,4,5,6,7,8,10,11,12,13]){
+ texts=[];sandbox.__ANIM.scenes[i].draw(0);const before=texts.length;
+ texts=[];sandbox.__ANIM.scenes[i].draw(.78);assert.ok(texts.length>before,`第 ${i+1} 幕应逐步展开`);
+ assert.notStrictEqual(sandbox.__ANIM.scenes[i].caption(0),sandbox.__ANIM.scenes[i].caption(.78));
 }
 assert.strictEqual(typeof frame,'function');frame(100);
 function set(id,val){elements[id+'val'].value=String(val);handlers[id]();return vm.runInContext('result()',sandbox);}
@@ -32,4 +46,4 @@ r=set('row',200);assert.strictEqual(r.bin,2208);
 r=set('col',206);assert.strictEqual(r.badCol,false);assert.strictEqual(r.bin,1);
 r=set('col',207);assert.strictEqual(r.badCol,true);assert.strictEqual(elements.colout.textContent,'207');
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
-console.log('OK：7 幕、滑杆、行列阈值边界与同级优先顺序');
+console.log('OK：14 幕、滑杆、行列阈值边界与同级优先顺序');

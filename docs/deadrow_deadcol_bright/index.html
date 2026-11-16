@@ -153,7 +153,7 @@
       <div class="logo">◎</div>
       <div>
         <h1>图像传感器 FT 测试 · 白帧坏行坏列（Deadrow_Deadcol_bright）动画讲解</h1>
-        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Deadrow_Deadcol_bright(test_manage));</code></p>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Deadrow_Deadcol_bright(test_manage,true));</code></p>
       </div>
     </div>
     <div class="badges">
@@ -187,8 +187,8 @@
 
       <div class="tuner">
         <div class="tuner-head">
-          <h2>模拟单条异常行与列</h2>
-          <span>假设两侧背景均值为 200，其他异常类型计数为 0</span>
+          <h2>模拟两个独立目标线</h2>
+          <span>两条线各自独立：两侧背景均值为 200，其他计数假设为 0</span>
         </div>
         <div class="sliders two" id="sliders">
           <label class="slider" style="--c:#ffd166"><span class="ch">行</span><input id="rowval" type="range" min="180" max="220" step="1" value="200"><output id="rowout">200</output></label>
@@ -210,7 +210,7 @@
 
   <footer class="foot">
     教学示意：基于 GC8613T 白帧 <code>LineDefect.data</code> 和 V1.0，默认背景值 200；非产线数据。
-    动画只模拟居中孤立行、列的比例差异，假设其他异常计数为零；实际算法还检查 DOL 和断线。
+    互动只模拟两个独立目标线，其他异常计数假设为零，并非完整图像检测。
   </footer>
 </div>
 
@@ -612,7 +612,7 @@ const AlgoAnim = {
 window.AlgoAnim = AlgoAnim;
 </script>
 <script>
-/* 仅模拟两个孤立中心线，假设周围背景均为 200，DOL 与断线为 0。 */
+/* 教学算例，不是对真实图像的完整检测。 */
 const state=AlgoAnim.state;
 state.row=200; state.col=200;
 function result(){
@@ -620,85 +620,138 @@ function result(){
   const badRow=rowDiff>0.025, badCol=colDiff>0.03;
   return {rowDiff,colDiff,badRow,badCol,bin:badCol?2208:(badRow?2210:1),grade:(badRow||badCol)?7:0};
 }
-function panel(x,y,w,h,title,lines,color){
-  card(x,y,w,h,{fill:'rgba(110,168,254,.05)',stroke:'rgba(110,168,254,.22)'});
-  txt(title,x+22,y+34,{size:16,weight:700,color:color||C.accent});
-  lines.forEach((s,i)=>txt(s,x+22,y+72+i*30,{size:14,color:i===0?C.ink:C.dim}));
+function steps(x,y,w,h,title,lines,p,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.05)',stroke:'rgba(110,168,254,.25)'});
+  txt(title,x+20,y+34,{size:16,weight:700,color:color||C.accent});
+  const n=Math.min(lines.length,1+Math.floor(clamp01(p/.72)*lines.length));
+  lines.forEach((v,i)=>{if(i<n)txt(v,x+20,y+70+i*31,{size:14,color:i===n-1?C.ink:C.dim});});
 }
-function sample(mode,p){
-  const x=70,y=155,w=410,h=260;
-  card(x,y,w,h,{fill:'rgba(110,168,254,.06)'});
-  for(let i=0;i<9;i++){
-    ctx.fillStyle=(i===4 && mode==='row')?'rgba(255,209,102,.7)':'rgba(110,168,254,.13)';
-    ctx.fillRect(x+18,y+20+i*24,w-36,18);
-  }
-  if(mode==='col'){
-    ctx.fillStyle='rgba(110,168,254,.76)';ctx.fillRect(x+195,y+18,22,h-36);
-  }
-  txt(mode==='col'?'列方向示意':'行方向示意',x+18,y+h+30,{size:13,color:C.dim});
-  const f=ease(seg(p,.04,.4));
-  txt('目标线',x+18,y+h-15,{size:13,color:C.ink,alpha:f});
+function label(s,x,y,color){txt(s,x,y,{size:13,color:color||C.dim});}
+function channelFrame(){
+ card(65,165,430,242,{fill:'rgba(110,168,254,.05)',stroke:C.accent});
+ txt('R 通道图',85,193,{size:15,weight:700,color:C.accent});
+ label('宽 1920 像素',195,195); label('高 1080 像素',195,220);
 }
 function intro(p){
-  header(0,'定位','白帧中的线缺陷：不是单个坏点，而是一整行或列异常');
-  sample('row',p);
-  panel(540,155,390,260,'本项在做什么',['先得到 R / Gr / Gb / B 四通道','对每个通道分别检查行和列','同时检查线内波动和断线指标','汇总各通道计数，返回子项结果'],C.accent2);
-  txt('边缘线缺陷由另一个子项处理。',540,455,{size:13,color:C.dim});
+ header(0,'任务','白帧里，找出与周围不同的行或列');
+ steps(65,160,410,250,'从哪里开始？',['① 白帧 RAW 拆成四张通道图','② 每张图分别检查行和列','③ 还检查线内波动与断线指标','④ 汇总异常计数，决定结果'],p,C.accent);
+ if(p>=.25){arrow(480,270,520,270,C.accent2,2);steps(535,160,400,250,'为什么比较周围？',['正常行、列与附近线通常接近','某条线整体偏亮或偏暗时','与相邻线均值的差可能变大','判定依赖阈值，不只看颜色'],(p-.25)/.55,C.accent2);}
+ label('演示使用 GC8613T 白帧 V1.0 配置；所有亮度是模拟值。',65,480);
 }
 function separate(p){
-  header(1,'分通道','四张通道图分别执行行检测与列检测');
-  const colors=[CH.R,CH.Gr,CH.Gb,CH.B];
-  ['R','Gr','Gb','B'].forEach((v,i)=>{
-    const x=65+i*225, alpha=ease(seg(p,i*.12,.45+i*.12));ctx.save();ctx.globalAlpha=alpha;
-    card(x,170,200,220,{fill:'rgba(110,168,254,.06)',stroke:colors[i]});
-    txt(v,x+100,223,{size:25,color:colors[i],align:'center',weight:700,font:MONO});
-    txt('按行统计',x+30,278,{size:15});txt('按列统计',x+30,320,{size:15});
-    txt('并行线程',x+30,358,{size:13,color:C.dim});ctx.restore();
-  });
-  txt('通道图的宽、高是原始 Bayer 图宽、高的一半。',65,455,{size:14,color:C.dim});
+ header(1,'分通道','先把 RAW 拆成 R、Gr、Gb、B 四张图');
+ card(55,170,260,170,{fill:'rgba(110,168,254,.06)',stroke:C.accent});
+ txt('RAW 白帧',80,210,{size:18,weight:700});txt('3840 × 2160',80,250,{size:18});label('RG Bayer 排列',80,290);
+ arrow(325,255,370,255,C.accent2,2);
+ ['R','Gr','Gb','B'].forEach((v,i)=>{const x=390+(i%2)*270,y=150+Math.floor(i/2)*150;
+  if(p>=i*.12){card(x,y,245,125,{fill:withA(CH[v],.07),stroke:CH[v]});txt(v,x+20,y+38,{size:22,color:CH[v],weight:700});
+  txt('1920 × 1080 像素',x+20,y+70,{size:14});label('单独查行，也单独查列',x+20,y+100);}});
+ label('每 2×2 Bayer 块各取一个位置；宽、高分别减半。',55,470);
 }
-function row(p){
-  header(2,'检测行','目标行均值与上下邻近行均值比较');
-  sample('row',p);const r=result();
-  panel(540,155,390,300,'示意：目标行与背景',['目标行均值：'+state.row+'；邻近行：200','两侧各取 5 行算邻近均值','取两侧相对差异中的较大者','|'+state.row+' − 200| ÷ 200 = '+(r.rowDiff*100).toFixed(2)+'%','超过 2.5% 才记为异常行'],C.accent2);
+function anatomy(p){
+ header(2,'认识行列','看一张 R 通道图：一行横着数，一列竖着数');
+ channelFrame();
+ ctx.fillStyle='rgba(255,209,102,.75)';ctx.fillRect(80,275,400,7);
+ if(p>=.3){ctx.fillStyle='rgba(110,168,254,.8)';ctx.fillRect(275,210,6,185);}
+ steps(535,160,400,250,'每一条线包含多少像素？',['① 图宽 1920，高 1080','② 横着 1 行：1920 个像素','③ 竖着 1 列：1080 个像素','④ 黄色行和蓝色列是两种方向'],p,C.accent2);
+ label('左图是缩略示意，不逐点画出全部像素。',65,455);
 }
-function col(p){
-  header(3,'检测列','目标列均值与左右邻近列均值比较');
-  sample('col',p);const r=result();
-  panel(540,155,390,300,'示意：目标列与背景',['目标列均值：'+state.col+'；邻近列：200','左右各取 5 列算邻近均值','取两侧相对差异中的较大者','|'+state.col+' − 200| ÷ 200 = '+(r.colDiff*100).toFixed(2)+'%','超过 3.0% 才记为异常列'],C.accent);
+function rowmean(p){
+ header(3,'行均值','取一整行：先把 1920 个像素合成一个平均值');
+ txt('模拟某一条 R 通道行：1920 个像素',65,175,{size:16,weight:700});
+ // 整行按真实 1920 个像素绘制，屏幕宽度压缩，每个竖条是一个像素。
+ for(let i=0;i<1920;i++){ctx.fillStyle=i<960?'#46709c':'#b3d0ea';ctx.fillRect(65+i*.43,205,.44,35);}
+ label('← 前 960 个：各 180 DN',65,270);label('后 960 个：各 200 DN →',495,270);
+ label('每根极细竖条 = 1 个像素；例如第 1 个像素的模拟亮度是 180 DN。',65,298);
+ steps(65,320,870,215,'计算这一行的亮度均值',['① 将 1920 个像素的 DN 值相加','② 总和 = 960 × 180 + 960 × 200 = 364800','③ 除以 1920 个像素 → 行均值 = 190 DN','④ 每一行都各自计算一个均值'],p,C.accent2);
 }
-function extra(p){
-  header(4,'其他线异常','除了整行整列差异，还检查线内波动和断线指标');
-  panel(65,160,405,265,'DOL：线内波动',['计算每一行或列像素标准差','超过通道各自的 DOL 阈值则计数','R / B 上限为 80','Gr / Gb 上限为 90'],C.accent2);
-  panel(530,160,405,265,'断线指标',['将线分为两半计算均值序列','检查连续线均值变化的二次差','示例阈值为 10','超过阈值时计数'],C.accent);
-  txt('这里仅展示判断思路；本页滑杆假设这两类计数为零。',65,470,{size:14,color:C.dim,alpha:ease(seg(p,.05,.35))});
+function neighbors(p){
+ header(4,'取邻行','对目标行，上下各取 5 行；两侧分别求平均');
+ const x=65,y=155;
+ for(let i=0;i<11;i++){const yy=y+i*27;ctx.fillStyle=i===5?'rgba(255,209,102,.75)':i<5?'rgba(110,168,254,.55)':'rgba(61,220,151,.5)';ctx.fillRect(x,yy,300,21);
+  txt(i===5?'目标行：190':i<5?'上方第 '+(5-i)+' 行：200':'下方第 '+(i-5)+' 行：210',x+12,yy+16,{size:12,color:C.ink});}
+ steps(415,155,520,300,'一个居中目标行的模拟例子',['① 上方 5 行：200、200、200、200、200','② 上方均值 = 1000 ÷ 5 = 200','③ 下方 5 行：210、210、210、210、210','④ 下方均值 = 1050 ÷ 5 = 210','⑤ 不含目标行；上下两侧分开比较'],p,C.accent2);
+ label('仅展示参与计算的 11 行；不是整张图。',65,495);
+}
+function ratio(p){
+ header(5,'算比例差','目标行分别与上方、下方比较，取较大的差');
+ steps(65,160,870,315,'继续使用上一幕的模拟数：目标 190，上方 200，下方 210',['① 上方差 = |190 − 200| ÷ 200 = 0.05 = 5%','② 下方差 = |190 − 210| ÷ 210 ≈ 0.09524 = 9.52%','③ 取两侧较大值：max(5%, 9.52%) = 9.52%','④ 行阈值 0.025 = 2.5%','⑤ 9.52% > 2.5%，该目标行记为异常行','分母分别是对应一侧均值；等于阈值不计数'],p,C.accent2);
+ label('绝对值 | | 使偏亮或偏暗都能被发现。',65,520);
+}
+function scan(p){
+ header(6,'扫描行','目标行逐行移动：每一行都用自己的邻行计算');
+ channelFrame();
+ const k=Math.min(1079,Math.floor(clamp01(p/.72)*1080));
+ ctx.fillStyle=C.accent2;ctx.fillRect(80,210+k/1080*180,400,3);
+ txt('当前演示到第 '+(k+1)+' / 1080 行',65,460,{size:15,weight:700,color:C.accent2});
+ steps(535,160,400,290,'每一行的流程',['① 取当前行的 1920 像素均值','② 求上下各 5 行的均值','③ 算两侧比例差，取较大者','④ 超过 2.5% 时，异常行数加 1','⑤ 移动到下一行，重复'],p,C.accent);
+ label('扫描示意不代表只会有一条异常行。',65,500);
+}
+function columns(p){
+ header(7,'扫描列','列检测把方向转过来：整列、左侧五列、右侧五列');
+ channelFrame();
+ const k=Math.min(1919,Math.floor(clamp01(p/.72)*1920));
+ ctx.fillStyle=C.accent;ctx.fillRect(80+k/1920*400,210,3,180);
+ txt('当前演示到第 '+(k+1)+' / 1920 列',65,460,{size:15,weight:700,color:C.accent});
+ steps(535,160,400,290,'方向变了，方法相同',['① 一列包含 1080 个像素','② 每列求均值，左右各取 5 列','③ 分别算相对差，取较大者','④ 严格大于 0.030 = 3% 才计数','⑤ 四个通道各自检查'],p,C.accent2);
+ label('黄色行与蓝色列是独立方向，不能混为一谈。',65,500);
+}
+function dol(p){
+ header(8,'线内 DOL','即使整行均值与邻近相近，行内像素仍可能差异大');
+ txt('一条 R 行的另一组模拟像素：1920 个',65,170,{size:16,weight:700});
+ for(let i=0;i<1920;i++){ctx.fillStyle=i<960?'#315a87':'#d2e5fa';ctx.fillRect(65+i*.43,190,.44,32);}
+ label('960 个 50 DN',65,250);label('960 个 250 DN',495,250);
+ steps(65,285,870,250,'单独检查这一行内部的标准差（DOL）',['① 平均 = (960 × 50 + 960 × 250) ÷ 1920 = 150','② 相对平均的偏差为 −100 或 +100','③ 标准差 = √(1920 × 10000 ÷ 1919) ≈ 100.03 DN','④ R 行 DOL 阈值为 80，100.03 > 80 → DOL 计数加 1','这里源码用样本标准差：分母是 N−1'],p,C.accent2);
+}
+function half(p){
+ header(9,'切成两半','断线指标先把每一行分成左半和右半');
+ const a=[200,200,220];
+ for(let i=0;i<3;i++){const y=180+i*72;txt('第 '+(i+1)+' 行',65,y+25,{size:14});
+  card(150,y,300,50,{fill:'rgba(255,209,102,.14)',stroke:C.accent2});txt('左半均值 '+a[i],170,y+32,{size:15});
+  card(450,y,300,50,{fill:'rgba(110,168,254,.10)',stroke:C.accent});txt('右半：也单独计算',470,y+32,{size:14});}
+ if(p>=.5) txt('左半依次得到：200 → 200 → 220',150,455,{size:18,weight:700,color:C.accent2});
+ label('每半为 960 像素；此处只画连续 3 行示例。',65,505);
+}
+function breakline(p){
+ header(10,'断线二次差','看同一半区域，连续三行的均值变化是否突然改变');
+ steps(65,160,870,315,'延续上一幕左半均值：200 → 200 → 220',['① 第一次变化：200 − 200 = 0','② 第二次变化：220 − 200 = 20','③ 二次差 = |第二次变化 − 第一次变化| = |20 − 0| = 20','④ 断线阈值 10：20 > 10，计数加 1','⑤ 沿行序列继续；另一半也独立计算','列检测同理：列分上下两半，再沿列序列计算'],p,C.accent2);
+ label('这是数值指标的例子，不等同于保证视觉上出现断线。',65,515);
+}
+function edges(p){
+ header(11,'边界与零','靠近边缘或邻近均值为零时，源码如何处理？');
+ steps(65,160,870,315,'比例模式的两个特殊情况',['① 某一侧凑不齐 5 条邻线','② 那一侧改用当前线均值，不使用部分邻线','③ 如果任一侧邻近均值为 0','④ 两侧比例差及最终差都记为 −1','⑤ 因此这次不会因比例差超过正阈值而计数','DOL 与断线仍有各自的计算路径'],p,C.accent);
+ label('本例 StripRow / StripCol = 0；其他配置可能不同。',65,515);
 }
 function decision(p){
-  header(5,'选择 bin','异常计数决定是否失败，grade 决定后续覆盖');
-  const rows=[['异常列','2208','7'],['异常行','2210','7'],['DOL','2212','6'],['断线','2213','5']];
-  rows.forEach((v,i)=>{
-    let y=155+i*67;card(65,y,500,53,{fill:'rgba(110,168,254,.06)'});
-    txt(v[0],85,y+34,{size:15,weight:700});txt('bin '+v[1],285,y+34,{size:15});txt('grade '+v[2],415,y+34,{size:14,color:C.dim});
-  });
-  panel(605,155,330,270,'覆盖顺序',['先处理列，再处理行','接着处理 DOL 和断线','后项 grade 必须严格更大','行列同为 7，列先保留','表格是示例配置中的常见分支'],C.accent2);
-  txt('源码也有低等级 MA 分支；本示例 TA / MA 阈值相同，已触发时走上表分支。',65,485,{size:12,color:C.dim});
+ header(12,'结果汇总','先看四类计数，再按顺序与 grade 选择子项 bin');
+ const names=['异常列：bin 2208 / grade 7','异常行：bin 2210 / grade 7','DOL：bin 2212 / grade 6','断线：bin 2213 / grade 5'];
+ steps(65,160,430,280,'示例配置的常见分支',names,p,C.accent2);
+ steps(535,160,400,280,'如何覆盖？',['① 任一类计数 > 0：本项失败','② 按列 → 行 → DOL → 断线检查','③ 后项 grade 必须严格更高','④ 行、列同时触发：列先保留','⑤ 与其他子项还需进一步汇总'],p,C.accent);
+ label('本配置 TA 与 MA 阈值相同；其他配置有 MA 分支。',65,500);
 }
 function finish(p){
-  header(6,'互动判定','拖动行、列均值，观察比例差异与示例 bin');
-  const r=result();
-  panel(65,155,400,270,'行检测',['邻近行均值：200','目标行均值：'+state.row,'比例差：'+(r.rowDiff*100).toFixed(2)+'%','上限：2.5%','结果：'+(r.badRow?'异常':'正常')],r.badRow?C.fail:C.pass);
-  panel(535,155,400,270,'列检测',['邻近列均值：200','目标列均值：'+state.col,'比例差：'+(r.colDiff*100).toFixed(2)+'%','上限：3.0%','结果：'+(r.badCol?'异常':'正常')],r.badCol?C.fail:C.pass);
-  txt((r.bin===1?'PASS':'FAIL')+'    bin '+r.bin+'    grade '+r.grade,65,488,{size:22,weight:700,color:r.bin===1?C.pass:C.fail});
-  txt('假设 DOL、断线与其他通道计数为 0；不模拟原始图像。',65,525,{size:13,color:C.dim});
+ header(13,'互动','拖动滑杆：两个独立目标线的简化判定');
+ const r=result();
+ steps(65,155,400,290,'目标行：背景两侧均 200',['① 目标行均值：'+state.row+' DN','② |'+state.row+' − 200| ÷ 200','③ 比例差 = '+(r.rowDiff*100).toFixed(2)+'%','④ 行上限：2.5%','⑤ 目标行：'+(r.badRow?'异常':'未超限')],p,r.badRow?C.fail:C.pass);
+ steps(535,155,400,290,'目标列：背景两侧均 200',['① 目标列均值：'+state.col+' DN','② |'+state.col+' − 200| ÷ 200','③ 比例差 = '+(r.colDiff*100).toFixed(2)+'%','④ 列上限：3.0%','⑤ 目标列：'+(r.badCol?'异常':'未超限')],p,r.badCol?C.fail:C.pass);
+ if(p>=.65) txt((r.bin===1?'PASS':'FAIL')+'    子项 bin '+r.bin+'    grade '+r.grade,65,495,{size:21,weight:700,color:r.bin===1?C.pass:C.fail});
+ label('假设其他线与通道、DOL 和断线计数为零；并非完整图像检测。',65,530);
 }
 const SCENES=[
- {kicker:'定位',dur:11,draw:intro,caption:()=> '① 白帧中的行列异常按四个颜色通道分别检测',html:'<h3>在测试流程中的位置</h3><p><code>BrightTest.cpp</code> 调用 <code>Deadrow_Deadcol_bright</code>，传入已拆通道的白帧。它检查线缺陷；边缘线缺陷是另一个子项。</p>'},
- {kicker:'分通道',dur:12,draw:separate,caption:()=> '② 四个通道分别处理，先做行检测，再做列检测',html:'<h3>四通道并行</h3><p>行检测和列检测分别启动 R、Gr、Gb、B 四个线程，并在返回前等待。传入通道图的宽高分别为 RAW 宽高的一半。</p><p>本文针对示例 <code>LineDefect.data</code> 的 V1.0；项目也支持 V1.1。</p>'},
- {kicker:'检测行',dur:14,draw:row,caption:()=> '③ 比较每行均值和上下邻行均值的比例差',html:'<h3>怎么判断一行</h3><p>对每行计算均值；前后各取 <code>radius=5</code> 行求邻近均值，计算两侧相对差并取最大。超过该通道阈值就累加异常行。</p><p>示例四通道 TA 行阈值都是 0.025，即 2.5%。边缘邻行不足时源码会用当前行均值；邻近均值为 0 时差值记为 -1。</p>'},
- {kicker:'检测列',dur:14,draw:col,caption:()=> '④ 对列使用相同思路，比较左右邻列',html:'<h3>怎么判断一列</h3><p>先求每列均值，再与左右各 5 列的邻近均值比较。示例四通道 TA 列阈值均为 0.030，即 3.0%；严格大于阈值才计数。</p><p>动画只模拟背景均值为 200 的孤立中心线，并未对真实图像执行算法。</p>'},
- {kicker:'线内及断线',dur:14,draw:extra,caption:()=> '⑤ 同时检查线内标准差（DOL）与半线均值二次差',html:'<h3>不止检查均值差</h3><p>源码还计算每条线内的标准差并与 DOL 阈值比较；断线指标把每行或列分为两半，对每半的均值序列计算相邻差值的变化量，再按阈值计数。</p><p>这些计数来自四通道，最终也影响是否失败和 bin。</p>'},
- {kicker:'选择 bin',dur:14,draw:decision,caption:()=> '⑥ 汇总异常计数：列、行、DOL、断线按顺序比较 grade',html:'<h3>如何选择结果</h3><p>任一异常行、异常列、DOL 或断线计数大于 0，本项即失败。先判断列，再判断行、DOL 和断线；后项只有 grade 严格更大才覆盖当前结果。示例行与列均为 grade 7，所以同时触发时保留列 bin 2208。</p><p>V1.0 还有低等级 MA 分支；示例的 TA 和 MA 阈值相等，触发 TA 检测时对应最大差已达到 MA 阈值，因此进入常见 bin 分支。其他配置可能不同。</p>'},
- {kicker:'互动判定',dur:15,draw:finish,caption:()=> '⑦ 试着拖动行、列的示例均值：等于阈值不算异常',html:'<h3>动手试一下</h3><p>拖动滑杆改变目标行、列的均值，背景两侧固定为 200。行超过 2.5% 或列超过 3% 才判异常；如果两者同时异常，示例选择列的 bin 2208。</p><p>本互动假设 DOL、断线、其他通道均无异常，仅演示判定思路，不会对图像做完整检测。</p>'}
+ {kicker:'任务',dur:20,draw:intro,caption:p=>p<.3?'① 从白帧拆出四通道，分别检查行和列':'① 对比邻近线，找出与周围明显不同的行或列',html:'<h3>先理解要做什么</h3><p>白帧是一张受均匀照明的图像。这里寻找与附近线有明显差异的行或列，并额外检查线内波动和断线指标。</p><p>画面使用 GC8613T 的 V1.0 示例配置。数值都是模拟，不代表实际测量。</p>'},
+ {kicker:'分通道',dur:22,draw:separate,caption:p=>p<.5?'② RAW 按 Bayer 位置拆成四张通道图':'② 每张图 1920×1080；行检测和列检测分别处理四通道',html:'<h3>为什么有四张图？</h3><p>示例 RAW 为 3840×2160，RG Bayer 每 2×2 块中有 R、Gr、Gb、B 各一个位置。把同类位置按原位置排列，得到四张 1920×1080 通道图。</p><p>行、列检测分别启动四个通道线程；本页只展示 R 通道示例。代码支持 V1.0 / V1.1，本页以 V1.0 为准。</p>'},
+ {kicker:'认识行列',dur:20,draw:anatomy,caption:p=>p<.3?'③ 一行横跨整张通道图：1920 个像素':'③ 一列从上到下：1080 个像素；行与列分别检测',html:'<h3>行和列分别是什么？</h3><p>一张 R 通道图宽 1920 像素、高 1080 像素。横着从左到右是一行，一行有 1920 个像素，共 1080 行；竖着是一列，一列有 1080 个像素，共 1920 列。</p><p>图形只是缩略图，不是实际画出每一个像素。</p>'},
+ {kicker:'行均值',dur:26,draw:rowmean,caption:p=>p<.35?'④ 先取一整行：1920 个像素的模拟亮度':p<.6?'④ 把像素值相加，再除以 1920':'④ 这一行的平均亮度为 190 DN；其他行各自计算',html:'<h3>一行怎么变成一个数？</h3><p>教学例子中 960 个像素是 180 DN，另外 960 个是 200 DN。相加后除以总像素数 1920，得到该行均值 190 DN。画面中 1920 根极细竖条代表完整一行像素；宽度经过屏幕压缩。</p><p>每一行都要分别求自己的平均，不是对整张图求一个平均。</p>'},
+ {kicker:'取邻行',dur:28,draw:neighbors,caption:p=>p<.35?'⑤ 先取目标行上方五行，算上方均值':p<.65?'⑤ 再取目标行下方五行，单独算下方均值':'⑤ 上方 200，下方 210；不把目标行算进邻行',html:'<h3>邻居指哪些行？</h3><p>配置 radius=5。对居中的目标行，分别取上面五行和下面五行，不包含目标行。每侧先将 5 个行均值再求平均；两侧不能合并成一个均值。</p><p>画面只画参与比较的 11 行；目标 190、上侧每行 200、下侧每行 210 是模拟数值。</p>'},
+ {kicker:'算比例差',dur:30,draw:ratio,caption:p=>p<.25?'⑥ 目标行与上方均值相减，取绝对值，再除以上方均值':p<.5?'⑥ 再用同样方法计算与下方的比例差':p<.72?'⑥ 两侧差取较大值':'⑥ 9.52% 大于行阈值 2.5%，目标行计为异常',html:'<h3>一步一步算</h3><p>上方差 = |190−200|/200 = 5%；下方差 = |190−210|/210 ≈ 9.52%。取较大值 9.52%，与行阈值 0.025（即 2.5%）比较。</p><p>严格大于才计数；等于阈值不计数。这个例子只计算一条目标行，不推断整张图的异常行数。</p>'},
+ {kicker:'扫描行',dur:24,draw:scan,caption:p=>p<.72?'⑦ 目标行从上向下移动，对每一行重复计算':'⑦ 所有行处理后，汇总各通道的异常行计数',html:'<h3>不是只看一行</h3><p>R 通道有 1080 行：每行求均值后，逐行计算上下邻行差；超出阈值时计数。四个通道分别运行，之后汇总计数。</p><p>图中移动的亮线表示计算位置。靠近边缘时有特殊规则，第 12 幕解释；某条异常行也可能影响邻行的参考均值。</p>'},
+ {kicker:'扫描列',dur:24,draw:columns,caption:p=>p<.72?'⑧ 换成一列一列，从左向右扫描':'⑧ 一列 1080 个像素；与左右邻列比较，列阈值为 3%',html:'<h3>列和行的区别</h3><p>R 通道有 1920 列，每列 1080 像素。先求列均值，再分别求左侧和右侧各 5 列均值，计算两侧比例差并取较大值。</p><p>本配置列 TA 阈值为 0.030，即 3%，严格大于才计数。行列分别运行，各通道分别计算。</p>'},
+ {kicker:'线内 DOL',dur:30,draw:dol,caption:p=>p<.35?'⑨ 另一组模拟行：平均为 150，但像素有 50 和 250':p<.65?'⑨ 计算这一整行像素的标准差':'⑨ 样本标准差约 100.03 DN，超过 R 通道阈值 80',html:'<h3>为什么还要检查线内波动？</h3><p>这条模拟行一半是 50 DN，一半是 250 DN，平均是 150；即使邻行均值也是 150，行内差异仍然很大。DOL 用整行或整列像素的标准差衡量线内波动。</p><p>本源码 GetDatasStd 使用样本标准差，除以 N−1：√(1920×10000/1919)≈100.03 DN。R/B 阈值 80、Gr/Gb 阈值 90，严格大于时计数。此例与之前行均值例子独立。</p>'},
+ {kicker:'半行均值',dur:22,draw:half,caption:p=>p<.5?'⑩ 每条行按左右各一半分别求均值':'⑩ 沿行方向排列左半的均值：200、200、220',html:'<h3>断线指标第一步：分半</h3><p>每行分为左半、右半，各有 960 像素；分别求均值。对于连续多行，把左半均值按行顺序组成一个序列，右半也形成另一序列。</p><p>这里只画连续三行的例子；三行左半均值假定是 200、200、220，右半也要单独检查。列则分为上、下两半，每半 540 像素。</p>'},
+ {kicker:'断线二次差',dur:30,draw:breakline,caption:p=>p<.25?'⑪ 连续三个半行均值，先算相邻两次变化':p<.55?'⑪ 两次变化再相减，取绝对值':'⑪ 二次差 20 大于阈值 10，计数加 1',html:'<h3>什么是二次差？</h3><p>左半的三个均值 200、200、220：第一次变化是 0，第二次变化是 20；二次差为 |20−0|=20。超过阈值 10，本次计数加 1。</p><p>窗口继续滑动到下一组三行；左半和右半都检查。列同理，对每列的上半与下半均值序列运算。指标不保证和肉眼看到的断线一一对应。</p>'},
+ {kicker:'边界与零',dur:24,draw:edges,caption:p=>p<.4?'⑫ 一侧不足 5 条邻线时，该侧用当前线均值':'⑫ 任一侧邻近均值为零，两侧比例差和最终差设为 −1',html:'<h3>边界不是简单缩短邻域</h3><p>当某一侧不够 radius=5 条时，源码用目标线自身的均值作为该侧参考。若任一侧均值为 0，则两侧比例差和最终差都设为 −1，不会因比例差超过正阈值而计数。</p><p>本配置 StripRow、StripCol 为 0；其他配置的处理范围可能不同。DOL、断线有各自的计算。</p>'},
+ {kicker:'汇总结果',dur:26,draw:decision,caption:p=>p<.5?'⑬ 四通道行列、DOL 与断线计数汇总；有异常即失败':'⑬ 按列、行、DOL、断线顺序，只有更高 grade 才覆盖',html:'<h3>为什么列和行同时异常时选列？</h3><p>代码先检查列，再检查行、DOL 和断线。后续分支的 grade 必须严格大于当前 grade 才能覆盖。此示例行列 grade 均为 7，所以两者同时触发时保留列 bin 2208。</p><p>示例 TA/MA 阈值相同，触发 TA 时进入图中常见分支。其他配置存在 MA 分支，最终 bin 还要与其他测试子项汇总。参数 true 是 log_flag，控制日志，不是改变缺陷判定的开关。</p>'},
+ {kicker:'互动判定',dur:24,draw:finish,caption:p=>p<.65?'⑭ 拖滑杆，分别比较目标行和目标列与 200 的差':'⑭ 等于阈值不算超限；两者都超限时模拟选择列 bin 2208',html:'<h3>动手体验阈值</h3><p>滑杆是两个独立目标线的简化例子，假设各自两侧背景均值固定 200。行均值 195 或 205 时差为 2.5%，不超限；194 或 206 时超限。列均值 194 或 206 时差为 3%，不超限；193 或 207 时超限。</p><p>这里只模拟目标线，假设其他线和通道、DOL、断线计数为零，不模拟完整图像。实际异常线可能影响附近线、DOL 或断线的判断。</p>'}
 ];
 ['row','col'].forEach(k=>{const input=document.getElementById(k+'val'),out=document.getElementById(k+'out'); input.addEventListener('input',()=>{state[k]=Number(input.value);out.textContent=input.value;AlgoAnim.render();});});
 AlgoAnim.start({scenes:SCENES});
