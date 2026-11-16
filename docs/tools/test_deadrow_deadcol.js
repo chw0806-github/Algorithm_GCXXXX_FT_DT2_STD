@@ -24,17 +24,28 @@ sandbox.__ANIM.gotoScene(3,true);
 assert.ok(elements['code-guide'].innerHTML.includes('each_row_.push_back'));
 sandbox.__ANIM.gotoScene(10,true);
 assert.ok(elements['code-guide'].innerHTML.includes('delta2-delta1'));
-assert.strictEqual((960*180+960*200)/1920,190);
-assert.strictEqual((960*50+960*250)/1920,150);
-assert.ok(Math.abs(Math.sqrt(1920*10000/1919)-100.026)<0.001);
-assert.ok(Math.abs((210-190)/210-0.095238095238)<1e-9);
-assert.strictEqual(Math.abs((220-200)-(200-200)),20);
+const row=vm.runInContext('rowExample()',sandbox);
+const pixels=Array.from(vm.runInContext('ROW_PIXELS',sandbox));
+assert.strictEqual(pixels.length,1920);
+assert.strictEqual(new Set(pixels).size,20);
+assert.strictEqual(pixels.reduce((a,b)=>a+b,0),363840);
+assert.strictEqual(row.target,189.5);assert.strictEqual(row.top,200);assert.strictEqual(row.bottom,210);
+assert.strictEqual(new Set(Array.from(vm.runInContext('TOP_MEANS',sandbox))).size,5);
+assert.strictEqual(new Set(Array.from(vm.runInContext('BOTTOM_MEANS',sandbox))).size,5);
+assert.ok(Math.abs(row.topDiff-.0525)<1e-12);
+assert.ok(Math.abs(row.bottomDiff-20.5/210)<1e-12);
+const dol=vm.runInContext('dolExample()',sandbox);
+assert.strictEqual(new Set(Array.from(vm.runInContext('DOL_PIXELS',sandbox))).size,20);
+assert.strictEqual(dol.mean,150);assert.strictEqual(dol.sumSquares,17526720);
+assert.ok(Math.abs(dol.std-95.5680747145)<1e-9);
+assert.strictEqual(vm.runInContext('Math.abs((HALF_MEANS[2]-HALF_MEANS[1])-(HALF_MEANS[1]-HALF_MEANS[0]))',sandbox),16);
 for(let i=0;i<14;i++){
  sandbox.__ANIM.gotoScene(i,true);
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
 let fills=0;ctx.fillRect=()=>{fills++;};
-sandbox.__ANIM.scenes[3].draw(1);assert.strictEqual(fills,1920,'行均值画面应绘出完整 1920 像素');
+sandbox.__ANIM.scenes[3].draw(0);assert.strictEqual(fills,1920,'行均值画面应绘出完整 1920 像素');
+fills=0;sandbox.__ANIM.scenes[3].draw(1);assert.strictEqual(fills,1940,'还应放大展示前 20 个像素');
 fills=0;sandbox.__ANIM.scenes[8].draw(1);assert.strictEqual(fills,1920,'DOL 示例应绘出完整 1920 像素');
 let texts=[];ctx.fillText=text=>texts.push(String(text));
 for(const i of [3,4,5,6,7,8,10,11,12,13]){
