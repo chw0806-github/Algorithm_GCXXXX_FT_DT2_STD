@@ -45,6 +45,12 @@ scenes[6].draw(0);assert.deepStrictEqual(marks,[]);
 scenes[6].draw(.2);assert.deepStrictEqual(marks,[10]);
 scenes[6].draw(.4);assert.deepStrictEqual(marks,[10,70]);sandbox.grid=originalGrid;
 assert.notStrictEqual(scenes[6].caption(0),scenes[6].caption(.2));assert.notStrictEqual(scenes[6].caption(.2),scenes[6].caption(.4));
+// 比较条随播放进度增长，互动时颜色角色跟随实际极值而非固定位置。
+let barValues=[];const originalHorizontal=sandbox.horizontal;sandbox.horizontal=(...args)=>{barValues.push(args[4]);originalHorizontal(...args);};
+scenes[8].draw(0);const earlyBars=barValues.slice();barValues=[];scenes[8].draw(.8);assert.ok(barValues[0]>earlyBars[0]&&barValues[1]>earlyBars[1]);sandbox.horizontal=originalHorizontal;
+const originalGrid2=sandbox.grid;let interactiveArgs;sandbox.grid=(...args)=>{interactiveArgs=args;};
+run('state.gr=170');scenes[13].draw(1);assert.strictEqual(interactiveArgs[1],70);assert.strictEqual(interactiveArgs[2],0);sandbox.grid=originalGrid2;
+assert.notStrictEqual(scenes[0].caption(0),scenes[0].caption(.8));assert.notStrictEqual(scenes[5].caption(0),scenes[5].caption(.8));assert.notStrictEqual(scenes[9].caption(0),scenes[9].caption(.8));
 buttons.normal();assert.strictEqual(out.textContent,'200');assert.strictEqual(run('calc(state.gr).fail'),false);
 buttons.near();assert.strictEqual(out.textContent,'216');assert.strictEqual(run('calc(state.gr).fail'),false);assert.ok(at(13,1).includes('GI ≈ 0.080000'));
 input.value='217';handler();assert.strictEqual(out.textContent,'217');assert.strictEqual(run('calc(state.gr).fail'),true);

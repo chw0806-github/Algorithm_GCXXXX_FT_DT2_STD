@@ -26,3 +26,5 @@
 - 开关关闭时 V1.0 将 `g_msg=false`；未知版本返回 false 且 `g_msg=false`。V1.0 返回一个 GI 子项；调用方 `insert` 追加整个向量，最终 bin 仍需结合其他子项。`Color_GI_5_5` 和 Color_Ratio 内的 GI 子项与此函数不同。
 
 源码见 `TestItems/BrightTest.cpp:291–413`、`Params/testitems.cpp:1765–1889`、`Params/cpalgorithmraw.cpp:7825–7867`、`Params/parammanage.cpp:6221–6339` 与 `FTAlgorithm.cpp:358–364`。
+
+2026-11：重新设计 14 幕画面，用 ROI 网格、绿色通道、动态比较条与阈值标记展示每一步；互动图的极值颜色和位置随模拟数据更新。图示区域和数值仍为示意，动画不逐像素播放累加。
