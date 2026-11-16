@@ -10,6 +10,7 @@ items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
 
 - 动画：`docs/light_response/index.html`（单文件、零依赖、可离线；源文件为同目录 `index.src.html`）
 - 静态分镜：`docs/light_response/storyboard.html`（**不执行脚本也能看**：8 幕各一张定格图 + 字幕 + 讲解）
+- 均值画面先定位中心区域，再展示公式与四通道模拟均值；不播放逐像素累加。滑杆值是模拟结果，非实测。
 - 讲解：本文件（算法流程、判定树、真实配置、常见坑）
 - 目录：`../index.html`；相对照度对照页：`../relative_illumination/index.html`
 

@@ -35,6 +35,11 @@ for(let i=0;i<13;i++){
  sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'),`第 ${i+1} 幕缺源码`);
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
+// 行像素数量一开始即完整呈现，右侧按步骤展示总和和均值。
+let fills=0,texts=[];ctx.fillRect=()=>{fills++;};ctx.fillText=s=>texts.push(String(s));
+function lineAt(p){fills=0;texts=[];sandbox.__ANIM.scenes[4].draw(p);return {fills,texts:texts.slice()};}
+let first=lineAt(0),last=lineAt(1);assert.strictEqual(first.fills,1920);assert.strictEqual(last.fills,1920);
+assert.ok(!first.texts.includes('总和 = 363840 DN'));assert.ok(last.texts.includes('行均值 = 363840 ÷ 1920 = 189.5 DN'));
 buttons.hypothetical();assert.strictEqual(run('state.strip'),2);buttons.ma();assert.strictEqual(out.textContent,'193');assert.strictEqual(run('lineResult(state.mean,state.strip).bin'),2216);
 buttons.ta();assert.strictEqual(run('lineResult(state.mean,state.strip).bin'),2217);buttons.actual();assert.strictEqual(run('state.strip'),0);
 input.value='195';handler();assert.strictEqual(out.textContent,'195');assert.strictEqual(run('lineResult(state.mean,2).hit'),false);

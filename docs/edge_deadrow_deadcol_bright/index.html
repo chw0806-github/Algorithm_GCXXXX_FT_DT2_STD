@@ -749,8 +749,8 @@ function strip(p){
 }
 function line(p){
   header(4,'目标行像素','假设 R 通道顶部第 0 行：真实数量为 1920 个像素');
-  const data=samplePixels(),shown=Math.floor(clamp01(p/.70)*data.length);
-  for(let i=0;i<data.length;i++){const x=55+(i%48)*6,y=155+Math.floor(i/48)*6;ctx.fillStyle=withA(C.accent,i<shown?.3+(data[i]-180)/45:.10);ctx.fillRect(x,y,5,5);}
+  const data=samplePixels();
+  for(let i=0;i<data.length;i++){const x=55+(i%48)*6,y=155+Math.floor(i/48)*6;ctx.fillStyle=withA(C.accent,.3+(data[i]-180)/45);ctx.fillRect(x,y,5,5);}
   txt('1920 个位置排成 48×40 格展示数量',55,418,{size:12,color:C.dim});
   txt('放大前 20 个：后面重复 95 次',55,440,{size:12,color:C.dim});
   for(let i=0;i<20;i++){let x=55+(i%10)*34,y=448+Math.floor(i/10)*25;card(x,y,31,22,{r:2,fill:withA(C.accent,.18),stroke:withA(C.accent,.35)});txt(data[i],x+15,y+15,{size:10,align:'center'});}

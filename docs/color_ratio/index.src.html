@@ -114,9 +114,8 @@ function five(p){header(4,'选出五块','81 块都算比值；四角与中心�
   grid(65,155,true);
   box(450,155,485,315,'四角 + 中心',['左上 0　　右上 8','中心 40','左下 72　　右下 80','共 5 块，各取 GG、RG、BG','81 块还用于最大、最小、均值和标准差','不代表其他 76 块都参与五点阈值'],p,C.accent2);note('画面颜色只标出五个判定位置；不是测量结果。');}
 function pixels(p){header(5,'中心 ROI 的像素','先看一块：R 通道 213×120 = 25560 个模拟位置');
-  const shown=Math.floor(clamp01(p/.75)*N);
-  ctx.fillStyle=shown?'rgba(255,122,122,.55)':'rgba(255,122,122,.08)';
-  for(let i=0;i<N;i++){if(i===shown)ctx.fillStyle='rgba(255,122,122,.08)';const x=55+(i%213)*1.55,y=155+Math.floor(i/213)*1.9;ctx.fillRect(x,y,1.2,1.5);}
+  ctx.fillStyle='rgba(255,122,122,.45)';
+  for(let i=0;i<N;i++){const x=55+(i%213)*1.55,y=155+Math.floor(i/213)*1.9;ctx.fillRect(x,y,1.2,1.5);}
   txt('放大前 20 个模拟 R 像素（90、91 交替）',55,418,{size:12,color:C.dim});
   for(let i=0;i<20;i++){let x=55+i%10*34,y=428+Math.floor(i/10)*25;card(x,y,31,22,{r:2,fill:withA(CH.R,.18),stroke:withA(CH.R,.4)});txt(90+i%2,x+15,y+15,{size:10,align:'center'});}
   box(450,155,485,315,'四通道在相同 ROI 位置',['R：90、91 交替，均值 90.5','Gr：189、190 交替，均值 189.5','Gb：191、192 交替，均值 191.5','B：117、118 交替，均值 117.5','仅为简单的模拟值，并非真实规律','每个通道各 25560 个像素'],p,C.accent2);note('该分布仅便于复算，不是源码要求；图中小格只画 R，四通道各自取值。');}
@@ -187,25 +186,17 @@ function pixelSum(region,ch,count){
   const m=region[ch],low=Math.floor(m);
   return .1+low*count+(m===low?0:Math.floor(count/2));
 }
-// 先慢看前四个像素，再加速遍历其余位置；进度始终是已累加的像素数。
-function pixelCount(p){
-  if(p<.08)return 0;
-  if(p<.17)return Math.min(4,Math.ceil((p-.08)/.09*4));
-  if(p>=.36)return N;
-  return 4+Math.floor(clamp01((p-.17)/.19)*(N-4));
-}
 function regionCaption(i,p){
   const name=FIVE[i].name;
-  if(p<.08)return name+'：先在 9×9 中找到此 ROI';
-  if(p<.17)return name+'：先逐个看前四个位置；每个通道从 0.1 开始';
-  if(p<.36)return name+'：按从左到右、从上到下加速遍历其余模拟像素';
+  if(p<.14)return name+'：先在 9×9 中找到此 ROI，查看四通道模拟均值';
+  if(p<.30)return name+'：展示四通道总和，每个和包含初始值 0.1';
   if(p<.42)return name+'：两个绿色通道的和相加再除以 2';
   if(p<.55)return name+'：先算 RG，再加偏移并对照此位置的范围';
   if(p<.68)return name+'：再算 BG，加偏移并对照范围';
   return name+'：最后算 GG；三项分别判断，使用未舍入数';
 }
 function regionCalculation(which,p){
-  const v=FIVE[which], count=pixelCount(p);
+  const v=FIVE[which];
   header(12+which,v.name+'逐步计算','固定看一块：像素 → 四个和 → RG / BG / GG → 各自判定');
   const startX=55,startY=154;
   for(let n=0;n<81;n++){
@@ -214,29 +205,26 @@ function regionCalculation(which,p){
   }
   txt(v.name+' ROI '+v.index,55,325,{size:13,color:C.accent2,weight:700});
   card(235,154,290,162,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
-  txt('模拟像素按位置逐个累加',250,181,{size:14,color:C.accent,weight:700});
-  txt(count?'刚累加：第 '+(Math.floor((count-1)/213)+1)+' 行，第 '+((count-1)%213+1)+' 列':'等待第一个像素',250,208,{size:12});
+  txt('① 此 ROI 的模拟输入',250,181,{size:14,color:C.accent,weight:700});
+  txt('每通道 213 × 120 = 25560 个像素',250,208,{size:12});
   const chs=['r','gr','gb','b'],labels=['R','Gr','Gb','B'],colors=[CH.R,CH.Gr,CH.Gb,CH.B];
   labels.forEach((label,i)=>{
-    const value=count?regionPixel(v,chs[i],count-1):'—';
-    txt(label+': '+value,250+(i%2)*125,235+Math.floor(i/2)*26,{size:13,color:colors[i],weight:700});
+    txt(label+' 均值: '+v[chs[i]]+' DN',250+(i%2)*130,235+Math.floor(i/2)*26,{size:12,color:colors[i],weight:700});
   });
-  txt('已累加：'+count+' / '+N+' 个 / 通道',250,296,{size:12,color:C.dim});
+  txt('仅为构造的模拟值，不是实测',250,296,{size:12,color:C.dim});
   card(55,344,470,158,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
-  txt('四个通道累加和（初始值均为 0.1）',70,368,{size:13,color:C.accent,weight:700});
-  labels.forEach((label,i)=>{
+  txt('四个通道的和：各自从 0.1 开始',70,368,{size:13,color:C.accent,weight:700});
+  if(p>=.14)labels.forEach((label,i)=>{
     const y=394+i*25;
     txt(label,72,y,{size:13,color:colors[i],weight:700});
-    const before=pixelSum(v,chs[i],Math.max(0,count-1));
-    const addition=count?' + '+regionPixel(v,chs[i],count-1)+' = '+pixelSum(v,chs[i],count).toFixed(1):'（初始）';
-    txt(before.toFixed(1)+addition,120,y,{size:12});
-    if(count===N)txt('均值 '+v[chs[i]],350,y,{size:12,color:C.dim});
+    txt(v[chs[i]]+' × 25560 + 0.1 = '+pixelSum(v,chs[i],N).toFixed(1),120,y,{size:12});
   });
+  else txt('接下来直接展示四个通道的和',72,405,{size:13,color:C.dim});
   card(550,154,395,348,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
   txt('② 绿色参考和 = (Gr 和 + Gb 和) ÷ 2',565,180,{size:13,color:C.accent,weight:700});
   const total=chs.map(ch=>pixelSum(v,ch,N)),green=(total[1]+total[2])/2;
-  if(p>=.36)txt('= ('+total[1].toFixed(1)+' + '+total[2].toFixed(1)+') ÷ 2 = '+green.toFixed(1),565,201,{size:11,color:C.ink});
-  else txt('等待四个和累加完成…',565,201,{size:12,color:C.dim});
+  if(p>=.30)txt('= ('+total[1].toFixed(1)+' + '+total[2].toFixed(1)+') ÷ 2 = '+green.toFixed(1),565,201,{size:11,color:C.ink});
+  else txt('先得到四个通道的和…',565,201,{size:12,color:C.dim});
   const kinds=['RG','BG','GG'], start=[.42,.55,.68];
   kinds.forEach((kind,i)=>{
     const y=215+i*93,c=regionCompare(v,kind),numer=i===0?total[0]:i===1?total[3]:total[1],denom=i===2?total[2]:green;
@@ -250,7 +238,7 @@ function regionCalculation(which,p){
       if(phase>=.66)txt('目标 '+c.target+' ×(1±'+v.factor+')：'+c.low.toFixed(3)+'～'+c.high.toFixed(3)+' → '+(c.pass?'通过':'失败'),570,y+75,{size:11,color:c.pass?C.pass:C.fail,weight:700});
     }else txt('等待上一步…',570,y+51,{size:11,color:C.dim});
   });
-  note('像素为模拟值；前 4 个慢放，其余加速逐位置遍历。判定用未舍入数。');
+  note('模拟均值用于复算；真实像素不要求固定或交替。判定用未舍入数。');
 }
 function calcLeftUp(p){regionCalculation(0,p);}
 function calcRightUp(p){regionCalculation(1,p);}
@@ -324,12 +312,12 @@ const SCENES=[
  {kicker:'中心 RG 判定',dur:26,draw:compare,caption:p=>'⑨ 中心 RG 加 0.07，再与目标 0.55 的 ±20% 范围比较',html:'<h3>offset 加在哪里？</h3><p>中心 RG 原始约 0.47507，加配置 offset 0.07 得约 0.54507。目标 0.55、Class2 factor 0.2，所以范围是 0.55×(1±0.2) = [0.44, 0.66]。本中心 RG 条件通过。</p><p>源码只在修正值大于上限或小于下限时失败，边界相等不失败。完整 ratio 结果仍要检查五点全部比值及中心 GG 加严。</p>'},
  {kicker:'其他点与比值',dur:26,draw:other,caption:p=>'⑩ 中心 BG、GG 和四角用各自 target、offset 与 factor',html:'<h3>不能只看 RG</h3><p>中心 BG 修正约 0.60880，目标 0.61，普通范围 [0.488,0.732]；中心 GG 约 0.98956，目标 1，普通范围 [0.8,1.2]。它们在各自普通范围内。</p><p>例如左上 RG target=0.512、offset=0.05、角区 factor=0.5，允许范围 [0.256,0.768]。接下来将引入四角的模拟数据，不是实测。</p>'},
  {kicker:'区域怎么比较',dur:26,draw:regionConcept,caption:p=>'⑪ 五块各自与对应配置比较，而不是四角互相相减',html:'<h3>它们怎样比较？</h3><p>源码先分别算各 ROI 的 GG、RG、BG；对某一位置的某一比值，先加该位置配置的 offset，然后和该位置 target × (1±factor) 的范围比较。<b>不是把左上减右上，也不是把中心当作其他四角的分母。</b></p><p>81 块的最大、最小、平均及标准差另作日志统计；本动画依次高亮的顺序只是教学顺序，不代表 QMap 的实际遍历顺序。</p>'},
- {kicker:'五块模拟数据',dur:26,draw:regionInputs,caption:p=>'⑫ 中心沿用前例；四角输入各不相同的模拟均值',html:'<h3>先准备五块的数据</h3><p>中心继续使用前面的 90.5、189.5、191.5、117.5；四角分别给出不同的 R、Gr、Gb、B 模拟均值。表中每行是一块 ROI，每个均值都对应该通道的 25560 个像素。</p><p>接下来四角每个通道使用固定模拟像素值，中心使用相邻整数交替。动画按位置逐个累加；没有模拟其余 76 块，也不是实测。</p>'},
- {kicker:'左上逐步计算',dur:75,draw:calcLeftUp,caption:p=>regionCaption(0,p),html:'<h3>一步一步算左上 ROI</h3><p>画面先定位左上，然后显示此区域 R、Gr、Gb、B 的不同模拟像素。每个通道有 213×120 个模拟像素，四个累加和都从 0.1 开始。先逐个展示前四个位置的「之前的和 + 当前像素 = 新的和」，再加速按从左到右、从上到下的顺序遍历余下像素。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
- {kicker:'右上逐步计算',dur:75,draw:calcRightUp,caption:p=>regionCaption(1,p),html:'<h3>一步一步算右上 ROI</h3><p>画面先定位右上，然后显示此区域 R、Gr、Gb、B 的不同模拟像素。每个通道有 213×120 个模拟像素，四个累加和都从 0.1 开始。先逐个展示前四个位置的「之前的和 + 当前像素 = 新的和」，再加速按从左到右、从上到下的顺序遍历余下像素。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
- {kicker:'中心逐步计算',dur:75,draw:calcCenter,caption:p=>regionCaption(2,p),html:'<h3>一步一步算中心 ROI</h3><p>画面先定位中心，然后显示此区域 R、Gr、Gb、B 的不同模拟像素。每个通道有 213×120 个模拟像素，四个累加和都从 0.1 开始。先逐个展示前四个位置的「之前的和 + 当前像素 = 新的和」，再加速按从左到右、从上到下的顺序遍历余下像素。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
- {kicker:'左下逐步计算',dur:75,draw:calcLeftDown,caption:p=>regionCaption(3,p),html:'<h3>一步一步算左下 ROI</h3><p>画面先定位左下，然后显示此区域 R、Gr、Gb、B 的不同模拟像素。每个通道有 213×120 个模拟像素，四个累加和都从 0.1 开始。先逐个展示前四个位置的「之前的和 + 当前像素 = 新的和」，再加速按从左到右、从上到下的顺序遍历余下像素。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
- {kicker:'右下逐步计算',dur:75,draw:calcRightDown,caption:p=>regionCaption(4,p),html:'<h3>一步一步算右下 ROI</h3><p>画面先定位右下，然后显示此区域 R、Gr、Gb、B 的不同模拟像素。每个通道有 213×120 个模拟像素，四个累加和都从 0.1 开始。先逐个展示前四个位置的「之前的和 + 当前像素 = 新的和」，再加速按从左到右、从上到下的顺序遍历余下像素。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
+ {kicker:'五块模拟数据',dur:26,draw:regionInputs,caption:p=>'⑫ 中心沿用前例；四角输入各不相同的模拟均值',html:'<h3>先准备五块的数据</h3><p>中心继续使用前面的 90.5、189.5、191.5、117.5；四角分别给出不同的 R、Gr、Gb、B 模拟均值。表中每行是一块 ROI，每个均值都对应该通道的 25560 个像素。</p><p>接下来四角每个通道使用固定模拟像素值，中心使用相邻整数交替。画面直接展示各通道的和；没有模拟其余 76 块，也不是实测。</p>'},
+ {kicker:'左上逐步计算',dur:45,draw:calcLeftUp,caption:p=>regionCaption(0,p),html:'<h3>一步一步算左上 ROI</h3><p>画面先定位左上，然后显示此区域 R、Gr、Gb、B 的模拟均值。每个通道有 213×120 个模拟像素，直接展示各通道的和，均包含源码中的初始值 0.1。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
+ {kicker:'右上逐步计算',dur:45,draw:calcRightUp,caption:p=>regionCaption(1,p),html:'<h3>一步一步算右上 ROI</h3><p>画面先定位右上，然后显示此区域 R、Gr、Gb、B 的模拟均值。每个通道有 213×120 个模拟像素，直接展示各通道的和，均包含源码中的初始值 0.1。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
+ {kicker:'中心逐步计算',dur:45,draw:calcCenter,caption:p=>regionCaption(2,p),html:'<h3>一步一步算中心 ROI</h3><p>画面先定位中心，然后显示此区域 R、Gr、Gb、B 的模拟均值。每个通道有 213×120 个模拟像素，直接展示各通道的和，均包含源码中的初始值 0.1。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
+ {kicker:'左下逐步计算',dur:45,draw:calcLeftDown,caption:p=>regionCaption(3,p),html:'<h3>一步一步算左下 ROI</h3><p>画面先定位左下，然后显示此区域 R、Gr、Gb、B 的模拟均值。每个通道有 213×120 个模拟像素，直接展示各通道的和，均包含源码中的初始值 0.1。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
+ {kicker:'右下逐步计算',dur:45,draw:calcRightDown,caption:p=>regionCaption(4,p),html:'<h3>一步一步算右下 ROI</h3><p>画面先定位右下，然后显示此区域 R、Gr、Gb、B 的模拟均值。每个通道有 213×120 个模拟像素，直接展示各通道的和，均包含源码中的初始值 0.1。四角采用固定值、中心采用两个相邻整数交替，仅为简化演示，不代表真实图像。</p><p>待四个和计算完成，先求两个绿色和的平均，再依次展示 RG、BG 和 GG 的除法、偏移和本位置允许范围。数值显示会舍入，实际判断用未舍入值；这是模拟像素，不是实测。界面播放顺序为教学顺序，源码先算所有 ROI，再按类型进行判定。</p>'},
  {kicker:'五点 GG 比较',dur:30,draw:regionGG,caption:p=>'⑱ 各区 GG 加各自偏移后，分别对照 GG 目标范围',html:'<h3>五次 GG 比较</h3><p>每块用自己的 Gr 和 ÷ Gb 和；本配置五点 GG 目标都是 1、偏移都是 0，中心 Class2 factor=0.2，四角是 0.5。中心范围 [0.8,1.2]，四角为 [0.5,1.5]。</p><p>高亮依次移动，表格逐行算出原始值、偏移、修正值、范围及结果；这组模拟五项均通过。边界相等不失败，使用未舍入值比较。</p>'},
  {kicker:'五点 RG 比较',dur:30,draw:regionRG,caption:p=>'⑲ 每块 RG 加本区 offset，分别与该区 RG 范围比较',html:'<h3>五次 RG 比较</h3><p>每块用自己区域的 R 和除以两个 G 和的平均，再加对应 RG offset。中心 target=0.55、offset=0.07、factor=0.2，范围 [0.44,0.66]；四角 target=0.512、offset=0.05、factor=0.5，范围 [0.256,0.768]。</p><p>这组五块模拟的 RG 均通过；并不是拿五个 RG 互相相减。</p>'},
  {kicker:'五点 BG 比较',dur:30,draw:regionBG,caption:p=>'⑳ 五块 BG 各自比较；模拟右下超出自己的上限',html:'<h3>五次 BG 比较</h3><p>每块用自己的 B 和除以两个 G 和的平均，再加该位置的 BG offset。四角目标 0.62、factor=0.5，范围 [0.31,0.93]；中心目标 0.61、factor=0.2，范围 [0.488,0.732]。</p><p>本例右下原始 BG 约 1.0204，加 offset −0.007 约 1.0134，大于上限 0.93，因此右下 BG 失败；其余四项通过。</p>'},

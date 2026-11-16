@@ -91,28 +91,27 @@ for(let i=0;i<5;i++)for(const ch of ['r','gr','gb','b']){
  close(integerSum+.1,m*25560+.1);
  if(i===2)assert.deepStrictEqual(Array.from({length:20},(_,n)=>run(`regionPixel(FIVE[${i}],'${ch}',${n})`)),Array.from(run(`sample('${{r:'R',gr:'Gr',gb:'Gb',b:'B'}[ch]}').slice(0,20)`)));
 }
-assert.strictEqual(run('pixelCount(0)'),0);assert.strictEqual(run('pixelCount(.08)'),0);
-assert.strictEqual(run('pixelCount(.09)'),1);assert.strictEqual(run('pixelCount(.115)'),2);
-assert.strictEqual(run('pixelCount(.14)'),3);assert.strictEqual(run('pixelCount(.165)'),4);
-assert.strictEqual(run('pixelCount(.36)'),25560);
-// 逐幕核验文字确实随进度依次出现，而不是只列出结果。
+// 五个区域分阶段展示输入、各通道和、绿色参考、比例及判定，不逐像素播放。
 for(let i=0;i<5;i++){
  const index=12+i;
  assert.strictEqual(sandbox.__ANIM.scenes[index].kicker,`${points[i].name}逐步计算`);
- assert.ok(sandbox.__ANIM.scenes[index].dur>=60);
+ assert.strictEqual(sandbox.__ANIM.scenes[index].dur,45);
  sandbox.__ANIM.gotoScene(index,true);
  function renderAt(p){drawn=[];sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[index].dur;sandbox.__ANIM.render();return drawn.slice();}
- let text=renderAt(0);assert.ok(text.includes('等待第一个像素'));assert.ok(text.includes('已累加：0 / 25560 个 / 通道'));assert.ok(text.includes('0.1（初始）'));
- assert.ok(!text.some(x=>x.startsWith('加偏移 ')));
- text=renderAt(.09);assert.ok(text.includes('刚累加：第 1 行，第 1 列'));assert.ok(text.includes(`0.1 + ${Math.floor(points[i].r)} = ${(0.1+Math.floor(points[i].r)).toFixed(1)}`));
- text=renderAt(.115);assert.ok(text.includes('刚累加：第 1 行，第 2 列'));
- text=renderAt(.2);assert.ok(text.some(x=>x.startsWith('刚累加：第 ')));assert.ok(!text.includes('已累加：25560 / 25560 个 / 通道'));
- text=renderAt(.38);assert.ok(text.includes('刚累加：第 120 行，第 213 列'));assert.ok(text.includes('已累加：25560 / 25560 个 / 通道'));assert.ok(text.some(x=>x.startsWith('= (')));
+ let text=renderAt(0);assert.ok(text.includes('① 此 ROI 的模拟输入'));
+ assert.ok(text.includes(`R 均值: ${points[i].r} DN`));
+ assert.ok(text.includes('接下来直接展示四个通道的和'));
+ assert.ok(!text.some(x=>x.includes('× 25560 + 0.1 =')));
+ text=renderAt(.2);
+ for(const ch of ['r','gr','gb','b']) assert.ok(text.includes(`${points[i][ch]} × 25560 + 0.1 = ${(points[i][ch]*25560+.1).toFixed(1)}`));
+ assert.ok(!text.some(x=>x.startsWith('= (')));
+ text=renderAt(.31);assert.ok(text.some(x=>x.startsWith('= (')));
  for(const [progress,offsets,ranges] of [[.43,0,0],[.47,1,0],[.52,1,1],[.56,1,1],[.60,2,1],[.65,2,2],[.69,2,2],[.73,3,2],[.78,3,3]]){
   text=renderAt(progress);
   assert.strictEqual(text.filter(x=>x.startsWith('加偏移 ')).length,offsets,`${points[i].name} ${progress} offset`);
   assert.strictEqual(text.filter(x=>x.startsWith('目标 ')).length,ranges,`${points[i].name} ${progress} range`);
  }
+ assert.ok(!text.some(x=>/已累加|刚累加|当前和/.test(x)));
 }
 // 右下 BG 通过与失败区间的邻近边界；仅在本演示的比例非截断范围内。
 const edgeRaw=.62*1.5+.007;

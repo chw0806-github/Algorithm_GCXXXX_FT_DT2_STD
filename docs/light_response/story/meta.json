@@ -43,9 +43,9 @@
     "i": 6,
     "file": "s06.png",
     "kicker": "算均值",
-    "caption": "四个均值就是这一子项的「测量值」",
+    "caption": "其他通道各自求均值；四个均值用于下一步判定",
     "dur": 14,
-    "html": "<h3>DN 是什么？</h3>\n      <p>DN（Digital Number）就是像素的灰度量化值。本例是 8 bit，范围 0~255；10/12 bit 则是 0~1023 / 0~4095。</p>\n      <pre><code>// 四个通道各开一个线程，互不等待\nMultiThread::get_roi_channel_mean\n    -&gt; GetROIMean(data, w, h, x, y, w, h);\n\nmean = Σ DN / N</code></pre>\n      <p>均值代表<b>整体响应灵敏度</b>：偏暗说明光电转换弱 / 曝光不足，偏亮说明增益过大或接近饱和。</p>\n      <p class=\"tip\">均值会「稀释」个别坏点：一个 255 的亮点平均到几十万像素里几乎看不出来。所以坏点由 Pixel_Defect、DAG 等子项负责 —— 每个子项各管一件事。</p>"
+    "html": "<h3>DN 是什么？</h3>\n      <p>DN（Digital Number）就是像素的灰度量化值。本例是 8 bit，范围 0~255；10/12 bit 则是 0~1023 / 0~4095。</p>\n      <pre><code>// 四个通道各开一个线程，互不等待\nMultiThread::get_roi_channel_mean\n    -&gt; GetROIMean(data, w, h, x, y, w, h);\n\nmean = Σ DN / N</code></pre>\n      <p>画面中的区域只示意位置；四个均值由滑杆设定，均为模拟，不展示逐像素累加。</p>\n      <p>均值代表<b>整体响应灵敏度</b>：偏暗说明光电转换弱 / 曝光不足，偏亮说明增益过大或接近饱和。</p>\n      <p class=\"tip\">均值会「稀释」个别坏点：一个 255 的亮点平均到几十万像素里几乎看不出来。所以坏点由 Pixel_Defect、DAG 等子项负责 —— 每个子项各管一件事。</p>"
   },
   {
     "i": 7,

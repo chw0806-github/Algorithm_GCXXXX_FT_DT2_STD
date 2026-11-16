@@ -47,6 +47,11 @@ for(let i=0;i<14;i++){
  assert.ok(elements['code-guide'].innerHTML.includes('code-block'),`第 ${i+1} 幕缺少源码`);
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
+let texts=[];ctx.fillText=text=>texts.push(String(text));
+function meanAt(p){texts=[];sandbox.__ANIM.scenes[3].draw(p);return texts.slice();}
+let t=meanAt(0);assert.ok(t.includes('左上 5×5 邻域：全部 25 个模拟像素'));assert.ok(!t.some(x=>x.includes('25 个数之和')));
+t=meanAt(.4);assert.ok(t.includes('③ 25 个数之和 = 4500'));assert.ok(!t.some(x=>x.startsWith('④ 平均')));
+t=meanAt(.7);assert.ok(t.includes('④ 平均 = 4500 ÷ 25 = 180 DN'));assert.ok(!t.some(x=>/依次计入|当前和/.test(x)));
 assert.strictEqual(typeof frame,'function');frame(100);
 function set(v){input.value=String(v);handler();return vm.runInContext('result()',sandbox);}
 r=set(195);assert.strictEqual(r.primary,false);assert.strictEqual(r.blemish,false);
