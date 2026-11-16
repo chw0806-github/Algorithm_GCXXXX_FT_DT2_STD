@@ -48,10 +48,10 @@
       <div class="tuner">
         <div class="tuner-head">
           <h2>模拟一个 Gr 通道中心像素</h2>
-          <span>四个邻域均值假设为 180；模拟不执行图像团簇检测</span>
+          <span>四块均值分别为 180、190、200、210；只模拟一个内部目标</span>
         </div>
-        <div class="sliders two" id="sliders"><label class="slider" style="--c:#7fe08f"><span class="ch">Gr</span><input id="pixelval" type="range" min="0" max="255" step="1" value="180"><output id="pixelout">180</output></label></div>
-        <div class="presets" id="presets"></div>
+        <div class="sliders two" id="sliders"><label class="slider" style="--c:#7fe08f"><span class="ch">Gr</span><input id="pixelval" type="range" min="0" max="255" step="1" value="245"><output id="pixelout">245</output></label></div>
+        <div class="presets" id="presets"><button id="preset-normal">未标记：195</button><button id="preset-blemish">blemish 候选：220</button><button id="preset-limit">边界：234</button><button id="preset-bright">亮方向：245</button><button id="preset-dark">暗方向：140</button></div>
       </div>
     </section>
 
@@ -68,90 +68,182 @@
 
   <footer class="foot">
     教学示意：基于 GC8613T 白帧 <code>PixelDefect.data</code> 的 V1.0，像素与邻域数值非实测。
-    互动仅计算一个居中 Gr 点，假设四个邻域均值为 180，分类结果不等于完整图像检测。
+    互动仅计算一个居中 Gr 点，四块均值分别为 180、190、200、210；分类结果不等于完整图像检测。
   </footer>
 </div>
 
 <script src="../shared/player.js"></script>
 <script>
-/* 理想中心点示例：四个 Gr 邻域均为 180，其他点与团簇都假设正常。 */
-const state=AlgoAnim.state; state.pixel=180;
+/* 一个图像内部的 Gr 目标点；四块各有 25 个不同模拟值，不计算其他点。 */
+const state=AlgoAnim.state; state.pixel=245;
+const QNAMES=['左上','右上','左下','右下'];
+const QCOLORS=['#6ea8fe','#6ad9c4','#b79aff','#ffb078'];
+const QMEANS=[180,190,200,210];
+function quadValues(q){return Array.from({length:25},(_,i)=>QMEANS[q]-12+i);}
+function qsum(q){return quadValues(q).reduce((a,b)=>a+b,0);}
+function means(){return QMEANS.map((_,i)=>qsum(i)/25);}
 function result(){
-  const diff=Math.abs(state.pixel-180)/180;
-  const primary=diff>0.30, blemish=!primary && diff>0.12;
-  const sign=state.pixel>180?'亮点':'暗点';
-  return {diff,primary,blemish,sign,bin:primary?(state.pixel>180?2002:2006):2001,grade:primary?1:0};
+  const m=means(),diffs=m.map(v=>Math.abs(state.pixel-v)/v), maxDiff=Math.max.apply(null,diffs);
+  const primary=diffs.some(v=>v>0.30),blemish=!primary&&diffs.some(v=>v>0.12);
+  const ref=m.reduce((a,b)=>a+b,0)/4,delta=state.pixel-ref;
+  const sign=delta>0?'亮点':'暗点';
+  return {means:m,diffs,maxDiff,primary,blemish,ref,delta,sign,bin:primary?(delta>0?2002:2006):2001,grade:primary?1:0};
 }
-function panel(x,y,w,h,title,lines,color){
-  card(x,y,w,h,{fill:'rgba(110,168,254,.05)',stroke:'rgba(110,168,254,.22)'});
+function panel(x,y,w,h,title,lines,p,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.22)'});
   txt(title,x+20,y+34,{size:16,weight:700,color:color||C.accent});
-  lines.forEach((s,i)=>txt(s,x+20,y+72+i*29,{size:14,color:i===0?C.ink:C.dim}));
+  const shown=Math.min(lines.length,1+Math.floor(clamp01(p/.72)*lines.length));
+  lines.forEach((v,i)=>{if(i<shown)txt(v,x+20,y+70+i*30,{size:14,color:i===shown-1?C.ink:C.dim});});
 }
-function map(p){
-  const x=75,y=155,size=50,gap=6;
-  for(let j=0;j<5;j++)for(let i=0;i<5;i++){
-    const a=ease(seg(p,(i+j)*.035,.3+(i+j)*.035));ctx.save();ctx.globalAlpha=a;
-    const center=i===2&&j===2, cross=(i===2||j===2)&&!center;
-    const fill=center?'rgba(255,209,102,.22)':cross?'rgba(255,255,255,.025)':
-      (i<2)===(j<2)?'rgba(110,168,254,.16)':'rgba(61,220,151,.12)';
-    card(x+i*(size+gap),y+j*(size+gap),size,size,{r:6,fill:fill,stroke:center?'rgba(255,209,102,.75)':C.line});
-    if(center)txt(state.pixel,x+i*(size+gap)+size/2,y+j*(size+gap)+31,{size:15,color:C.accent2,align:'center',weight:700});
-    ctx.restore();
+function quadrant(x,y){if(x===5||y===5)return -1;return (y>5?2:0)+(x>5?1:0);}
+function patchValue(x,y){
+  if(x===5&&y===5)return state.pixel;
+  const q=quadrant(x,y);
+  if(q<0)return 185+(x*7+y*11)%21;
+  return quadValues(q)[(y<5?y:y-6)*5+(x<5?x:x-6)];
+}
+/* 展示完整 11×11 局部：4 个各 5×5 的邻域，及目标行、列。 */
+function patch(x0,y0,focus){
+  const size=27,step=30;
+  for(let y=0;y<11;y++)for(let x=0;x<11;x++){
+    const q=quadrant(x,y),center=x===5&&y===5;
+    const color=center?C.accent2:q<0?'#64748b':QCOLORS[q];
+    const alpha=center?.55:q<0?.10:(focus==null||focus===q?.23:.06);
+    card(x0+x*step,y0+y*step,size,size,{r:3,fill:withA(color,alpha),stroke:withA(color,center?.9:.22)});
+    txt(patchValue(x,y),x0+x*step+size/2,y0+y*step+18,{size:10,align:'center',weight:center?700:400,color:center?C.accent2:C.ink});
   }
-  [[0,0],[3,0],[0,3],[3,3]].forEach(q=>txt('180',x+(q[0]+1)*(size+gap)-3,y+(q[1]+1)*(size+gap)+4,{size:13,color:C.ink,align:'center',weight:700,alpha:ease(seg(p,.25,.6))}));
-  txt('放大示意：中间是目标像素',75,470,{size:13,color:C.dim});
-  txt('实际每个邻域 5×5，图中未按比例',75,493,{size:12,color:C.dim});
+  txt('完整局部：11 列 × 11 行 = 121 个像素',x0,y0+363,{size:12,color:C.dim});
 }
 function intro(p){
-  header(0,'定位','白帧像素缺陷：把目标点与周围同色像素比较');
-  map(p);
-  panel(455,155,480,265,'在白帧测试中的位置',['已拆出 R、Gr、Gb、B 四个通道','四通道分别生成像素缺陷图','映射回 Bayer 图，识别单点与团簇','结合配置输出 bin / grade'],C.accent2);
-  txt('本页讲解示例 PixelDefect.data 的 V1.0。',455,466,{size:13,color:C.dim});
+  header(0,'总览','先找一个像素，问：它与周围的同色像素差多少？');
+  const cards=[['① 取目标','一个 Gr 像素'],['② 找邻居','四块各 25 像素'],['③ 计算差','四个比例各自算'],['④ 做标记','生成两张候选图']];
+  cards.forEach((v,i)=>{if(p>=i*.15){const x=55+i*225;card(x,205,200,145,{fill:'rgba(110,168,254,.07)',stroke:i===0?C.accent2:C.accent});txt(v[0],x+18,248,{size:17,weight:700,color:i===0?C.accent2:C.accent});txt(v[1],x+18,295,{size:14});if(i)arrow(x-25,278,x-5,278,C.dim,2);}});
+  if(p>=.6){txt('本页只用一个内部 Gr 像素做模拟，最后才解释全图统计。',55,430,{size:14,color:C.ink});txt('所有数字都是教学值，不是实测；亮场示例使用 V1.0。',55,465,{size:13,color:C.dim});}
 }
-function quadrants(p){
-  header(1,'四块邻域','在同一颜色通道，对目标像素比较四个邻域');
-  map(p);
-  panel(455,155,480,290,'示意：四个邻域均值相同',['左上、右上、左下、右下：均为 180','配置 radius=5，每块邻域为 5×5','目标所在行、列不属于这四块','每块独立求均值，分别计算差异','真实图像四块均值可能不同'],C.accent);
+function channels(p){
+  header(1,'拆通道','一张 Bayer 原图，先拆成四张单色通道图');
+  card(55,175,250,170,{fill:'rgba(110,168,254,.07)',stroke:C.accent});txt('RAW：3840 × 2160',75,220,{size:16,weight:700});txt('RG Bayer',75,260,{size:15,color:C.dim});
+  arrow(320,255,365,255,C.accent2,2);
+  ['R','Gr','Gb','B'].forEach((v,i)=>{if(p>=i*.12){const x=385+(i%2)*270,y=145+Math.floor(i/2)*150;card(x,y,245,125,{fill:withA(CH[v],.08),stroke:CH[v]});txt(v,x+18,y+37,{size:21,weight:700,color:CH[v]});txt('1920 × 1080 像素',x+18,y+72,{size:14});txt(v==='Gr'?'↓ 下面选 Gr 来讲':'该通道也要分别处理',x+18,y+100,{size:12,color:C.dim});}});
+  txt('这里的颜色区分通道；后面的亮度数字单位是 DN。',55,470,{size:13,color:C.dim});
 }
-function compare(p){
-  header(2,'比例差','白帧模式：四块邻域各自比较，任一超过阈值即可');
-  map(p);const r=result();
-  panel(455,155,480,300,'Gr 通道示意',['目标像素：'+state.pixel+'；每块邻域均值：180','|目标 − 邻域均值| ÷ 邻域均值','当前四块比例差均为 '+(r.diff*100).toFixed(2)+'%','任一比例差 > 30%：进入主缺陷图','等于阈值不触发主缺陷'],C.accent2);
+function target(p){
+  header(2,'目标与邻域','放大 Gr 图的一处：黄色是要检查的一个目标像素');
+  patch(65,155,null);
+  panel(455,155,480,305,'看清楚 11×11 的局部',['① 黄格：目标像素，当前 '+state.pixel+' DN','② 左上、右上、左下、右下各一块','③ 每块 5×5 = 25 个同通道像素','④ 目标所在行和列不属于四块','⑤ 四块共 100 个；只算这些邻居'],p,C.accent2);
+  txt('目标行列其余 20 个点是上下文，不参与四块求均值。',455,500,{size:12,color:C.dim});
+}
+function oneMean(p){
+  header(3,'一块的均值','先取左上角 5×5：把 25 个不同亮度求平均');
+  const values=quadValues(0),n=Math.min(25,Math.ceil(clamp01(p/.70)*25));
+  for(let i=0;i<25;i++){const x=65+(i%5)*61,y=165+Math.floor(i/5)*57;
+    card(x,y,55,50,{r:5,fill:withA(C.accent,i<n?.35:.08),stroke:withA(C.accent,i<n?.75:.25)});
+    txt(values[i],x+27,y+31,{size:16,align:'center',weight:700});}
+  const partial=values.slice(0,n).reduce((a,b)=>a+b,0);
+  txt('已依次计入 '+n+' / 25 个，当前和 = '+partial,65,480,{size:13,color:C.accent});
+  panel(455,155,480,300,'左上角这一块',['① 25 个模拟像素：168、169、…、192','② 不同亮度都分别相加','③ 25 个数之和 = '+qsum(0),'④ 平均 = '+qsum(0)+' ÷ 25 = '+means()[0]+' DN','⑤ 这是左上邻域的参考均值'],p,C.accent2);
+  txt('实际值不需要等差或重复；此分布只为手算。',455,500,{size:12,color:C.dim});
+}
+function fourMeans(p){
+  header(4,'四块均值','其他三块也各自求一次平均；四个参考值可以不同');
+  const focus=Math.min(3,Math.floor(clamp01(p/.72)*4));patch(65,155,focus);
+  const m=means();
+  panel(455,155,480,305,'每块各用自己的 25 个像素',['① 左上：168～192 → 平均 '+m[0],'② 右上：178～202 → 平均 '+m[1],'③ 左下：188～212 → 平均 '+m[2],'④ 右下：198～222 → 平均 '+m[3],'⑤ 算出 4 个均值，不是把四块合并'],p,C.accent);
+  txt('彩色高亮依次指示四块；各块的像素值均为模拟。',455,500,{size:12,color:C.dim});
+}
+function comparisons(p){
+  header(5,'四次比较','用同一个目标像素，分别与四个邻域均值比较');
+  const r=result();
+  card(65,155,265,325,{fill:'rgba(255,209,102,.06)',stroke:C.accent2});
+  txt('目标像素',85,195,{size:16,color:C.accent2,weight:700});txt(state.pixel+' DN',85,240,{size:27,weight:700});
+  txt('和每块各算一次：',85,295,{size:14});txt('|目标 − 均值| ÷ 均值',85,330,{size:14});
+  txt('分母是该块自己的均值',85,385,{size:12,color:C.dim});
+  const shown=Math.min(4,1+Math.floor(clamp01(p/.70)*4));
+  for(let i=0;i<shown;i++){const y=155+i*78;card(365,y,570,61,{fill:withA(QCOLORS[i],.07),stroke:withA(QCOLORS[i],.35)});
+    txt(QNAMES[i],385,y+37,{size:14,color:QCOLORS[i],weight:700});
+    txt('|'+state.pixel+' − '+r.means[i]+'| ÷ '+r.means[i]+' = '+(r.diffs[i]*100).toFixed(2)+'%',455,y+37,{size:15});}
+  txt('显示比例四舍五入，阈值判断使用未舍入的值。',365,515,{size:12,color:C.dim});
+}
+function mainThreshold(p){
+  header(6,'主缺陷阈值','四个比例各自比较 30%；只要有一个严格超过就标记');
+  const r=result(),num=r.diffs.filter(v=>v>.30).length;
+  panel(65,155,500,320,'这个目标的四次比较',QNAMES.map((name,i)=>name+'：'+(r.diffs[i]*100).toFixed(2)+'% '+(r.diffs[i]>.30?' > 30%：超过':' ≤ 30%：未超过')).concat(['超过阈值的邻域有 '+num+' 个']),p,C.accent);
+  if(p>=.5) panel(605,155,330,250,'目标像素主图结果',[r.primary?'至少一块超过 → 标记':'四块都未超过 → 不标记','等于 30% 不算超过','目标为 '+state.pixel+' DN','候选像素不等于最终 bin'],seg(p,.5,.85),r.primary?C.fail:C.pass);
+  txt('本示例仅计算中心目标，不推断其他位置。',65,515,{size:13,color:C.dim});
 }
 function masks(p){
-  header(3,'生成缺陷图','主缺陷图和 blemish 候选图不是同一张图');
-  const r=result();map(p);
-  panel(455,155,480,290,'Gr 通道阈值',['主缺陷阈值：30%；严格大于','未进主图时，再比较 blemish 12%','当前：'+(r.primary?'主缺陷候选':r.blemish?'blemish 候选':'两张图均未标记'),'主图和 blemish 图互斥','不同颜色通道的 blemish 阈值不同'],C.accent);
+  header(7,'两张标记图','主缺陷图优先；未进主图才检查 blemish 候选');
+  const r=result(),descs=[['① 主缺陷图',r.primary,'任一差 > 30%'],['② blemish 候选图',r.blemish,'仅未进主图时：任一差 > 12%']];
+  descs.forEach((v,i)=>{if(i===0||p>=.35){const x=65+i*450;card(x,170,400,235,{fill:'rgba(110,168,254,.05)',stroke:i===0?C.accent:C.accent2});
+    txt(v[0],x+20,205,{size:18,weight:700,color:i===0?C.accent:C.accent2});txt(v[2],x+20,245,{size:13,color:C.dim});
+    card(x+20,265,90,65,{fill:v[1]?'rgba(255,95,126,.22)':'rgba(61,220,151,.08)',stroke:v[1]?C.fail:C.pass});txt(v[1]?'255':'0',x+65,308,{size:21,weight:700,align:'center',color:v[1]?C.fail:C.pass});
+    txt(v[1]?'目标位置：标记':'目标位置：不标记',x+130,304,{size:14});}});
+  txt('两图对应同一个像素的标记互斥；这里没有计算其他位置。',65,465,{size:13,color:C.dim});
+  txt('12% 是此配置的 Gr 阈值；其他通道需查看各自配置。',65,495,{size:13,color:C.dim});
 }
-function groups(p){
-  header(4,'合图与团簇','将四通道的标记映射回 Bayer，再统计空间形状');
-  const entries=[['单点','单个异常标记'],['相邻点','横向 / 纵向或对角'],['更大团簇','多点组成的其他形状']];
-  entries.forEach((a,i)=>{const x=65+i*305;panel(x,170,270,230,a[0],[a[1],'仅作形状示意','实际统计依源码'],i===0?C.accent2:C.accent);});
-  txt('亮 / 暗方向由目标值减四邻域均值的平均值决定。',65,465,{size:14,color:C.dim});
-  txt('团簇会影响单点计数；图形不是完整的分类规则。',65,495,{size:13,color:C.dim});
+function direction(p){
+  header(8,'亮点还是暗点','另算方向：目标值减去四个邻域均值的平均');
+  const r=result();
+  panel(65,155,870,300,'同一个目标与同一组邻域',['① 四个均值：'+r.means.join('、'),'② 四块均值的平均 = ('+r.means.join(' + ')+') ÷ 4 = '+r.ref,'③ 目标 − 四块均值平均 = '+state.pixel+' − '+r.ref+' = '+r.delta,'④ '+(r.delta>0?'差值 > 0：亮的方向':'差值 ≤ 0：暗的方向'),'⑤ 是否属于单点或团簇，还要结合标记图与后续统计'],p,C.accent2);
+  txt('方向计算与前面的四次比例比较用途不同。',65,510,{size:13,color:C.dim});
+}
+function scanning(p){
+  header(9,'逐点扫描','目标会移动：整张通道图的每个位置都需各自比较');
+  card(65,155,430,245,{fill:'rgba(110,168,254,.06)',stroke:C.accent});
+  txt('Gr 通道图（外框示意）',85,190,{size:15,weight:700});
+  const n=Math.min(99,Math.floor(clamp01(p/.72)*100)),x=80+(n%10)*39,y=210+Math.floor(n/10)*17;
+  card(x,y,28,13,{r:2,fill:'rgba(255,209,102,.35)',stroke:C.accent2});
+  txt('演示位置 '+(n+1)+' / 100（仅用于说明移动）',65,450,{size:13,color:C.dim});
+  panel(535,155,400,305,'真实处理步骤',['① 对当前像素寻找四块邻域','② 每块求均值并做比例比较','③ 在标记图对应位置写结果','④ 再移动到下一个像素','⑤ R / Gr / Gb / B 各自处理'],p,C.accent);
+  txt('示意移动不是全图检测结果，也不是实际像素数量。',535,500,{size:12,color:C.dim});
+}
+function bayer(p){
+  header(10,'合回 Bayer','四通道标记各自算完，再映射回原图的 Bayer 位置');
+  const names=['R','Gr','Gb','B'];
+  names.forEach((v,i)=>{const x=65+(i%2)*155,y=165+Math.floor(i/2)*130;card(x,y,135,100,{fill:withA(CH[v],.08),stroke:CH[v]});txt(v,x+67,y+42,{size:20,align:'center',weight:700,color:CH[v]});txt('通道标记',x+67,y+73,{size:12,align:'center'});});
+  arrow(390,275,485,275,C.accent2,2);
+  if(p>=.25){txt('RG Bayer 位置示意',525,160,{size:15,weight:700});names.forEach((v,i)=>{const x=525+(i%2)*150,y=180+Math.floor(i/2)*140;card(x,y,130,120,{fill:withA(CH[v],.12),stroke:CH[v]});txt(v,x+65,y+68,{size:21,align:'center',weight:700,color:CH[v]});});}
+  txt('主缺陷图、blemish 图和差值图分别合回；图形只示意排列。',65,515,{size:13,color:C.dim});
+}
+function clusters(p){
+  header(11,'单点与团簇','合图后看标记的位置关系，不能只看一个像素');
+  panel(65,160,400,275,'概念例子：一个孤立标记',['① 若附近没有其他缺陷标记','② 才有可能作为单点统计','③ 亮或暗由差值方向判断','④ 是否符合单点还要看完整图'],p,C.accent);
+  if(p>=.25) panel(535,160,400,275,'概念例子：多个相邻标记',['① 可能构成某种团簇','② C++ 分全局 / 通道等多种形状','③ 团簇会影响单点统计','④ 此例不实现团簇识别'],seg(p,.25,.9),C.accent2);
+  txt('这里只解释概念，不凭这一张局部图推断实际单点或团簇计数。',65,500,{size:13,color:C.dim});
 }
 function bins(p){
-  header(5,'输出结果','V1.0：团簇分类与单点计数共同决定子项 bin');
-  panel(65,155,420,300,'简单情形：仅单个点',['假设没有其他团簇 / blemish 超限','无主缺陷单点：bin 2001 / grade 0','一个亮点：bin 2002 / grade 1','一个暗点：bin 2006 / grade 1','仅为简化分支，并非全部判定'],C.accent2);
-  panel(535,155,400,300,'重要：子项与最终汇总',['V1.0 初始化 is_passed=false','grade 0 不会覆盖初始最终结果','最终结果还需比较其他子项','高等级团簇有各自的 bin','同级覆盖行为由各处源码决定'],C.accent);
+  header(12,'子项与汇总','先从统计结果选择子项 bin；最终 bin 还要与其他子项汇总');
+  panel(65,155,430,300,'仅在额外假设成立时',['无团簇、无其他点，blemish 不超限','无主缺陷单点：2001 / grade 0','一个亮点：2002 / grade 1','一个暗点：2006 / grade 1','其他形状和计数会走别的分支'],p,C.accent2);
+  panel(535,155,400,300,'还不是最终测试结果',['此 V1.0 初始化 is_passed=false','grade 0 不覆盖初始最终结果','最终还需比较其他子项的 grade','边界 / 零均值另有处理风险'],p,C.accent);
+  txt('本页不计算完整图像、blemish 团簇或最终 bin。',65,510,{size:13,color:C.dim});
 }
 function interactive(p){
-  header(6,'动手试','滑动 Gr 像素值，观察邻域差与模拟分类');
-  const r=result();map(p);
-  panel(455,155,480,310,'单点教学模型',['目标：'+state.pixel+'；邻域：180','相对差：'+(r.diff*100).toFixed(2)+'%','分类：'+(r.primary?'主缺陷候选 · '+r.sign:r.blemish?'blemish 候选':'未标记'),'假设仅有该孤立主缺陷点：','子项 bin '+r.bin+' / grade '+r.grade],r.primary?C.fail:C.pass);
-  txt('实际邻域、团簇和计数可能改变输出；不等同完整算法。',455,500,{size:12,color:C.dim});
+  header(13,'互动','拖动目标像素：邻域保持不同的 180、190、200、210');
+  const r=result();
+  panel(65,155,445,325,'一个 Gr 目标点',['① 目标：'+state.pixel+' DN','② 四个比例：'+r.diffs.map(x=>(x*100).toFixed(2)+'%').join(' / '),'③ 主图：'+(r.primary?'标记':'不标记')+'；blemish 图：'+(r.blemish?'标记':'不标记'),'④ 方向差 = '+state.pixel+' − '+r.ref+' = '+r.delta,'⑤ 假设无团簇、其他点且 blemish 不超限','⑥ 模拟子项 bin '+r.bin+' / grade '+r.grade],p,r.primary?C.fail:C.pass);
+  panel(555,155,380,325,'可以试试',['195：两图均不标记','220：进入 blemish 候选图','234：左上刚好 30%，主图不标记','245：左上超过 30%，主图标记','140：主图标记，方向为暗','具体数字是模拟，不代表实测'],p,C.accent2);
+  txt('互动直接改目标值；其余像素与邻域均值保持固定。',65,515,{size:13,color:C.dim});
 }
 const SCENES=[
- {kicker:'定位',dur:12,draw:intro,caption:()=> '① 拆通道后比较像素与邻域，形成缺陷候选',html:'<h3>在白帧中的位置</h3><p>白帧的一条测试分支调用 <code>Pixel_Defect_Test(test_manage, External_Configuration)</code>。本页讲解示例 <code>PixelDefect.data</code> 的 V1.0；其他版本和测试分支可能不同。</p>'},
- {kicker:'四块邻域',dur:14,draw:quadrants,caption:()=> '② 每个目标点参考同通道的四个 5×5 邻域',html:'<h3>如何找参考值</h3><p>四个通道分别处理。针对目标像素，使用左上、右上、左下、右下四块邻域各自的均值；示例 <code>radius=5</code>，每块为 5×5，不包含目标所在行列。</p><p>动画仅模拟位于内部的理想点，四块均值均设为 180；不模拟图像边界或零分母。</p>'},
- {kicker:'比例比较',dur:14,draw:compare,caption:()=> '③ 白帧比例模式：任一邻域比例差严格超过 30% 就标记',html:'<h3>计算比例差</h3><p>白帧示例 <code>type=1</code> 使用比例模式，分别计算 <code>|目标 − 邻域均值| / 邻域均值</code>。四个邻域中任一个严格大于配置阈值就写入主缺陷图。</p><p>示例四通道主阈值都是 0.30。暗帧使用 DN 模式，不能直接套用此处的比例阈值。</p>'},
- {kicker:'两张标记图',dur:13,draw:masks,caption:()=> '④ 未进主缺陷图时，再根据 blemish 阈值生成候选图',html:'<h3>主缺陷与 blemish 候选</h3><p>只有没有进入主缺陷图的像素，才继续比较 blemish 阈值；任一邻域超阈值写入候选图。两张图对同一像素互斥。</p><p>Gr 示例阈值为 0.12；R、Gb、B 的值应查看配置。<b>候选像素不等于已判定的 blemish 缺陷</b>，后续还要做形状、数量判断。</p>'},
- {kicker:'单点与团簇',dur:14,draw:groups,caption:()=> '⑤ 合并到 Bayer 坐标，按形状统计单点、团簇和 blemish',html:'<h3>从候选图到统计</h3><p>四通道的主缺陷图、blemish 图和差值图映射回 Bayer 排列。源码识别多种全局及通道团簇形状，另统计亮暗单点；部分团簇计数会从单点统计中扣除。</p><p>亮暗方向依据目标像素与四个邻域均值的平均值之差。此处图示仅是概念示意，不代表完整形状判定。</p>'},
- {kicker:'结果与汇总',dur:15,draw:bins,caption:()=> '⑥ 根据团簇及计数设 bin / grade，最终 bin 还要与其他子项汇总',html:'<h3>不要混淆子项和最终结果</h3><p>V1.0 的 bin 有多条团簇和单点分支。假设没有团簇、其他点及 blemish 超限：无主缺陷对应 2001 / grade 0；一个亮点对应 2002 / grade 1；一个暗点对应 2006 / grade 1。</p><p>源码初始化 <code>is_passed=false</code>，V1.0 内没有将其改为 true。最终汇总只在失败且 grade 严格大于当前 grade 时覆盖，因此 grade 0 不会覆盖默认最终结果；实际还要检查其他子项。</p>'},
- {kicker:'互动模拟',dur:15,draw:interactive,caption:()=> '⑦ 拖动像素值，观察 Gr 点的比例差和两张候选图',html:'<h3>动手试</h3><p>四块 Gr 邻域固定为 180。目标值 234 时比例差恰为 30%，不进入主缺陷图；235 时大于 30%，成为主缺陷候选。</p><p>子项 bin 显示建立在<b>只有这个孤立主缺陷点、无其他点和团簇</b>的假设上；实际运行中周围像素、团簇和各项配置都会影响结果。</p>'}
+ {kicker:'总览',dur:20,draw:intro,caption:p=>p<.3?'① 选一个目标像素，在同通道找四块邻居':p<.6?'① 每块求均值，分别计算差异':'① 根据差异写标记，再做整图统计',html:'<h3>先记住主线</h3><p>先盯住一颗像素：看它与附近同通道像素的亮度相差多少。对每颗像素重复，再将标记合回原图，统计单点与团簇。</p><p>本页用 Gr 通道内部一个目标讲解 GC8613T V1.0 白帧比例模式；所有像素数字均为模拟，不是实测。</p>'},
+ {kicker:'拆通道',dur:20,draw:channels,caption:p=>p<.5?'② RAW 按 RG Bayer 排列拆成四张图':'② 本例选择 Gr；真实算法四通道分别处理',html:'<h3>为什么只看 Gr？</h3><p>示例 RAW 为 3840×2160，RG Bayer 每个 2×2 块分别取 R、Gr、Gb、B。得到四张 1920×1080 的通道图，四个通道各自做检测。</p><p>为了看清过程，这里只拿 Gr 通道的一个内部目标举例。</p>'},
+ {kicker:'目标与邻域',dur:26,draw:target,caption:p=>p<.35?'③ 黄格是一个 Gr 像素；画面放大实际 11×11 局部':p<.65?'③ 四个彩色区域各是 5×5 个邻居':'③ 目标所在行、列不属于四块；四块共 100 个像素',html:'<h3>目标和邻居分别是谁？</h3><p>黄色中心是一个目标像素，数值可用滑杆调整。它周围分出左上、右上、左下、右下四块，每块 <b>5×5＝25 个像素</b>，对应配置 radius=5。</p><p>完整局部画出 11×11＝121 个位置：四块 100 个，目标 1 个，同一行和列其余 20 个。本例在图像内部；边界的取样方式不同。</p>'},
+ {kicker:'一块求均值',dur:28,draw:oneMean,caption:p=>p<.4?'④ 左上 25 个像素依次加入总和':p<.7?'④ 25 个不同模拟值之和为 4500':'④ 4500 ÷ 25 = 180 DN，得到左上的参考均值',html:'<h3>一个参考均值怎么来的？</h3><p>左上 5×5 的 25 个模拟值是 168、169、……、192 DN。全部相加得 4500，除以 25 得 <b>180 DN</b>。亮色格依次表示正在计数的像素。</p><p>这些值是为教学构造，真实数据不需要等差；只显示左上这一块并不表示图像只有 25 个像素。</p>'},
+ {kicker:'四块均值',dur:25,draw:fourMeans,caption:p=>p<.4?'⑤ 对每一块单独求平均':p<.7?'⑤ 四块的均值可以各不相同':'⑤ 本例得到 180、190、200、210 DN',html:'<h3>四块不能混成一个均值</h3><p>四块都各有 25 个模拟像素，均值依次为左上 180、右上 190、左下 200、右下 210 DN。数值各不相同，更接近需要分别计算的情况。</p><p>彩色区域与目标都是 Gr 通道像素；颜色只是帮助辨认四块。</p>'},
+ {kicker:'四次比较',dur:30,draw:comparisons,caption:p=>p<.3?'⑥ 目标减去左上均值，取绝对值，再除以左上均值':p<.65?'⑥ 其他三块也分别用各自均值作分母':'⑥ 获得四个比例差；滑杆可以改变目标值',html:'<h3>为什么要算四次？</h3><p>默认目标为 245 DN。左上差为 |245−180|/180≈36.11%；右上约 28.95%，左下 22.50%，右下约 16.67%。每一块使用自己的均值作分母。</p><p>画面展示百分数的近似值，比较阈值时使用未舍入的值。代码本身没有单独保护邻域均值为零的情况，本算例均非零。</p>'},
+ {kicker:'主缺陷阈值',dur:25,draw:mainThreshold,caption:p=>p<.55?'⑦ 四个比例分别与 30% 比较':'⑦ 只要一个严格大于 30%，就标记主缺陷图',html:'<h3>只需一块超过</h3><p>示例白帧四通道主阈值均为 0.30，也就是 30%。默认 245 时只有左上 36.11% 超过，仍足以在主缺陷图标记该目标。</p><p>严格大于才触发，等于不触发。此标记是候选，不等于最终结果；其他位置没有在本页计算。</p>'},
+ {kicker:'两张标记图',dur:25,draw:masks,caption:p=>p<.35?'⑧ 先写主缺陷图对应位置':'⑧ 没进主图时才比较 Gr 的 12% blemish 阈值',html:'<h3>为什么有两张图？</h3><p>先检查主阈值；若有任何邻域差超过 30%，主缺陷图写 255，blemish 图写 0。否则主图写 0，才检查 Gr 的 12% 阈值，决定 blemish 图写 255 还是 0。</p><p>255 表示该位置被标记，不是目标像素的亮度。blemish 候选不等于最终 blemish 缺陷，还要进一步统计。</p>'},
+ {kicker:'亮暗方向',dur:24,draw:direction,caption:p=>p<.4?'⑨ 先把四个邻域均值再求平均':p<.7?'⑨ 目标减去四块均值的平均，得到带正负的差':'⑨ 正值表示亮的方向；最终单点还要看后续统计',html:'<h3>亮点还是暗点？</h3><p>方向使用有符号差值：目标减去四块均值的平均。默认 (180+190+200+210)/4=195，245−195=+50，为亮的方向。</p><p>只有结合主图及空间统计才能确认单点等分类；这一步不能单独决定 bin。</p>'},
+ {kicker:'逐点扫描',dur:22,draw:scanning,caption:p=>p<.72?'⑩ 目标位置移动，每个位置重新找四块':'⑩ 四通道的每个像素都需要处理；边界单独处理',html:'<h3>一个目标不是整张图</h3><p>真实代码在四通道中逐像素计算四邻域均值、差异和标记。动画中的移动点只表示移动过程，100 个演示位置不是实际图像大小，也不是检测结果。</p><p>边界附近的邻域处理与内部不同，页面算例只用于内部目标；图像中其他点可能受本目标影响。</p>'},
+ {kicker:'合回 Bayer',dur:22,draw:bayer,caption:p=>p<.4?'⑪ 四通道各自得到标记图和差值图':'⑪ 按 Bayer 原位置合成，准备做空间形状统计',html:'<h3>为什么又合起来？</h3><p>四个通道各自计算完成后，源码把主缺陷图、blemish 图和差值图按 Bayer 位置映射回原图尺寸，供后面的空间统计使用。</p><p>右边 2×2 只是排列示意，不是完整图像。</p>'},
+ {kicker:'单点与团簇',dur:24,draw:clusters,caption:p=>p<.4?'⑫ 标记孤立还是相邻，决定后续如何统计':'⑫ 不同形状的团簇与单点分别计数',html:'<h3>标记之后还要做什么？</h3><p>源码识别全局和通道内多种团簇形状，再统计亮暗单点；团簇计数会影响单点统计。这里仅解释概念，不在页面中模拟全部分类。</p><p>无法仅凭本页的一个目标点断言它一定是孤立单点。</p>'},
+ {kicker:'子项与汇总',dur:24,draw:bins,caption:p=>p<.5?'⑬ 满足额外假设时，单点数量决定示例子项 bin':'⑬ 最终 bin 还要和其他子项比较',html:'<h3>两个层次的结果</h3><p>假设没有团簇、其他点，且 blemish 不超限：无主缺陷单点对应 2001 / grade 0，一个亮点对应 2002 / 1，一个暗点对应 2006 / 1。其他场景有更多分支。</p><p>此 V1.0 初始化 is_passed=false；最终汇总仅用失败且 grade 严格更高的子项覆盖当前结果，因此子项 2001 不等于最终 bin。</p>'},
+ {kicker:'互动模拟',dur:26,draw:interactive,caption:p=>p<.5?'⑭ 滑杆改变一个目标值；四块邻域保持不变':'⑭ 对照四个比例与两张标记图，观察变化',html:'<h3>试着拖动滑杆</h3><p>四块均值固定为 180、190、200、210 DN，目标可在 0～255 之间改变。目标 195 时两图不标记；220 时是 blemish 候选；234 时左上刚好 30%，不进入主图；245 时左上超过 30%，主图标记。</p><p>显示的子项 bin 只在没有团簇、其他点且 blemish 不超限的假设下成立；不是对全图的实际检测。</p>'}
 ];
 const input=document.getElementById('pixelval'),output=document.getElementById('pixelout');
-input.addEventListener('input',()=>{state.pixel=Number(input.value);output.textContent=input.value;AlgoAnim.render();});
+function setPixel(value){state.pixel=Number(value);input.value=state.pixel;output.textContent=String(state.pixel);AlgoAnim.render();}
+input.addEventListener('input',()=>setPixel(input.value));
+[['preset-normal',195],['preset-blemish',220],['preset-limit',234],['preset-bright',245],['preset-dark',140]].forEach(pair=>document.getElementById(pair[0]).addEventListener('click',()=>setPixel(pair[1])));
 AlgoAnim.start({scenes:SCENES});
 </script>
 </body>

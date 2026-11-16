@@ -55,7 +55,7 @@ EXPECTED_KICKERS = {
     'relative_illumination': ['定位','取窗口','求均值','算 ratio','防呆','判 Spec','归档'],
     'non_uniformity': ['定位','认识 RAW','拆四通道','一格从哪来','逐行铺格','放大像素','求均值','求标准差','格内百分比','平均与最大','左右镜像','上下镜像','判定与互动'],
     'deadrow_deadcol_bright': ['任务','分通道','认识行列','行均值','取邻行','算比例差','扫描行','扫描列','线内 DOL','半行均值','断线二次差','边界与零','汇总结果','互动判定'],
-    'pixel_defect': ['定位','四块邻域','比例比较','两张标记图','单点与团簇','结果与汇总','互动模拟'],
+    'pixel_defect': ['总览','拆通道','目标与邻域','一块求均值','四块均值','四次比较','主缺陷阈值','两张标记图','亮暗方向','逐点扫描','合回 Bayer','单点与团簇','子项与汇总','互动模拟'],
 }
 
 GUIDES = {
@@ -77,9 +77,18 @@ GUIDES = {
   [S(RAW,5225,5271,'mean_left','列检测用左右邻列；与行检测方向不同。')],
   [dol,std], [halves], [breakline], [edge,zero], [decision,priority], [rowratio,rowcount,priority]],
  'pixel_defect': [
-  [callpixel], [pixneighbor], [pixratio], [pixmask],
-  [S(RAW,9192,9193,'mean_ref','四邻域均值的平均用于计算亮暗方向的 delta；团簇统计另有其他代码。')],
-  [S(ITEM,3550,3568,'paticle','这里只展示前几种团簇结果分支；完整判定还有其他分支。')], [pixratio,pixmask]],
+  [callpixel], [basic,bayer,splitraw],
+  [S(RAW,9155,9164,'sum_t[0]','源码数组顺序是左上、左下、右上、右下；画面为便于阅读按左上、右上、左下、右下展示。本幕只示意内部点。'),pixneighbor],
+  [S(RAW,9175,9178,'sum_t[n]/cnt','r=5 时 cnt=25；每块的求和结果除以像素数得到该块均值。')],
+  [pixneighbor], [pixratio],
+  [S(RAW,9195,9204,'compareValue[n]>spec','循环比较四个比例；只要 flag 大于零就写入主缺陷图。')],
+  [pixmask],
+  [S(RAW,9192,9193,'mean_ref','四块均值的平均用于计算带符号差值；此值和比例判断用途不同。')],
+  [S(RAW,9143,9151,'vec_up','沿行扫描并通过增减更新邻域的列和；随后还要逐列扫描。')],
+  [S(TEST,2875,2881,'RGGB_Map_Integrate_chao','主缺陷、blemish 和差值图分别按 Bayer 排列合回原图位置。')],
+  [S(TEST,2905,2922,'FindALLClusterBayer_in_binary','对合成主缺陷图调用团簇统计；本幕仅作概念解释。')],
+  [S(ITEM,3633,3649,'res.bin = 2001','满足外围条件时先赋 2001；符合亮单点数量范围可改为 2002。'),S(ITEM,3661,3665,'res.bin = 2006','暗单点符合相应范围时改为 2006；其他范围与后续 blemish 条件可能再次改变结果。'),S(ITEM,3680,3697,'blemish_cnt','超过单点限制或 blemish 条件时可能覆盖先前 bin。'),finalbin],
+  [pixratio,pixmask]]
 }
 
 def get_guides(page):
