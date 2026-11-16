@@ -22,3 +22,5 @@ python3 docs/tools/test_config_story.py
 python3 docs/build.py --check
 python3 docs/build_story.py --check
 ```
+
+`Color_Shading_15_15` 的 16 幕源码覆盖调用、专用配置缺失与版本、ROI 均值、四角六对、上下左右边差、阈值及异常路径。仓库没有 `ColorShading_15x15.data`；页面只引用真实 Basic.data，其他参数均明确为教学假设。

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color_Shading_15_15 动画讲解</title>
+<link rel="stylesheet" href="../shared/player.css">
+</head>
+<body><div class="app">
+<header class="top"><div class="brand"><div class="logo">◎</div><div>
+<h1>图像传感器 FT 测试 · 色彩阴影（Color_Shading_15_15）</h1>
+<p class="sub">逐行拆解 <code>vector&lt;Subitem_Result&gt; cs_shading_15x15 = Color_Shading_15_15(test_manage);</code><br><code>items_results.insert(items_results.end(), cs_shading_15x15.begin(), cs_shading_15x15.end());</code></p>
+</div></div><div class="badges"><span class="badge">C++ / Qt · V1.0 源码</span><span class="badge">15×15 参数为假设</span><a class="badge link" href="storyboard.html">看不了动画？→ 静态分镜</a></div></header>
+  <main>
+<section class="stage-col"><div class="stage-card"><canvas id="stage" aria-label="算法动画舞台"></canvas><div class="caption"><span class="dot"></span><span id="caption">① 按区域计算颜色比例，再比较角和边</span></div></div>
+<div class="controls"><button id="prev">◀ 上一节</button><button id="play" class="primary">⏸ 暂停</button><button id="next">下一节 ▶</button><button id="replay">↺ 重播</button><div class="progress"><div id="bar"></div></div><div class="speed"><button data-speed="0.5">0.5×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div></div>
+<div class="tuner"><div class="tuner-head"><h2>互动：改变两个模拟区域的 R 值</h2><span>只用于最后一幕；不修改配置或真实图像</span></div>
+<div class="sliders two"><label class="slider"><span>右下角 R</span><input id="corner" type="range" min="80" max="150" value="120" step="1"><output id="cornerout">120</output></label><label class="slider"><span>下边中段 R</span><input id="bottom" type="range" min="60" max="140" value="80" step="1"><output id="bottomout">80</output></label></div><div class="presets"><button id="sample">恢复示例</button><button id="normal">假设范围内</button></div></div></section>
+<aside class="side"><nav class="chapters" id="chapters" aria-label="章节"></nav><section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section><div class="explain" id="explain"><h3>本页在讲什么</h3><p>根据源码演示区域均值、四角色差和边缘色差。15×15 配置文件缺失，因此演示参数和像素值均为假设。</p></div></aside>
+</main><footer class="foot">本示例的 Basic.data 是仓库原文；15×15 配置文件缺失。网格、阈值、bin、grade 与像素均为教学假设，并非实测或产线配置。</footer>
+</div><script src="../shared/player.js"></script><script>
+const state=AlgoAnim.state;state.corner=120;state.bottom=80;
+const EPS=1e-8,SIZE=15,COUNT=225;
+const LIMIT={corner:30,edge:20,bin:9000,grade:5}; // 教学假设，不是产线参数
+const CORNERS=[[0,1,15,16],[195,196,210,211],[13,14,28,29],[208,209,223,224]]; // LT LB RT RB
+const EDGES=[[5,6,7,8,9],[215,216,217,218,219],[75,90,105,120,135],[89,104,119,134,149]]; // top bottom left right
+const PAIRS=[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+const NAMES=['左上','左下','右上','右下'];
+function data(corner=120,bottom=80){
+ const vals=Array.from({length:COUNT},()=>({r:100,gr:200,gb:200,b:120}));
+ [80,90,100,corner].forEach((r,k)=>CORNERS[k].forEach(i=>vals[i].r=r));
+ [100,bottom,100,110].forEach((r,k)=>EDGES[k].forEach(i=>vals[i].r=r));
+ return vals;
+}
+function ratio(v){return v.r*v.b/(v.gr*v.gb+EPS);}
+function avg(a){return a.reduce((x,y)=>x+y,0)/a.length;}
+function diff(a,b){return Math.abs(a/(b+EPS)-1)*100;}
+function exceeds(dc,edge){return dc>LIMIT.corner||edge>LIMIT.edge;}
+function calculate(corner=120,bottom=80){
+ const values=data(corner,bottom),ratios=values.map(ratio);
+ const corners=CORNERS.map(ids=>avg(ids.map(i=>ratios[i]))),edges=EDGES.map(ids=>avg(ids.map(i=>ratios[i])));
+ const pairs=PAIRS.map(([a,b])=>diff(corners[a],corners[b]));
+ const dc=Math.max(...pairs),tb=diff(edges[0],edges[1]),rl=diff(edges[3],edges[2]),edge=Math.max(tb,rl);
+ return {values,ratios,corners,edges,pairs,dc,tb,rl,edge,fail:exceeds(dc,edge)};
+}
+function box(x,y,w,h,title,lines,p,color){card(x,y,w,h,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});txt(title,x+18,y+32,{size:15,weight:700,color:color||C.accent});const n=Math.min(lines.length,1+Math.floor(clamp01(p/.76)*lines.length));lines.forEach((s,i)=>{if(i<n)txt(s,x+18,y+67+i*31,{size:13,color:i===n-1?C.ink:C.dim});});}
+function note(s){txt(s,55,545,{size:12,color:C.dim});}
+function grid(x,y,ids){
+ const chosen=new Set(ids||[]);for(let i=0;i<COUNT;i++){const xx=x+(i%15)*20,yy=y+Math.floor(i/15)*20;card(xx,yy,18,18,{r:2,fill:chosen.has(i)?withA(C.accent2,.48):withA(C.accent,.09),stroke:chosen.has(i)?C.accent2:withA(C.accent,.25)});}
+}
+function f(x){return x.toFixed(4)}
+function intro(p){header(0,'一眼看懂','按区域算颜色比例，再分别比较四角与四条边');box(55,160,425,310,'主要步骤',['① RAW 拆成四通道，划分 ROI','② 每块求四通道均值，算一个比例','③ 四角各取 2×2 块，比较六对','④ 四边各取中间 5 块，比较上下 / 左右','⑤ 两个最大差分别对照上限'],p,C.accent2);box(510,160,425,310,'此教程的前提',['仓库没有 15×15 专用配置文件','15×15、Skip 及阈值均为假设','像素与结果均为虚构，不是实测','不依赖 Color_Ratio 的 RG/BG','每个区域按均值计算 R×B/(Gr×Gb)'],p);note('界面按 V1.0 的源码演示；不逐像素播放累加。');}
+function config(p){header(1,'配置与入口','先区分已有配置和为了说明而设的参数');box(55,155,430,330,'仓库中可以确认',['Basic.data：3840 × 2160，RG Bayer','未找到 ColorShading_15x15.data','打开文件失败时加载函数返回 false','无法从仓库确认实际开关或阈值','不能推断此测试已开启或产线结果'],p,C.accent2);box(510,155,425,330,'下文只是教学假设',['V1.0；open_mode = 1','Skip = 0；ROI = 15 × 15','角差上限 30%，边差上限 20%','失败 bin 9000 / grade 5（假设）','这些数字不是配置原文'],p);note('实际版本取决于参数加载状态；本页仅解释假设成功进入 V1.0。');}
+function layout(p){header(2,'分通道与分区','假设分为 15 列 × 15 行，定位区域不是逐像素遍历');grid(55,155,[112]);box(410,155,525,315,'按假设计算尺寸',['RAW 3840×2160 → 单通道 1920×1080','Skip = 0；宽 1920 ÷ 15 = 128','高 1080 ÷ 15 = 72','每块每通道 128×72 = 9216 像素','共 225 块，均匀覆盖此通道','中心索引 (7,7)，行优先编号 112'],p,C.accent2);note('黄色为中心位置；实际 ROI 个数和 Skip 需要专用配置确定。');}
+function roi(p){const v=data()[0],q=ratio(v);header(3,'一块求通道均值','选左上第一块：四通道分别求区域均值');grid(55,155,[0]);box(410,155,525,315,'ROI 0 的模拟像素',['每通道 128×72 = 9216 个像素','假设该块各通道内像素值固定','R 均值 80，Gr 均值 200','Gb 均值 200，B 均值 120','均值 = 该通道像素之和 ÷ 数量','直接展示均值，不播放逐点累加'],p,C.accent2);note('四通道数字是教学假设；本函数使用均值，而不是通道和加 0.1。');}
+function oneRatio(p){const v=data()[0],q=ratio(v);header(4,'一块算比例','把同一块的四个通道均值组合成一个比例');box(55,155,425,320,'ROI 0 的模拟均值',['R = '+v.r+'，B = '+v.b,'Gr = '+v.gr+'，Gb = '+v.gb,'每个数是本区域一个通道的均值','不是四个区域的值'],p,C.accent2);box(510,155,425,320,'代入源码公式',['① 分子 R × B = 80 × 120 = 9600','② 分母 Gr × Gb + 1e−8','③ 比例 = 9600 ÷ (40000 + 1e−8)','④ 得到比例 ≈ '+f(q),'⑤ 每个 ROI 都按同一公式计算'],p);note('EPS = 1e−8；显示值舍入，后续计算使用未舍入值。');}
+function all(p){header(5,'得到比例图','225 块各自得到一个 R×B/(Gr×Gb) 比例');grid(55,155,[]);box(410,155,525,315,'比例图是什么？',['① 每块 ROI 对应一个数','② 四角和边缘下一步分别取样','③ 不先算 RG 与 BG 再比较','④ 所有区域像素都定义为模拟值','⑤ 这里的颜色只表示网格位置'],p,C.accent2);note('大部分区域使用 R=100、Gr=Gb=200、B=120；角和边按后续算例设置。');}
+function corners(p){const d=calculate();header(6,'四角区域','每个角取 2×2 个 ROI，先求各自的比例平均');grid(55,155,CORNERS.flat());box(410,155,525,315,'四角平均（模拟）',NAMES.map((n,i)=>n+'：4 块 ROI 的比例平均 ≈ '+f(d.corners[i])).concat(['各角分别求平均，不是只取角上 1 块','这里只改变每角的 R，其他通道固定']),p,C.accent2);note('四角各 4 块，共 16 块；四角显示顺序为左上、左下、右上、右下。');}
+function pairExample(p){const d=calculate();header(7,'一对角怎么比较','先看左上 ÷ 右下，减 1，取绝对值，再转百分比');box(55,155,425,320,'先取两个角均值',['左上 ≈ '+f(d.corners[0]),'右下 ≈ '+f(d.corners[3]),'每个值来自各角 2×2 ROI','方向不同会改变分母'],p,C.accent2);box(510,155,425,320,'按源码实际顺序',['左上 ÷ (右下 + 1e−8)','再减 1，取绝对值','最后乘 100','|左上/(右下+EPS) − 1| × 100','本对结果约 '+f(d.pairs[2])+'%'],p);note('不是两角直接相减；分母是右下，且加 EPS。');}
+function allPairs(p){const d=calculate();header(8,'六对取最大','四个角两两比较：六项中的最大值就是 DiffCorner');box(55,155,425,325,'六对角（有固定方向）',PAIRS.map(([a,b],i)=>NAMES[a]+' ÷ '+NAMES[b]+'：约 '+f(d.pairs[i])+'%'),p,C.accent2);box(510,155,425,325,'汇总角差',['每对都按前一个 ÷ 后一个','每个分母加 EPS，减 1 后取绝对值','六个百分比取最大','本例最大来自左上 ÷ 右下','DiffCorner ≈ '+f(d.dc)+'%','下一步再单独计算边缘差'],p);note('取最大的是六项比例差，不是四个角的最大比例。');}
+function edges(p){const d=calculate();header(9,'四边中间区域','顶部、底部、左边、右边，各选中间连续 5 块');grid(55,155,EDGES.flat());box(410,155,525,315,'四边各自平均',['上：第 0 行，列 5～9，均值 ≈ '+f(d.edges[0]),'下：第 14 行，列 5～9，均值 ≈ '+f(d.edges[1]),'左：第 0 列，行 5～9，均值 ≈ '+f(d.edges[2]),'右：第 14 列，行 5～9，均值 ≈ '+f(d.edges[3]),'中心索引裁到至少距边 2 格','5 块平均的是比例，不是像素'],p,C.accent2);note('黄色为参与边缘计算的 20 块；与四角各 2×2 的选择不同。');}
+function tb(p){const d=calculate();header(10,'上下边比较','上边平均 ÷ 下边平均，得到上下差');box(55,155,425,315,'从四边取上下',['上边 5 块平均 ≈ '+f(d.edges[0]),'下边 5 块平均 ≈ '+f(d.edges[1]),'先分别平均，再进行比较'],p,C.accent2);box(510,155,425,315,'Diff_TB',['上 ÷ (下 + 1e−8)','减 1 → 取绝对值 → ×100','上下差约 '+f(d.tb)+'%','源码分母是下边，不是上边'],p);note('比值与百分数是模拟值；并不代表图像的实测结果。');}
+function rl(p){const d=calculate();header(11,'左右边比较','右边平均 ÷ 左边平均，得到左右差');box(55,155,425,315,'从四边取左右',['左边 5 块平均 ≈ '+f(d.edges[2]),'右边 5 块平均 ≈ '+f(d.edges[3]),'先分别平均，再进行比较'],p,C.accent2);box(510,155,425,315,'Diff_RL 和 Maxdiff',['右 ÷ (左 + 1e−8)','减 1 → 取绝对值 → ×100','左右差约 '+f(d.rl)+'%','Maxdiff = max(上下差, 左右差)','本例边缘最大差 ≈ '+f(d.edge)+'%'],p);note('左右方向是右 ÷ 左；与上下方向的前后顺序不同。');}
+function decision(p){const d=calculate();header(12,'对照上限','任一差值严格大于对应上限，就设置失败');box(55,155,425,315,'本例两个输出',['DiffCorner ≈ '+f(d.dc)+'%','Maxdiff ≈ '+f(d.edge)+'%','角差与边差是不同的指标','画面已舍入，判断用原始浮点值'],p,C.accent2);box(510,155,425,315,'仅用于演示的假设',['角上限 30%，边上限 20%','角差 > 30%，边差 > 20%','满足任一条件即失败','假设 bin 9000 / grade 5','等于上限不失败；不是实际 bin'],p);note('真实上限、bin、grade 需从实际 ColorShading_15x15.data 确认。');}
+function risks(p){header(13,'异常与风险','源码没有覆盖所有无效输入，不能把初始通过当有效测量');box(55,155,425,330,'区域数量或尺寸异常',['行或列小于 5，函数直接返回 −1','调用方没有检查返回值','两个输出未赋值仍用于判断：未定义行为','ROI 超出边界时均值函数返回 −1','尺寸为零可能导致除以零'],p,C.accent2);box(510,155,425,330,'其他边界',['分母加 EPS 不等于验证数据有效','零亮度也可能得到有限比例','ROI 开始位置为负未单独保护','计算函数的 msg / debug 在此未输出','数据或配置异常时应联系开发核查'],p);note('这些是源码风险提示，不在本教程中修改生产算法。');}
+function returns(p){header(14,'返回与追加','V1.0 返回一个子项；调用方把向量追加到列表');box(55,155,425,320,'V1.0 初始化与开关',['子项初始 true，bin 1 / grade 0','open_mode = 1 时计算并比较','其他开关值不进入计算','关闭分支没有设置 g_msg=false','因此初始通过不代表有效测量'],p,C.accent2);box(510,155,425,320,'调用与最终结果',['版本不匹配：返回 false、g_msg=false','V1.0 只 push_back 一个子项','insert 追加整个返回向量','MA 的 bin / grade 本函数未使用','最终 bin 还需汇总其他子项'],p);note('专用配置缺失时不能推断版本、开关或最终 bin 的实际状态。');}
+function interactive(p){const d=calculate(state.corner,state.bottom);header(15,'互动观察','改变右下角和下边中段的 R，重新计算两项差值');box(55,155,425,315,'模拟区域输入',['右下角 2×2：R = '+state.corner,'下边中间 5 块：R = '+state.bottom,'其他区域与通道均固定','角差 ≈ '+f(d.dc)+'%','边差 ≈ '+f(d.edge)+'%'],1,C.accent2);box(510,155,425,315,'假设阈值下',['角差上限 30%，边差上限 20%','超过任一上限：'+(d.fail?'是':'否'),d.fail?'假设失败：bin 9000 / grade 5':'假设未超限：保持初始结果','判断使用未舍入值','滑杆不影响前面各幕的固定算例'],1);note('结果只用于假设参数下的教学；并非真实设备测量或最终 bin。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:20,draw:intro,caption:p=>'① 四通道均值 → 每块比例 → 四角与四边比较 → 判定',html:'<h3>先看整体</h3><p>Color_Shading_15_15 的 V1.0 调用 TestFunc_LSC，先求每个区域四通道均值，再算 R×B/(Gr×Gb+EPS)，最后输出四角最大差与上下左右边缘最大差。</p><p>本页所有专用参数和像素为教学假设，不是实际配置或实测。</p>'},
+ {kicker:'配置与入口',dur:22,draw:config,caption:p=>'② 专用配置缺失；15×15、开关、阈值和 bin 都是假设',html:'<h3>真实与假设</h3><p>仓库没有 ColorShading_15x15.data；加载器打开失败会返回 false。本页只引用同一目录实际存在的 Basic.data，不能从中推断该子项的实际配置、版本或运行结果。</p><p>仅为教学假设 V1.0、open_mode=1、Skip=0、15×15、角上限 30%、边上限 20%、bin 9000 / grade 5。真实参数可能不同。</p>'},
+ {kicker:'分通道与分区',dur:22,draw:layout,caption:p=>'③ 假设 15×15：每通道共 225 块，每块 128×72',html:'<h3>构造区域</h3><p>Basic.data 的 3840×2160 RAW 按 RG Bayer 拆为 1920×1080 四通道；假设 Skip=0、15×15，整数除法每块为 128×72，覆盖整个通道。中心位置是第 7 行、第 7 列（从 0 编号），索引 112。</p><p>15×15 只是函数名称对应的示例；实际尺寸由配置决定。</p>'},
+ {kicker:'一块求通道均值',dur:22,draw:roi,caption:p=>'④ 选中一块，分别求 R、Gr、Gb、B 的区域均值',html:'<h3>一块区域</h3><p>每块对四通道分别调用 GetROIChannelMean。本例左上块假设各通道像素分别固定为 80、200、200、120，因此均值也是这些数；只直接展示结果，不逐像素播放。</p><p>源码此处求均值，不是 Color_Ratio 的四通道和加 0.1。</p>'},
+ {kicker:'一块算比例',dur:22,draw:oneRatio,caption:p=>'⑤ R 均值乘 B 均值，除以两个绿色均值之积加 EPS',html:'<h3>计算一个比例</h3><p>源码比例为 <code>R_mean × B_mean / (Gr_mean × Gb_mean + 1e−8)</code>。本例约 0.24。分母中的 EPS 有助于避免某些零分母，但并不验证亮度是否有效。</p>'},
+ {kicker:'得到比例图',dur:20,draw:all,caption:p=>'⑥ 225 块分别计算一个比例，形成比例图',html:'<h3>每块都算</h3><p>画面中的每个小格是一块 ROI，不是一个像素。函数计算所有区域的比例；之后只取四角和四边中段进行比较。</p><p>本例所有 225 块均有定义；普通块 R=100，Gr=Gb=200，B=120；对应角及边中段的 R 按后面的说明修改。</p>'},
+ {kicker:'四角区域',dur:24,draw:corners,caption:p=>'⑦ 每个角各取 2×2 个 ROI，求四个比例的平均',html:'<h3>四个角的平均</h3><p>四角各取 2×2 块并平均比例。本例左上、左下、右上、右下的 R 分别为 80、90、100、120，其余通道均为 Gr=Gb=200、B=120；每角四块取相同模拟值。</p><p>每角均值约为 0.24、0.27、0.30、0.36。</p>'},
+ {kicker:'一对角怎么比较',dur:24,draw:pairExample,caption:p=>'⑧ 用左上除以右下加 EPS，减 1 后取绝对值并乘 100',html:'<h3>比较两个角</h3><p>示例以左上 ÷ (右下 + EPS) 为例，计算 <code>abs(左上/(右下+EPS) − 1) × 100</code>，约为 33.3333%。这是六对中的一对。</p><p>方向会影响结果；不能交换分子和分母，也不是直接相减。</p>'},
+ {kicker:'六对取最大',dur:26,draw:allPairs,caption:p=>'⑨ 四角六对按源码方向比较，取最大的 DiffCorner',html:'<h3>六对角</h3><p>依次为左上/左下、左上/右上、左上/右下、左下/右上、左下/右下、右上/右下。每个分母加 EPS；计算相对差的百分比，再取最大，本例约 33.3333%。</p>'},
+ {kicker:'四边中间区域',dur:24,draw:edges,caption:p=>'⑩ 每条边各取中间连续 5 个 ROI，分别平均',html:'<h3>四条边</h3><p>以中心列 7 为基准，顶部与底部取第 5～9 列；以中心行 7 为基准，左右边取第 5～9 行。源码将中心索引限制在离边至少 2 格的位置。每条边先平均这 5 个区域的比例。</p><p>假设上、下、左、右中段的 R 分别为 100、80、100、110；其余通道为 Gr=Gb=200、B=120。</p>'},
+ {kicker:'上下边比较',dur:20,draw:tb,caption:p=>'⑪ 上边均值除以下边均值加 EPS，得到上下百分比差',html:'<h3>上下边差</h3><p>Diff_TB = <code>abs(Top/(Bottom+EPS) − 1) × 100</code>；本例约 25%。分子为上、分母为下，先计算各边 5 块的平均。</p>'},
+ {kicker:'左右边比较',dur:22,draw:rl,caption:p=>'⑫ 右边除以左边；再将左右差与上下差取最大',html:'<h3>左右边差</h3><p>Diff_RL = <code>abs(Right/(Left+EPS) − 1) × 100</code>；本例约 10%。Maxdiff 是 Diff_TB 与 Diff_RL 的最大值，本例约 25%。注意方向为右除左。</p>'},
+ {kicker:'对照上限',dur:22,draw:decision,caption:p=>'⑬ 两个输出各自比较假设上限；任一严格超出即失败',html:'<h3>判断</h3><p>V1.0 判断 <code>DiffCorner &gt; max_diff_corner || Maxdiff &gt; max_diff_edge</code>，任一严格超限即失败，等于上限不失败。此例假设上限 30% 和 20%，两个指标都超限，赋假设 bin 9000、grade 5。</p><p>上限与 bin/grade 不来自仓库配置；比较使用未舍入浮点值。</p>'},
+ {kicker:'异常与风险',dur:24,draw:risks,caption:p=>'⑭ ROI 数量、尺寸或数据异常时，初始结果不能证明测量有效',html:'<h3>应核查的异常路径</h3><p>TestFunc_LSC 在行或列数小于 5 时返回 −1，却未给输出赋值；调用方忽略返回码，随后读取未初始化的两个 double，可能发生未定义行为。不能把这种情况理解为正常通过。</p><p>区域越界时均值函数返回 −1；零大小时可能除零。EPS 不等于对数据有效性检查。均值函数只检查末端大于边界，不单独检查负起点或零尺寸；需核对实际参数。</p>'},
+ {kicker:'返回与追加',dur:22,draw:returns,caption:p=>'⑮ V1.0 返回一个子项；开关关闭仍保持初始化状态',html:'<h3>返回结果</h3><p>V1.0 创建一个 true、bin 1、grade 0、g_msg=true 的子项；open_mode 不为 1 时跳过计算但没有修改 g_msg。未知版本返回一个 false、g_msg=false 的子项。函数只返回一个子项，虽然加载了 MA bin/grade，本函数并不使用它们。</p><p>调用方 insert 追加向量，最终结果还受其他子项影响。缺失配置时不可推断实际版本或结果。</p>'},
+ {kicker:'互动观察',dur:24,draw:interactive,caption:p=>'⑯ 改变两个区域的 R 值，观察假设阈值下的两项差',html:'<h3>动手观察</h3><p>滑杆分别修改右下角 2×2 块和下边中段 5 块的 R，其他通道和区域固定。假设上限为角 30%、边 20%；恢复示例为 120、80，改为 100、100 可观察未超限。</p><p>仅最后一幕使用滑杆，画面数字有舍入，内部使用 EPS 和未舍入值。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+const corner=document.getElementById('corner'),bottom=document.getElementById('bottom');
+function setValues(c,b){state.corner=Number(c);state.bottom=Number(b);corner.value=String(c);bottom.value=String(b);document.getElementById('cornerout').textContent=String(c);document.getElementById('bottomout').textContent=String(b);AlgoAnim.render();}
+corner.addEventListener('input',()=>setValues(corner.value,bottom.value));bottom.addEventListener('input',()=>setValues(corner.value,bottom.value));
+document.getElementById('sample').addEventListener('click',()=>setValues(120,80));document.getElementById('normal').addEventListener('click',()=>setValues(100,100));
+</script></body></html>

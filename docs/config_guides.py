@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = Path('STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps')
 # 字段解释只是阅读提示；数值始终从原文件读取，不写死在讲解里。
 CONFIGS = {
+    'color_shading_15x15': ('Basic.data', [('width', 'RAW 宽'), ('height', 'RAW 高'), ('bayer', 'Bayer 排列')]),
     'color_shading_5x5': ('ColorShading_5x5.data', [
         ('Skip', 'ROI 跳过边缘'), ('ROI_X_Cnt', '横向区域数'), ('ROI_Y_Cnt', '纵向区域数'),
         ('RG1_min', 'RG1 下限'), ('RG1_max', 'RG1 上限'), ('RG2_min', 'RG2 下限'), ('RG2_max', 'RG2 上限'),
@@ -70,7 +71,7 @@ CSS = '''
 def get_config(page):
     filename, fields = CONFIGS[page]
     files = []
-    names = [filename, 'Basic.data'] + (['LightResponse.data'] if page == 'color_ratio' else ['ColorRatio.data', 'LightResponse.data'] if page in ('color_shading', 'color_shading_5x5') else [])
+    names = ([filename] if page == 'color_shading_15x15' else [filename, 'Basic.data']) + (['LightResponse.data'] if page == 'color_ratio' else ['ColorRatio.data', 'LightResponse.data'] if page in ('color_shading', 'color_shading_5x5') else [])
     for name in names:
         path = CONFIG_DIR / name
         text = (ROOT / path).read_text(encoding='utf-8')
@@ -89,8 +90,9 @@ def render_config(page):
     file_html = ''.join('''<section class="config-file"><h3>{name} · 文件原文</h3>
 <div class="config-path">{path}</div><pre tabindex="0" aria-label="{name} 文件原文，可滚动"><code>{text}</code></pre></section>'''.format(
         name=escape(f['name']), path=escape(f['path']), text=escape(f['text'])) for f in files)
+    notice = ('<p><b>仓库没有 ColorShading_15x15.data；无法确认专用配置。</b> 以下只有实际 Basic.data，15×15 网格、开关、阈值和 bin 均为教学假设，不是配置原文。</p>' if page == 'color_shading_15x15' else '<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>')
     return '''<section class="config-panel" aria-label="示例配置文件">
 <h2>本页使用的 .data 配置</h2>
-<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+{notice}
 <div class="config-keys">{keys}</div><div class="config-layout">{files}</div>
-</section>'''.format(keys=key_html, files=file_html)
+</section>'''.format(keys=key_html, files=file_html, notice=notice)

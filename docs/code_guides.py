@@ -51,6 +51,7 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
+    'color_shading_15x15': ['一眼看懂','配置与入口','分通道与分区','一块求通道均值','一块算比例','得到比例图','四角区域','一对角怎么比较','六对取最大','四边中间区域','上下边比较','左右边比较','对照上限','异常与风险','返回与追加','互动观察'],
     'color_shading_5x5': ['一眼看懂','配置与入口','分区与五点','一块先算 RG / BG','先得到五点比例','RG1 对角比较','RG2 对角比较','RG3 中心与四角','BG1 对角比较','BG2 对角比较','BG3 中心与四角','依次对照六个范围','源码的除法条件','前置均值异常','返回与追加','互动观察'],
     'color_shading': ['一眼看懂','版本与开关','前置与低亮度','把画面分区','每块算颜色比例','逐块计算','RG 找中心与极值','BG 找中心与极值','RG 和中心比较','BG 和中心比较','对照阈值','特殊情况','返回并追加结果','互动模拟'],
     'light_response': ['总览','拆解代码','多工位','分通道','取 ROI','算均值','判 Spec','归档汇总'],
@@ -63,6 +64,23 @@ EXPECTED_KICKERS = {
 }
 
 GUIDES = {
+ 'color_shading_15x15': [
+  [S(BRIGHT,57,58,'cs_shading_15x15','调用并追加向量。'),S(TEST,5086,5092,'RB_GrGb[i]','每块用四通道均值计算一个比例。'),S(TEST,5108,5116,'out_DiffCorner','六对角比较后取最大值。'),S(TEST,5136,5140,'out_Maxdiff','上下、左右边差取较大值。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',17812,17824,'ColorShading_15x15.data','文件打开失败时直接返回 false；本仓库没有该文件。'),S(BRIGHT,1181,1200,'open_mode_','分派 V1.0 后，仅 open_mode=1 进入计算。')],
+  [basic,bayer,splitraw,S(TEST,5057,5077,'roi_x_pitch','根据行列数、Skip 和整数 pitch 构造 ROI；示例 15×15 为假设。')],
+  [S(TEST,5071,5083,'GetROIChannelMean','四个通道分别计算每块的均值。'),S(RAW,13609,13626,'mean_t / cnt','均值是像素和除以数量；画面不逐点播放。')],
+  [S(TEST,5086,5092,'Gr_mean[i] * Gb_mean[i] + EPS','比例用 R×B 除以 Gr×Gb 加 EPS；并非 RG/BG。')],
+  [S(TEST,5071,5092,'RB_GrGb[i]','每个区域得到四通道均值，再计算比例。')],
+  [S(TEST,5094,5106,'corner_avg','每角取 2×2 个比例求均值。')],
+  [S(TEST,5108,5116,'CornerLT / (CornerRB + EPS)','左上除右下加 EPS，再减一、取绝对值并乘 100。')],
+  [S(TEST,5108,5116,'max_element','六个方向固定的比值差中取最大。')],
+  [S(BRIGHT,1207,1217,'x_cnt / 2','中心索引来自区域数整数除二。'),S(TEST,5118,5134,'safe_x','中心索引裁到安全范围，每条边取连续五个比例求平均。')],
+  [S(TEST,5122,5127,'Top /= 5.0','顶部和底部各五块求平均。'),S(TEST,5136,5138,'Diff_TB','上下差是 Top 除以 Bottom 加 EPS。')],
+  [S(TEST,5129,5138,'Diff_RL','左右差是 Right 除以 Left 加 EPS，再与上下差取最大。')],
+  [S(BRIGHT,1220,1225,'max_diff_corner','任一输出严格大于对应上限时设置失败；阈值和 bin 均为教学假设。')],
+  [S(TEST,5057,5066,'return -1','不足 5 行或列时未赋输出即返回 −1。'),S(BRIGHT,1212,1224,'TestFunc_LSC','调用方忽略返回值并读取未初始化输出，存在未定义行为。'),S(RAW,13609,13626,'return -1','只检查末端边界；未验证负起点和零面积。')],
+  [S(BRIGHT,1194,1200,'result_cs_15x15','初始化通过，只有开关等于 1 才进入处理。'),S(BRIGHT,1232,1240,'push_back','没有关闭分支更改 g_msg；返回一个子项。'),S(BRIGHT,1181,1190,'g_msg = false','未知版本返回不参与汇总的子项。'),S(BRIGHT,57,58,'insert','向量整体追加到结果列表。'),finalbin],
+  [S(TEST,5094,5116,'diffcorner','互动改变右下角的模拟值后重新计算角差。'),S(TEST,5122,5138,'out_Maxdiff','互动改变下边中段并重新计算边差。'),S(BRIGHT,1220,1225,'max_diff_edge','两个假设上限按源码的或条件判断。')]],
  'color_shading_5x5': [
   [S(BRIGHT,54,55,'cs_shading_res_5x5','调用并把向量整体追加到结果列表。'),S(BRIGHT,1061,1075,'RG1 =','六项分别用五点比值作对角或中心比较。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',346,348,'ColorShading_5x5.data','加载器读取本版本配置。'),S(BRIGHT,966,969,'color_shading_5_5_V1.0','按版本选择实现。'),S(BRIGHT,982,1012,'param_color_shading_5x5.open_mode_','只检查 5×5 开关，再用本配置重新求 ROI 比例。')],
@@ -181,7 +199,9 @@ def get_guides(page):
             extract = lines[first-1:last]
             if not any(anchor in line for line in extract):
                 raise ValueError(f'源码已变化，请复核: {path}:{first}-{last} 缺少 {anchor}')
-            blocks.append({'path': path, 'first': first, 'last': last, 'note': note,
-                           'code': '\n'.join(f'{i:>5}  {line}' for i, line in enumerate(extract, first))})
+            # 新教程空白源码行只显示行号，避免分镜中的行尾空格；不改变非空行原文。
+            code = '\n'.join((f'{i:>5}' if page == 'color_shading_15x15' and not line else f'{i:>5}  {line}')
+                             for i, line in enumerate(extract, first))
+            blocks.append({'path': path, 'first': first, 'last': last, 'note': note, 'code': code})
         guides.append(blocks)
     return guides

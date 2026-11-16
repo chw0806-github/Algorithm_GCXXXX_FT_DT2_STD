@@ -28,6 +28,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
     {
+        "dir": "color_shading_15x15", "title": "Color_Shading_15_15",
+        "sub": "15×15 色彩阴影：四角与边缘比例差",
+        "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+        "lead": "16 幕定格图、逐幕源码和 Basic.data 原文；专用配置缺失，参数及像素为假设。",
+    },
+    {
         "dir": "color_shading_5x5", "title": "Color_Shading_5_5",
         "sub": "5×5 色彩阴影：五点对角与中心比较",
         "crumb": "图像传感器 FT 测试 · 白帧测试子项",
