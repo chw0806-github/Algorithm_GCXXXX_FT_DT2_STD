@@ -13,7 +13,7 @@ const document={getElementById:id=>elements[id]||null,querySelectorAll:()=>[],qu
 const sandbox={document,performance:{now:()=>0},requestAnimationFrame:fn=>{frame=fn;},setTimeout(){},addEventListener(){},devicePixelRatio:1};sandbox.window=sandbox;vm.createContext(sandbox);
 scripts.forEach((s,i)=>new vm.Script(s,{filename:'color:script'+i}).runInContext(sandbox));
 const run=s=>vm.runInContext(s,sandbox);
-assert.strictEqual(sandbox.__ANIM.scenes.length,16);assert.strictEqual(sandbox.__CODE_GUIDE.length,16);
+assert.strictEqual(sandbox.__ANIM.scenes.length,22);assert.strictEqual(sandbox.__CODE_GUIDE.length,22);
 assert.strictEqual(run('N'),25560);
 for(const [ch,min,avg] of [['R',81,90.5],['Gr',180,189.5],['Gb',182,191.5],['B',108,117.5]]){
  const a=Array.from(run(`sample('${ch}')`));assert.strictEqual(a.length,25560);assert.strictEqual(new Set(a).size,20);
@@ -38,9 +38,39 @@ r=run('ratios(125)');assert.strictEqual(r.centerRGPass,false);
 const green=190.5*25560+.1;
 const rForCorrected=corrected=>((corrected-.07)*green-.1)/25560;
 for(const [value,property,expected] of [[.44-1e-6,'centerRGPass',false],[.44+1e-6,'centerRGPass',true],[.66-1e-6,'centerRGPass',true],[.66+1e-6,'centerRGPass',false],[.539-1e-6,'goldenRG',false],[.539+1e-6,'goldenRG',true],[.561-1e-6,'goldenRG',true],[.561+1e-6,'goldenRG',false]])assert.strictEqual(run(`ratios(${rForCorrected(value)}).${property}`),expected);
+// 五个点的目标、偏移及因子都必须对应真实配置，不靠舍入值判定。
+const points=Array.from(run('FIVE'));
+assert.deepStrictEqual(points.map(p=>p.index),[0,8,40,72,80]);
+const keys=['leftup','rightup','center','leftdown','rightdown'];
+for(let i=0;i<5;i++){
+ const pt=points[i],key=keys[i],factor=i===2?config.Factor_Center_Class2:config.Factor_Corner_Class2;
+ assert.strictEqual(pt.rgTarget,config['TargetRatioRG_'+key]);
+ assert.strictEqual(pt.bgTarget,config['TargetRatioBG_'+key]);
+ assert.strictEqual(pt.rgOffset,config['TargetRatioRG_'+key+'_offset']);
+ assert.strictEqual(pt.bgOffset,config['TargetRatioBG_'+key+'_offset']);
+ assert.strictEqual(pt.factor,factor);assert.strictEqual(config['TargetRatioGG_'+key],1);assert.strictEqual(config['TargetRatioGG_'+key+'_offset'],0);
+ for(const kind of ['GG','RG','BG']){
+  const c=run(`regionCompare(FIVE[${i}],'${kind}')`);
+  const R=pt.r*25560+.1, G1=pt.gr*25560+.1, G2=pt.gb*25560+.1, B=pt.b*25560+.1;
+  const raw=kind==='GG'?G1/G2:kind==='RG'?R/((G1+G2)/2):B/((G1+G2)/2);
+  const target=config['TargetRatio'+kind+'_'+key],offset=config['TargetRatio'+kind+'_'+key+'_offset'];
+  close(c.raw,raw);close(c.offset,offset);close(c.target,target);close(c.low,target*(1-factor));close(c.high,target*(1+factor));
+  assert.strictEqual(c.pass,!(raw+offset>target*(1+factor)||raw+offset<target*(1-factor)));
+  assert.strictEqual(c.pass,!(i===4&&kind==='BG'),`错误的五点判定: ${key} ${kind}`);
+ }
+}
+close(run("regionCompare(FIVE[2],'RG').raw"),run('ratios(90.5).rg'));
+close(run("regionCompare(FIVE[2],'BG').raw"),run('ratios(90.5).bg'));
+close(run("regionCompare(FIVE[2],'GG').raw"),run('ratios(90.5).gg'));
+// 右下 BG 通过与失败区间的邻近边界；仅在本演示的比例非截断范围内。
+const edgeRaw=.62*1.5+.007;
+const boundaryB=(edgeRaw*((200*25560+.1+192*25560+.1)/2)-.1)/25560;
+sandbox.boundaryB=boundaryB;
+assert.strictEqual(run("regionCompare({...FIVE[4],b:boundaryB-0.001},'BG').pass"),true);
+assert.strictEqual(run("regionCompare({...FIVE[4],b:boundaryB+0.001},'BG').pass"),false);
 // V1.0 的绿色差先替换再比较，当前阈值 50；包括边界 10。
 for(const value of [0,2,10,10.001,50,51,100])assert.strictEqual((value>10?-1:value)>50,false);
-for(let i=0;i<16;i++){
+for(let i=0;i<22;i++){
  sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'),`第 ${i+1} 幕缺源码`);
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
@@ -48,4 +78,4 @@ buttons.fail();assert.strictEqual(out.textContent,'125');assert.strictEqual(run(
 buttons.notgolden();assert.strictEqual(run('ratios(state.r).goldenRG'),false);buttons.sample();assert.strictEqual(out.textContent,'90.5');
 input.value='100';handler();assert.strictEqual(out.textContent,'100');assert.strictEqual(typeof frame,'function');frame(100);
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
-console.log('OK：16 幕、81 ROI、25560 像素、四通道比例、偏移、特殊绿色差、互动');
+console.log('OK：22 幕、81 ROI、25560 像素、四通道比例、偏移、特殊绿色差、互动');

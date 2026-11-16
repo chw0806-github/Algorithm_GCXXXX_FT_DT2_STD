@@ -32,7 +32,7 @@ PAGES = [
         "title": "Color_Ratio",
         "sub": "颜色比例：81 个区域、五点判定和多个子项",
         "crumb": "图像传感器 FT 测试 · 白帧测试子项",
-        "lead": "16 幕定格图、逐幕源码与配置原文；中心数值仅为模拟。",
+        "lead": "22 幕定格图、逐幕源码与配置原文；五块数值均为模拟。",
     },
     {
         "dir": "edge_deadrow_deadcol_bright",
