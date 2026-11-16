@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge_Deadrow_Deadcol_bright 动画讲解 · 图像传感器 FT 测试</title>
+<style>
+:root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 目录页 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px}
+.card-link{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(110,168,254,.10),rgba(255,255,255,.02));padding:18px 20px;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.card-link:hover{transform:translateY(-2px);border-color:rgba(110,168,254,.5);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.card-link h3{margin:0 0 8px;font-size:15px;color:#eaf2ff}
+.card-link p{margin:0;font-size:12.5px;line-height:1.75;color:var(--dim)}
+.card-link .tag{display:inline-block;font-size:10.5px;color:#ffd166;border:1px solid rgba(255,209,102,.35);
+  background:rgba(255,209,102,.08);border-radius:999px;padding:2px 8px;margin-bottom:10px}
+.sliders.two{grid-template-columns:repeat(2,1fr)}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 边缘坏行坏列（Edge_Deadrow_Deadcol_bright）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>items_results.push_back(Algorithm_all[site_].Edge_Deadrow_Deadcol_bright(test_manage));</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>EdgeLineDefect.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
+    </div>
+  </header>
+
+<section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+<div class="config-keys"><span class="config-key">子项开关：<code>[open_mode]=1</code></span><span class="config-key">边缘行条带：<code>[StripRow]=0</code></span><span class="config-key">边缘列条带：<code>[StripCol]=0</code></span><span class="config-key">向内参考的邻线数：<code>[radius]=5</code></span><span class="config-key">R 行 TA：<code>[Spec_DeadRow_R_TA]=0.025</code></span><span class="config-key">R 行 MA：<code>[Spec_DeadRow_R_MA]=0.035</code></span><span class="config-key">R 列 TA：<code>[Spec_DeadCol_R_TA]=0.030</code></span><span class="config-key">R 列 MA：<code>[Spec_DeadCol_R_MA]=0.035</code></span><span class="config-key">R 行 DOL 阈值：<code>[SpecDOL_Row_R]=50</code></span></div><div class="config-layout"><section class="config-file"><h3>EdgeLineDefect.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/EdgeLineDefect.data</div><pre tabindex="0" aria-label="EdgeLineDefect.data 文件原文，可滚动"><code>[StripRow]=0
+[StripCol]=0
+
+[Spec_DeadRow_R_TA]=0.025
+[Spec_DeadRow_Gr_TA]=0.025
+[Spec_DeadRow_Gb_TA]=0.025
+[Spec_DeadRow_B_TA]=0.025
+
+[Spec_DeadRow_R_MA]=0.035
+[Spec_DeadRow_Gr_MA]=0.035
+[Spec_DeadRow_Gb_MA]=0.035
+[Spec_DeadRow_B_MA]=0.035
+
+
+[Spec_DeadCol_R_TA]=0.030
+[Spec_DeadCol_Gr_TA]=0.030
+[Spec_DeadCol_Gb_TA]=0.030
+[Spec_DeadCol_B_TA]=0.030
+
+[Spec_DeadCol_R_MA]=0.035
+[Spec_DeadCol_Gr_MA]=0.035
+[Spec_DeadCol_Gb_MA]=0.035
+[Spec_DeadCol_B_MA]=0.035
+
+
+[SpecDOL_Row_R]=50
+[SpecDOL_Row_Gr]=50
+[SpecDOL_Row_Gb]=50
+[SpecDOL_Row_B]=50
+
+[SpecDOL_Col_R]=50
+[SpecDOL_Col_Gr]=50
+[SpecDOL_Col_Gb]=50
+[SpecDOL_Col_B]=50
+
+[radius]=5
+[bin_dead_row]=2216
+[grade_dead_row]=6
+[bin_dead_row_MA]=2217
+[grade_dead_row_MA]=2
+[bin_dead_col]=2214
+[grade_dead_col]=6
+[bin_dead_col_MA]=2215
+[grade_dead_col_MA]=2
+[bin_dol]=2218
+[grade_dol]=5
+
+[open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section></div>
+</section>
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">① 理解边缘行列：先确认实际配置是否选择边缘线</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head"><h2>互动：一条假设的 R 通道顶部边缘行</h2><span>只改变模拟，不会修改 .data；假设其余边缘线与 DOL 均正常</span></div>
+        <div class="sliders two"><label class="slider" style="--c:#ff7a7a"><span class="ch">行均值</span><input id="rowmean" type="range" min="180" max="220" step="0.5" value="189.5"><output id="rowout">189.5</output></label></div>
+        <div class="presets"><button id="actual">实际 StripRow=0</button><button id="hypothetical">假设 StripRow=2</button><button id="normal">无超限 197.5</button><button id="ta">TA~MA 194.5</button><button id="ma">MA边界 193</button><button id="example">算例 189.5</button></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
+      <div class="explain" id="explain"><h3>本页在讲什么</h3><p>从实际配置 StripRow=0、StripCol=0 开始，再用假设值演示边缘行列如何比较。画面数值均为模拟。</p></div>
+    </aside>
+  </main>
+
+  <footer class="foot">教学示意：GC8613T 白帧 EdgeLineDefect.data，实际 StripRow=0、StripCol=0。假设 Strip=2 仅为理解算法，不会修改配置。源码存在释放后读取风险，不能保证运行结果。
+  </footer>
+</div>
+
+<script>
+/* ==========================================================================
+   AlgoAnim · 算法动画共用播放器
+   --------------------------------------------------------------------------
+   页面里只需要写「场景」，播放器负责：画布自适应、章节、控制条、字幕、快捷键。
+
+   用法：
+     <link rel="stylesheet" href="../shared/player.css">
+     <script src="../shared/player.js"><\/script>
+     <script>
+       const state = AlgoAnim.state;          // 共用状态（scene/t/speed + 自定义字段）
+       state.xxx = ...;
+       function drawStep1(p){ ... }           // p = 0..1，用全局 ctx / txt / card 画
+       const SCENES = [{ kicker, dur, draw:drawStep1, caption:p=>'...', html:'...' }];
+       AlgoAnim.start({ scenes: SCENES });
+     <\/script>
+
+   绘图工具箱（全部是全局函数）：txt card arrow rr para wrapLines withA
+   常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
+   ========================================================================== */
+'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / ' + String(scenes.length).padStart(2,'0') + ' · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+
+
+/* ==========================================================================
+   播放器
+   ========================================================================== */
+const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
+let scenes = [];
+let elCaption = null, elBar = null;
+
+function resize(){
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  if(!ctx || !scenes.length) return;
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = scenes[PState.scene];
+  const p = clamp01(PState.t / sc.dur);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
+  if(elCaption){
+    const cap = sc.caption(p);
+    if(elCaption.textContent !== cap) elCaption.textContent = cap;
+  }
+}
+
+let lastTime = performance.now();
+
+function tick(now){
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  const sc = scenes[PState.scene];
+  if(sc && PState.playing){
+    PState.t += dt * PState.speed;
+    if(PState.t >= sc.dur){
+      if(PState.scene < scenes.length - 1){
+        gotoScene(PState.scene + 1, true);
+      } else {
+        PState.t = sc.dur;
+        PState.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  if(!elBar || !scenes.length) return;
+  const sc = scenes[PState.scene];
+  const overall = (PState.scene + clamp01(PState.t/sc.dur)) / scenes.length;
+  elBar.style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
+function gotoScene(i, autoplay){
+  if(!scenes.length) return;
+  PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
+  PState.t = 0;
+  PState.playing = autoplay !== false;
+  syncPlayButton();
+  const ex = document.getElementById('explain');
+  if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === PState.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+  render();
+}
+
+function buildChapters(){
+  const box = document.getElementById('chapters');
+  if(!box) return;
+  box.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'chapter';
+    b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') +
+                  '</span><span class="name">' + s.kicker + '</span>';
+    b.addEventListener('click', ()=> gotoScene(i, true));
+    box.appendChild(b);
+  });
+}
+
+function bindControls(){
+  const play = document.getElementById('play');
+  if(play) play.addEventListener('click', ()=>{
+    if(!PState.playing && PState.t >= scenes[PState.scene].dur - 0.01) PState.t = 0;
+    PState.playing = !PState.playing;
+    syncPlayButton();
+  });
+  const prev = document.getElementById('prev');
+  if(prev) prev.addEventListener('click', ()=> gotoScene(PState.scene-1, true));
+  const next = document.getElementById('next');
+  if(next) next.addEventListener('click', ()=> gotoScene(PState.scene+1, true));
+  const replay = document.getElementById('replay');
+  if(replay) replay.addEventListener('click', ()=> gotoScene(0, true));
+
+  document.querySelectorAll('.speed button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      PState.speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(play) play.click(); }
+    if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(PState.scene+1, true); }
+    if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(PState.scene-1, true); }
+  });
+}
+
+const AlgoAnim = {
+  get state(){ return PState; },
+  get ctx(){ return ctx; },
+  get canvas(){ return canvas; },
+  get scenes(){ return scenes; },
+  gotoScene: gotoScene,
+  render: render,
+  start: function(opts){
+    opts = opts || {};
+    canvas = document.getElementById(opts.canvas || 'stage');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
+    scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    Object.assign(PState, opts.state || {});
+    elCaption = document.getElementById('caption');
+    elBar = document.getElementById('bar');
+    buildChapters();
+    bindControls();
+    if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize);
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
+  }
+};
+window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 44, "last": 46, "note": "白帧调用该子项并保存返回值。", "code": "   44  \n   45      items_results.push_back(Algorithm_all[site_].Deadrow_Deadcol_bright(test_manage,true));\n   46      items_results.push_back(Algorithm_all[site_].Edge_Deadrow_Deadcol_bright(test_manage));"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5580, "last": 5585, "note": "开关为 1 才进入子项。", "code": " 5580      Subitem_Result result_edge_line (\"Edge_Deadrow_Deadcol_bright\",true);\n 5581      int w=manage.width_;\n 5582      int h=manage.height_;\n 5583  \n 5584      if(manage.param_edge_line_defect_bright_.open_mode_ == 1)\n 5585      {"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7238, "last": 7244, "note": "条带宽为 0 时，顶部条件不成立；底部条件也不成立，随后 continue。", "code": " 7238      std::vector<int> row_data(w,0);\n 7239      for (int i=0; i<each_row_.size(); ++i)\n 7240      {\n 7241          double diff=0;\n 7242          if(i<stripCnt/2)\n 7243          {\n 7244              double mean_down = each_row_.at (i);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7262, "last": 7284, "note": "底部条件和 else continue；0 时任何索引均不满足。", "code": " 7262          else if(i>=each_row_.size()-stripCnt/2)\n 7263          {\n 7264              double mean_top = each_row_.at (i);\n 7265              if (i-r>0)\n 7266              {\n 7267                  int cnt_t1 = 0;\n 7268                  mean_top = 0.0;\n 7269                  for (int index = i-r; index<i; ++index)\n 7270                  {\n 7271                      mean_top+=each_row_.at(index);\n 7272                      cnt_t1+=1;\n 7273                  }\n 7274                  mean_top/=cnt_t1;\n 7275              }\n 7276              double dif_top= std::abs (each_row_.at (i)-mean_top);\n 7277  \n 7278              if(mode==Ratio)\n 7279                  diff  = dif_top/mean_top;\n 7280              else if(mode==DN)\n 7281                  diff = dif_top;\n 7282          }\n 7283          else\n 7284              continue;"}], [{"path": "STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data", "first": 1, "last": 3, "note": "这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。", "code": "    1  [width]=3840\n    2  [height]=2160\n    3  [bayer]=RG"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 4525, "last": 4543, "note": "四个通道按半尺寸分别设置线程并等待。", "code": " 4525      MultiThread::get_edge_row_defect_bychannel *p_row_defect[Channel_Num];\n 4526      for (int i=0; i < Channel_Num; i++)\n 4527      {\n 4528          p_row_defect[i] = new MultiThread::get_edge_row_defect_bychannel();\n 4529      }\n 4530  \n 4531      p_row_defect[R]->setparam(g_buf_r_,w/2,h/2,radius,skip,spec_R,spec_dol_R,0,0,0,0,0,0,mode,\"\");\n 4532      p_row_defect[Gr]->setparam(g_buf_gr_,w/2,h/2,radius,skip,spec_Gr,spec_dol_Gr,0,0,0,0,0,0,mode,\"\");\n 4533      p_row_defect[Gb]->setparam(g_buf_gb_,w/2,h/2,radius,skip,spec_Gb,spec_dol_Gb,0,0,0,0,0,0,mode,\"\");\n 4534      p_row_defect[B]->setparam(g_buf_b_,w/2,h/2,radius,skip,spec_B,spec_dol_B,0,0,0,0,0,0,mode,\"\");\n 4535  \n 4536      for (int i=0; i < Channel_Num; i++)\n 4537      {\n 4538          p_row_defect[i]->start();\n 4539      }\n 4540  \n 4541      for (int i=0; i < Channel_Num; i++)\n 4542      {\n 4543          p_row_defect[i]->wait();"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7238, "last": 7245, "note": "顶部按 stripCnt/2 选择，整数除法；该页后续使用假设值。", "code": " 7238      std::vector<int> row_data(w,0);\n 7239      for (int i=0; i<each_row_.size(); ++i)\n 7240      {\n 7241          double diff=0;\n 7242          if(i<stripCnt/2)\n 7243          {\n 7244              double mean_down = each_row_.at (i);\n 7245              if (i+r<each_row_.size())"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7262, "last": 7274, "note": "底部方向相反：参考上方 r 行。", "code": " 7262          else if(i>=each_row_.size()-stripCnt/2)\n 7263          {\n 7264              double mean_top = each_row_.at (i);\n 7265              if (i-r>0)\n 7266              {\n 7267                  int cnt_t1 = 0;\n 7268                  mean_top = 0.0;\n 7269                  for (int index = i-r; index<i; ++index)\n 7270                  {\n 7271                      mean_top+=each_row_.at(index);\n 7272                      cnt_t1+=1;\n 7273                  }\n 7274                  mean_top/=cnt_t1;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7223, "last": 7235, "note": "逐行遍历像素求均值；本例 w=1920，所以 2*N=1920。", "code": " 7223      std::vector<double> each_row_(h,0);\n 7224      int N = w/2;\n 7225      for (int i=0; i<h; ++i)\n 7226      {\n 7227          if(i>=stripCnt/2+r && i<h-stripCnt/2-r)\n 7228              continue;\n 7229          double mean_t = 0.0;\n 7230          for (int j=0; j<N; ++j)\n 7231          {\n 7232              mean_t+=(double)(pData[w*i+2*j]);\n 7233              mean_t+=(double)(pData[w*i+2*j+1]);\n 7234          }\n 7235          each_row_[i]=mean_t/(2*N);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7242, "last": 7255, "note": "顶部从下一行到 i+r 累加 r 条邻行均值再求平均。", "code": " 7242          if(i<stripCnt/2)\n 7243          {\n 7244              double mean_down = each_row_.at (i);\n 7245              if (i+r<each_row_.size())\n 7246              {\n 7247                  int cnt_t1 = 0;\n 7248                  mean_down = 0.0;\n 7249                  for (int index = i+1; index<=i+r; ++index)\n 7250                  {\n 7251                      mean_down+=each_row_.at(index);\n 7252                      cnt_t1+=1;\n 7253                  }\n 7254                  mean_down/=cnt_t1;\n 7255              }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7254, "last": 7260, "note": "取目标与参考差的绝对值，Ratio 模式除以内侧参考。", "code": " 7254                  mean_down/=cnt_t1;\n 7255              }\n 7256              double dif_down= std::abs (each_row_.at (i)-mean_down);\n 7257              if(mode==Ratio)\n 7258                  diff  = dif_down/mean_down;\n 7259              else if(mode==DN)\n 7260                  diff = dif_down;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7286, "last": 7295, "note": "保存最大差位置；严格大于 TA 才增加计数。", "code": " 7286          if( diff > max_diff)\n 7287          {\n 7288              max_diff = diff;\n 7289              max_pos = i*2;\n 7290          }\n 7291  \n 7292          if (diff>spec_line)\n 7293          {\n 7294              cnt_lines+=1;\n 7295  "}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5685, "last": 5699, "note": "有计数后，最大差大于或等于 MA 选择对应结果。", "code": " 5685          if (cnt_edge_dead_row>0 && manage.param_edge_line_defect_bright_.grade_dead_row_>result_edge_line.grade)\n 5686          {\n 5687              if(max_edge_row_diff[0]>=manage.param_edge_line_defect_bright_.deadrow_spec_r_MA_ ||\n 5688                      max_edge_row_diff[1]>=manage.param_edge_line_defect_bright_.deadrow_spec_gr_MA_ ||\n 5689                      max_edge_row_diff[2]>=manage.param_edge_line_defect_bright_.deadrow_spec_gb_MA_ ||\n 5690                      max_edge_row_diff[3]>=manage.param_edge_line_defect_bright_.deadrow_spec_b_MA_ )\n 5691              {\n 5692                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_row_;\n 5693                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_row_;\n 5694              }\n 5695              else\n 5696              {\n 5697                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_row_MA_;\n 5698                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_row_MA;\n 5699              }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7358, "last": 7381, "note": "左侧目标向右取参考列，计算同样的比例差。", "code": " 7358      std::vector<int> col_data(h);\n 7359      for (int i=0; i<each_col_.size(); ++i)\n 7360      {\n 7361          double diff=0;\n 7362          if(i<stripCnt/2)\n 7363          {\n 7364              double mean_right = each_col_.at (i);\n 7365  \n 7366              if (i+r<each_col_.size())\n 7367              {\n 7368                  int cnt_t1 = 0;\n 7369                  mean_right = 0.0;\n 7370                  for (int index = i+1; index<=i+r; ++index)\n 7371                  {\n 7372                      mean_right+=each_col_.at(index);\n 7373                      cnt_t1+=1;\n 7374                  }\n 7375                  mean_right/=cnt_t1;\n 7376              }\n 7377              double dif_right= std::abs (each_col_.at (i)-mean_right);\n 7378              if(mode==Ratio)\n 7379                  diff  = dif_right/mean_right;\n 7380              else if(mode==DN)\n 7381                  diff = dif_right;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5669, "last": 5683, "note": "列有计数后，按 MA 判断高低等级。", "code": " 5669          if (cnt_edge_dead_col>0)\n 5670          {\n 5671              if(max_edge_col_diff[0]>=manage.param_edge_line_defect_bright_.deadcol_spec_r_MA_ ||\n 5672                      max_edge_col_diff[1]>=manage.param_edge_line_defect_bright_.deadcol_spec_gr_MA_ ||\n 5673                      max_edge_col_diff[2]>=manage.param_edge_line_defect_bright_.deadcol_spec_gb_MA_ ||\n 5674                      max_edge_col_diff[3]>=manage.param_edge_line_defect_bright_.deadcol_spec_b_MA_ )\n 5675              {\n 5676                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_col_;\n 5677                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_col_;\n 5678              }\n 5679              else\n 5680              {\n 5681                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_col_MA_;\n 5682                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_col_MA;\n 5683              }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7303, "last": 7314, "note": "读取整条选中行，用其均值计算 DOL，严格大于阈值才计数。", "code": " 7303          int index_row = i;\n 7304          for (int index_col=0; index_col<w; ++index_col)\n 7305              row_data[index_col]=pData[w*index_row+index_col];\n 7306          double std_dol = GetDatasStd<int>(row_data,each_row_.at (i));\n 7307          if(std_dol>dol_std_max)\n 7308          {\n 7309              dol_std_max = std_dol;\n 7310              dol_std_max_pos = index_row*2;\n 7311          }\n 7312          if (std_dol>spec_dol)\n 7313          {//dol\n 7314              cnt_dol+=1;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 32, "last": 40, "note": "使用传入的均值，平方偏差和除以 N−1 再开平方。", "code": "   32  double  AlgorithmFuncs::GetDatasStd(std::vector<T> &datas,double mean_t)\n   33  {\n   34      double std_t = 0.0;\n   35      for (int i=0; i<datas.size (); ++i)\n   36      {\n   37          std_t+=(double)((mean_t-datas.at (i))*(mean_t-datas.at (i)));\n   38      }\n   39      std_t/=datas.size ()-1;\n   40      return std::sqrt (std_t);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5663, "last": 5705, "note": "列先赋值；行先用高等级条件与现有 grade 比较，再选择高低结果；DOL 最后比较。", "code": " 5663          logMsg (std::string(\"after dead line\"));\n 5664          int cnt_edge_dol = cnt_edge_row_dol + cnt_edge_col_dol;\n 5665  \n 5666          if (cnt_edge_dead_col>0 || cnt_edge_dead_row>0 || cnt_edge_dol>0)\n 5667              result_edge_line.is_passed = false;\n 5668  \n 5669          if (cnt_edge_dead_col>0)\n 5670          {\n 5671              if(max_edge_col_diff[0]>=manage.param_edge_line_defect_bright_.deadcol_spec_r_MA_ ||\n 5672                      max_edge_col_diff[1]>=manage.param_edge_line_defect_bright_.deadcol_spec_gr_MA_ ||\n 5673                      max_edge_col_diff[2]>=manage.param_edge_line_defect_bright_.deadcol_spec_gb_MA_ ||\n 5674                      max_edge_col_diff[3]>=manage.param_edge_line_defect_bright_.deadcol_spec_b_MA_ )\n 5675              {\n 5676                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_col_;\n 5677                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_col_;\n 5678              }\n 5679              else\n 5680              {\n 5681                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_col_MA_;\n 5682                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_col_MA;\n 5683              }\n 5684          }\n 5685          if (cnt_edge_dead_row>0 && manage.param_edge_line_defect_bright_.grade_dead_row_>result_edge_line.grade)\n 5686          {\n 5687              if(max_edge_row_diff[0]>=manage.param_edge_line_defect_bright_.deadrow_spec_r_MA_ ||\n 5688                      max_edge_row_diff[1]>=manage.param_edge_line_defect_bright_.deadrow_spec_gr_MA_ ||\n 5689                      max_edge_row_diff[2]>=manage.param_edge_line_defect_bright_.deadrow_spec_gb_MA_ ||\n 5690                      max_edge_row_diff[3]>=manage.param_edge_line_defect_bright_.deadrow_spec_b_MA_ )\n 5691              {\n 5692                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_row_;\n 5693                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_row_;\n 5694              }\n 5695              else\n 5696              {\n 5697                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_row_MA_;\n 5698                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_row_MA;\n 5699              }\n 5700          }\n 5701          if (cnt_edge_dol>0 && manage.param_edge_line_defect_bright_.grade_dol_>result_edge_line.grade)\n 5702          {\n 5703              result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dol_;\n 5704              result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dol_;\n 5705          }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5903, "last": 5926, "note": "遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。", "code": " 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector<Subitem_Result>& items_results)\n 5904  {\n 5905      Subitem_Result final_result(\"The initial value\",true,1,0,true);\n 5906  \n 5907      for(int i=0;i!=items_results.size();++i)\n 5908      {\n 5909          const Subitem_Result& item=items_results[i];\n 5910  \n 5911          if(item.g_msg == false)\n 5912              continue;\n 5913  \n 5914          std::string item_log =item.name;\n 5915          QString log_;\n 5916          if(item.is_passed)\n 5917              log_+=\" is Pass. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5918          else\n 5919              log_+=\" is Failed. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5920  \n 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();\n 5922  \n 5923          if(!item.is_passed && item.grade>final_result.grade)\n 5924              final_result=item;\n 5925      }\n 5926      return final_result;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7262, "last": 7284, "note": "StripRow=0 时两边都没有目标，跳过比例与 DOL。", "code": " 7262          else if(i>=each_row_.size()-stripCnt/2)\n 7263          {\n 7264              double mean_top = each_row_.at (i);\n 7265              if (i-r>0)\n 7266              {\n 7267                  int cnt_t1 = 0;\n 7268                  mean_top = 0.0;\n 7269                  for (int index = i-r; index<i; ++index)\n 7270                  {\n 7271                      mean_top+=each_row_.at(index);\n 7272                      cnt_t1+=1;\n 7273                  }\n 7274                  mean_top/=cnt_t1;\n 7275              }\n 7276              double dif_top= std::abs (each_row_.at (i)-mean_top);\n 7277  \n 7278              if(mode==Ratio)\n 7279                  diff  = dif_top/mean_top;\n 7280              else if(mode==DN)\n 7281                  diff = dif_top;\n 7282          }\n 7283          else\n 7284              continue;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 4583, "last": 4602, "note": "delete 后仍读取指针成员写日志，存在释放后读取的未定义行为；列函数也有相同问题。", "code": " 4583      for(int i=0; i< Channel_Num; i++)\n 4584      {\n 4585          delete p_row_defect[i];\n 4586      }\n 4587  \n 4588  \n 4589      msg+=boost::str(boost::format(\"SPEC:\\n\"\n 4590                                    \"R channel Edge Row Max Diff value:%.3f, (SPEC: %.3f); \\n\"\n 4591                                    \"R channel Edge Row Dol max std value:%.3f, (SPEC: %.3f); \\n\"\n 4592                                    \"Gr channel Edge Row Max Diff value:%.3f, (SPEC: %.3f); \\n\"\n 4593                                    \"Gr channel Edge Row Dol max std value:%.3f, (SPEC: %.3f); \\n\"\n 4594                                    \"Gb channel Edge Row Max Diff value:%.3f, (SPEC: %.3f); \\n\"\n 4595                                    \"Gb channel Edge Row Dol max std value:%.3f, (SPEC: %.3f); \\n\"\n 4596                                    \"B channel Edge Row Max Diff value:%.3f, (SPEC: %.3f); \\n\"\n 4597                                    \"B channel Edge Row Dol max std value:%.3f, (SPEC: %.3f); \\n\"\n 4598  \n 4599                                    )\n 4600                      % p_row_defect[R]->max_diff_ % spec_R\n 4601                      % p_row_defect[R]->dol_std_max_ % spec_dol_R\n 4602                      % p_row_defect[Gr]->max_diff_ % spec_Gr"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7242, "last": 7258, "note": "仅模拟顶部一行的参考与比例。", "code": " 7242          if(i<stripCnt/2)\n 7243          {\n 7244              double mean_down = each_row_.at (i);\n 7245              if (i+r<each_row_.size())\n 7246              {\n 7247                  int cnt_t1 = 0;\n 7248                  mean_down = 0.0;\n 7249                  for (int index = i+1; index<=i+r; ++index)\n 7250                  {\n 7251                      mean_down+=each_row_.at(index);\n 7252                      cnt_t1+=1;\n 7253                  }\n 7254                  mean_down/=cnt_t1;\n 7255              }\n 7256              double dif_down= std::abs (each_row_.at (i)-mean_down);\n 7257              if(mode==Ratio)\n 7258                  diff  = dif_down/mean_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7292, "last": 7295, "note": "严格超过 TA 才计数。", "code": " 7292          if (diff>spec_line)\n 7293          {\n 7294              cnt_lines+=1;\n 7295  "}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5685, "last": 5699, "note": "MA 判断包括等于；这里不模拟其他缺陷。", "code": " 5685          if (cnt_edge_dead_row>0 && manage.param_edge_line_defect_bright_.grade_dead_row_>result_edge_line.grade)\n 5686          {\n 5687              if(max_edge_row_diff[0]>=manage.param_edge_line_defect_bright_.deadrow_spec_r_MA_ ||\n 5688                      max_edge_row_diff[1]>=manage.param_edge_line_defect_bright_.deadrow_spec_gr_MA_ ||\n 5689                      max_edge_row_diff[2]>=manage.param_edge_line_defect_bright_.deadrow_spec_gb_MA_ ||\n 5690                      max_edge_row_diff[3]>=manage.param_edge_line_defect_bright_.deadrow_spec_b_MA_ )\n 5691              {\n 5692                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_row_;\n 5693                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_row_;\n 5694              }\n 5695              else\n 5696              {\n 5697                  result_edge_line.bin = manage.param_edge_line_defect_bright_.bin_dead_row_MA_;\n 5698                  result_edge_line.grade = manage.param_edge_line_defect_bright_.grade_dead_row_MA;\n 5699              }"}]];
+</script>
+<script>
+/* 仅互动最后一幕：参考均值固定 200，StripRow=2 是假设，不写配置文件。 */
+const state=AlgoAnim.state; state.mean=189.5; state.strip=0;
+const neighbors=[196,198,200,202,204];
+function samplePixels(){return Array.from({length:1920},(_,i)=>180+i%20);}
+function average(a){return a.reduce((x,y)=>x+y,0)/a.length;}
+function lineResult(mean,strip){
+  const diff=Math.abs(mean-200)/200;
+  const selected=Math.floor(strip/2)>0;
+  const hit=selected && diff>0.025;
+  return {diff,selected,hit,bin:hit?(diff>=0.035?2216:2217):1,grade:hit?(diff>=0.035?6:2):0};
+}
+function box(x,y,w,h,title,lines,p,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+  txt(title,x+18,y+32,{size:16,weight:700,color:color||C.accent});
+  const show=Math.min(lines.length,1+Math.floor(clamp01(p/.72)*lines.length));
+  lines.forEach((s,i)=>{if(i<show)txt(s,x+18,y+67+i*32,{size:14,color:i===show-1?C.ink:C.dim});});
+}
+function note(t){txt(t,55,520,{size:12,color:C.dim});}
+function intro(p){
+  header(0,'任务','先看真实配置，再用假设值理解边缘坏行坏列');
+  box(55,160,420,290,'实际配置',['open_mode = 1：会进入该子项','StripRow = 0，StripCol = 0','边缘线检测循环选不到行和列','不能把教学算例当实际检测结果'],p,C.accent2);
+  box(525,160,410,290,'为了学习，后面假设',['StripRow = 2，StripCol = 2','每通道每侧各选一条边缘线','其余阈值仍参考示例配置','只演示单个目标，不跑整图'],p,C.accent);
+  note('假设只在页面里生效，不会写入配置文件；源代码另有释放后读取风险。');
+}
+function config(p){
+  header(1,'实际配置','开关打开，不代表已经选择了要检测的边缘线');
+  box(55,160,880,300,'EdgeLineDefect.data（实际值）',['① open_mode = 1：进入行列检测调用','② StripRow = 0：上、下每侧 0 ÷ 2 = 0 条','③ StripCol = 0：左、右每侧 0 ÷ 2 = 0 条','④ 比例及 DOL 扫描均没有目标线','⑤ 预计算一些参考均值 ≠ 实际检测了边缘线'],p,C.accent2);
+  note('先算均值的循环仍可能执行；目标筛选阶段对所有行列执行 continue。');
+}
+function channels(p){
+  header(2,'拆通道','RG Bayer 白帧拆成四个单色通道，再各自处理');
+  box(55,160,380,280,'示例 Basic.data',['RAW：3840 × 2160','2×2：R、Gr、Gb、B','每通道：1920 × 1080','接下来只选择 R 通道'],p,C.accent2);
+  ['R','Gr','Gb','B'].forEach((v,i)=>{if(p>=i*.13){let x=505+i%2*210,y=165+Math.floor(i/2)*130;card(x,y,185,100,{fill:withA(CH[v],.1),stroke:CH[v]});txt(v,x+18,y+36,{size:20,weight:700,color:CH[v]});txt('1920 × 1080',x+18,y+72,{size:14});}});
+  note('每通道一行有 1920 像素，一列有 1080 像素；方框是通道示意。');
+}
+function strip(p){
+  header(3,'假设选边缘','以下假设 StripRow=2、StripCol=2，实际文件仍为 0');
+  card(70,165,340,280,{fill:'rgba(110,168,254,.04)',stroke:C.accent});
+  card(70,165,340,16,{r:2,fill:'rgba(255,209,102,.35)',stroke:C.accent2});card(70,429,340,16,{r:2,fill:'rgba(255,209,102,.35)',stroke:C.accent2});
+  card(70,181,14,248,{r:2,fill:'rgba(127,224,143,.35)',stroke:CH.Gr});card(396,181,14,248,{r:2,fill:'rgba(127,224,143,.35)',stroke:CH.Gr});
+  txt('R 通道图（外框示意）',94,310,{size:15});
+  box(455,165,480,280,'每侧各选几条？',['StripRow / 2 = 1：顶部、底部各 1 行','StripCol / 2 = 1：左侧、右侧各 1 列','顶部行只参考向内的下方 5 行','底部向上；左列向右；右列向左','选中边缘线还要检查 DOL'],p,C.accent2);
+  note('整数除法；图形仅表示位置，不是按像素数量绘制的图。');
+}
+function line(p){
+  header(4,'目标行像素','假设 R 通道顶部第 0 行：真实数量为 1920 个像素');
+  const data=samplePixels(),shown=Math.floor(clamp01(p/.70)*data.length);
+  for(let i=0;i<data.length;i++){const x=55+(i%48)*6,y=155+Math.floor(i/48)*6;ctx.fillStyle=withA(C.accent,i<shown?.3+(data[i]-180)/45:.10);ctx.fillRect(x,y,5,5);}
+  txt('1920 个位置排成 48×40 格展示数量',55,418,{size:12,color:C.dim});
+  txt('放大前 20 个：后面重复 95 次',55,440,{size:12,color:C.dim});
+  for(let i=0;i<20;i++){let x=55+(i%10)*34,y=448+Math.floor(i/10)*25;card(x,y,31,22,{r:2,fill:withA(C.accent,.18),stroke:withA(C.accent,.35)});txt(data[i],x+15,y+15,{size:10,align:'center'});}
+  box(450,160,485,300,'模拟的 1920 个不同位置',['每 20 个：180、181、…、199 DN','这一组顺序重复 96 次：20 × 96 = 1920','这只是复算用的构造，不是算法要求','总和 = 363840 DN','行均值 = 363840 ÷ 1920 = 189.5 DN'],p,C.accent2);
+  note('小方格重新排成矩阵只为展示数量；真实数据是一整行。');
+}
+function refs(p){
+  header(5,'向内找邻行','目标在顶部时，只看它下方的 5 条行均值');
+  const vals=[189.5].concat(neighbors);vals.forEach((v,i)=>{if(p>=i*.1){let y=155+i*48;card(65,y,335,38,{r:5,fill:i===0?withA(C.accent2,.22):withA(C.accent,.10),stroke:i===0?C.accent2:C.accent});txt((i===0?'目标第 0 行':'下方第 '+i+' 行')+'：'+v+' DN',83,y+25,{size:14,color:i===0?C.accent2:C.ink});}});
+  box(450,155,485,300,'5 个不同的模拟行均值',['下方：196、198、200、202、204','相加：196+198+200+202+204 = 1000','平均：1000 ÷ 5 = 200 DN','只朝图像内部取邻行，不取上方','本例参考均值非零'],p,C.accent);
+  note('每个邻行均值来自该行的 1920 个像素；邻行的具体像素在此未模拟。');
+}
+function ratio(p){
+  header(6,'比例差','把目标行均值和内侧 5 行的平均值比较');
+  box(55,160,440,290,'依次计算',['① 目标行均值 = 189.5 DN','② 内侧 5 行参考平均 = 200 DN','③ 绝对差 = |189.5 − 200| = 10.5','④ 比例 = 10.5 ÷ 200 = 0.0525','⑤ 换成百分数 = 5.25%'],p,C.accent2);
+  box(535,160,400,290,'注意分母',['比例 = |目标 − 参考| ÷ 参考','分母是内侧邻行均值 200','不是除以目标行均值 189.5','此代码没有零分母保护','真实结果按未舍入数值判断'],p,C.accent);
+  note('完整计算只针对示例中这一个顶部目标；其他边缘位置未在此计算。');
+}
+function thresholds(p){
+  header(7,'两级阈值','先用 TA 判断是否计数，再用 MA 决定哪个 bin');
+  box(55,160,430,300,'第一步：TA 检出',['R 行 TA = 0.025 = 2.5%','5.25% > 2.5% → 该行计数加 1','等于 TA 不计数（严格大于）','只说明这条线被计数'],p,C.accent);
+  box(535,160,400,300,'第二步：MA 选 bin',['R 行 MA = 0.035 = 3.5%','5.25% ≥ 3.5% → 2216 / 6','介于 TA 和 MA → 2217 / 2','MA 比较是大于或等于'],p,C.accent2);
+  note('这里假设其他通道与边缘线没有更大差异，其他缺陷为零；不是最终 bin。');
+}
+function col(p){
+  header(8,'边缘列','同样假设 StripCol=2；左侧向右取 5 列');
+  box(55,160,430,300,'另一组列算例',['R 通道一列含 1080 个像素','假设目标列均值 = 192 DN','右侧 5 列均值：196、198、200、202、204','它们的平均 = 200 DN','|192 − 200| ÷ 200 = 4%'],p,C.accent);
+  box(535,160,400,300,'按列阈值判断',['列 TA = 3%，4% > 3%：计数','列 MA = 3.5%，4% ≥ 3.5%','仅此列异常时：2214 / grade 6','右边缘列向左取参考列','列和行算例相互独立'],p,C.accent2);
+  note('列均值是模拟输入，不代表完整列图像；右侧邻列平均不等于单列像素值。');
+}
+function dol(p){
+  header(9,'线内 DOL','不仅看行间差：还检查同一条线内部是否波动过大');
+  box(55,160,440,300,'独立的行内算例',['1920 个值：50～59、241～250','20 种值，每种出现 96 次','行均值 = 150 DN','平方偏差总和 = 17526720','样本标准差 = √(17526720 / 1919)','约 95.57 DN > DOL 阈值 50'],p,C.accent2);
+  box(535,160,400,300,'和前面有什么不同？',['比例差：目标行均值对比邻行','DOL：同一行的像素彼此波动','当前行被选中时才检查 DOL','示例 R 行、列阈值均为 50','这是独立算例，不是第 5 幕的行'],p,C.accent);
+  note('DOL 使用样本标准差（分母 N−1）；未模拟其邻线或整图结果。');
+}
+function priority(p){
+  header(10,'汇总优先级','先列、再行、再 DOL；还要看 grade 和具体分支');
+  box(55,155,445,325,'部分情形（示例配置）',['仅列 MA 以上：2214 / 6','仅行 MA 以上：2216 / 6','列和行都 MA 以上：先列 2214 / 6','仅行 TA~MA：2217 / 2','仅 DOL：2218 / 5','行低级 + DOL：DOL 可覆盖'],p,C.accent2);
+  box(535,155,400,325,'注意判断顺序',['列先设置结果','行先比较配置的行 grade 6','通过后才决定行是 6 还是 2','DOL 用 grade 5 严格比较','条件不等于简单的固定排序'],p,C.accent);
+  note('结果是子项 bin；整个测试最终结果还要与其他子项汇总。');
+}
+function risk(p){
+  header(11,'实际运行与风险','实际 Strip 均为 0：不要把假设算例当作产线结果');
+  box(55,155,445,315,'按代码的目标筛选逻辑',['open_mode=1：进入函数','但 StripRow=0、StripCol=0','行列目标筛选均不选中任何线','因此不执行这些目标的比例与 DOL','预期计数为 0，非整图结论'],p,C.accent2);
+  box(535,155,400,315,'源码有运行风险',['行、列线程对象释放之后','日志仍读取已释放对象的成员','这属于释放后读取，行为未定义','还要注意邻线参考均值为零','页面只讲逻辑，不保证真实运行'],p,C.fail);
+  note('需由开发人员检查与修复后再验证；本演示不修改原始算法。');
+}
+function interactive(p){
+  header(12,'互动','切换实际 / 假设配置，再调整一条模拟顶部行均值');
+  const r=lineResult(state.mean,state.strip);
+  box(55,155,445,320,'当前模拟',['StripRow = '+state.strip+(state.strip?'（假设）':'（实际文件值）'),'目标行均值 = '+state.mean+' DN','内侧 5 行平均固定 = 200 DN','若计算，比例 = '+(r.diff*100).toFixed(2)+'%','是否选中该行：'+(r.selected?'是':'否'),r.selected?(r.hit?'超过 TA：计数':'未超过 TA：不计数'):'未选中：不检查此行'],p,C.accent2);
+  box(535,155,400,320,'只考虑这条行的简化结论',[r.selected?'模拟子项：'+r.bin+' / grade '+r.grade:'实际配置不扫描这条行','以下例子均假设 StripRow=2','197.5 → 1.25%，不计数','194.5 → 2.75%，2217 / 2','193 → 3.50%，2216 / 6','假设其他行列及 DOL 无异常','源码有释放后读取风险'],p,C.accent);
+  note('滑杆改变均值，不会同步改变第 5 幕的模拟像素，也不会修改配置。');
+}
+const SCENES=[
+ {kicker:'任务',dur:23,draw:intro,caption:p=>'① 先看实际 Strip=0，再假设 Strip=2 理解计算',html:'<h3>先抓住主线</h3><p>这个子项检查图像四周的边缘行列：选边缘线、计算均值、与朝图像内部的邻线比较，并检查线内 DOL。</p><p><b>重要：</b>实际示例配置 StripRow=0、StripCol=0，不选任何目标线。下面用假设 Strip=2 教学，不修改文件，也不代表实际检测结果。</p>'},
+ {kicker:'实际配置',dur:25,draw:config,caption:p=>'② open_mode=1，但 StripRow/Col 都是 0，不选中边缘目标',html:'<h3>开关和选区不是同一回事</h3><p><code>open_mode=1</code> 使程序进入子项并调用行、列处理；而 <code>StripRow=0</code>、<code>StripCol=0</code> 使目标线筛选条件两侧均选不到任何行列。线间比例和线内 DOL 均不会对目标线执行。</p><p>源码前面的预计算可能仍计算部分邻线均值，不能误认为已经检测了边缘线。源码还存在释放后读取，实际运行不能保证。</p>'},
+ {kicker:'拆通道',dur:22,draw:channels,caption:p=>'③ 3840×2160 的 RG Bayer 拆成四个 1920×1080 通道',html:'<h3>从 RAW 到 R 通道</h3><p>示例 Basic.data 的 RAW 尺寸 3840×2160、Bayer 为 RG；拆成 R、Gr、Gb、B，每张通道图 1920×1080。代码对每个通道分别启动边缘行、列处理。</p><p>接下来选 R 通道举例；颜色只是为了区分通道。</p>'},
+ {kicker:'假设选边缘',dur:26,draw:strip,caption:p=>'④ 假设 Strip=2，每通道上下各选 1 行、左右各选 1 列',html:'<h3>假设选出边缘线</h3><p>实际配置是零；为了讲解，假设 StripRow=2、StripCol=2。源码用整数除法 <code>stripCnt/2</code>，因此在一个通道中，上下各选 1 条行、左右各选 1 条列。</p><p>顶部只往下找 5 行；底部往上、左列往右、右列往左。这是内侧单方向参考，不是两边各找 5 条。</p>'},
+ {kicker:'目标行像素',dur:28,draw:line,caption:p=>'⑤ 显示真实数量的 1920 个模拟位置，计算目标行平均 189.5 DN',html:'<h3>一条行的均值</h3><p>假设顶部目标行有 1920 个模拟像素：180～199 DN 每 20 个重复 96 次，共 1920 个；相加 363840，平均为 <b>189.5 DN</b>。画面 48×40 的小格重新排列了全部位置，便于数清数量；原图里它们在同一行。</p><p>这只是方便复算的数据，并非要求像素重复或等差。滑杆不会更改本幕的固定像素。</p>'},
+ {kicker:'向内找邻行',dur:27,draw:refs,caption:p=>'⑥ 顶部目标行下面 5 个不同均值，平均得到 200 DN',html:'<h3>为什么只找下方？</h3><p>目标行在顶部，外侧没有行，所以向图像内部找下面 5 行。模拟均值分别为 196、198、200、202、204 DN，合计 1000，除以 5 得 <b>200 DN</b>。</p><p>这 5 个数字是五整行的均值，不是 5 个像素；每行有 1920 个像素。只构造它们的均值，不推断其像素分布。</p>'},
+ {kicker:'比例差',dur:26,draw:ratio,caption:p=>'⑦ |189.5−200| ÷ 200 = 5.25%',html:'<h3>如何计算比例差？</h3><p>先用目标均值减参考均值，取绝对值，再除以参考均值：<code>|189.5−200|/200=0.0525=5.25%</code>。绝对值让偏亮和偏暗都能检测。</p><p>源码本路径没有为零参考均值单独设置保护；此算例的分母为 200。</p>'},
+ {kicker:'两级阈值',dur:28,draw:thresholds,caption:p=>'⑧ 5.25% 严格超过 TA 2.5%，且达到 MA 3.5%',html:'<h3>TA 与 MA 各做什么？</h3><p>先与 R 行 TA 2.5% 比较，<b>严格大于</b>才计数。若有行被计数，再比较通道最大差与 MA 3.5%，<b>大于或等于</b>选 2216 / grade 6；未达到 MA 则选 2217 / grade 2。</p><p>假设其他通道、列和 DOL 无异常，本例 5.25% 给出子项 2216 / 6，不等于整机最终 bin。</p>'},
+ {kicker:'边缘列',dur:26,draw:col,caption:p=>'⑨ 假设选中左边缘列，向右找 5 列作参考',html:'<h3>列怎么做？</h3><p>这是独立算例。一个通道每列 1080 个像素；假设左边目标列均值 192，右边五列均值为 196、198、200、202、204，平均 200，比例差为 4%。</p><p>列 TA 为 3%、MA 为 3.5%，所以计数且满足 MA。假设只有这条列异常时，子项 2214 / grade 6；没有构造整列像素。</p>'},
+ {kicker:'线内 DOL',dur:28,draw:dol,caption:p=>'⑩ 独立算例：线内样本标准差约 95.57，高于 50',html:'<h3>DOL 在检查什么？</h3><p>和跨行比较不同，DOL 看一条已选边缘线内像素的波动。这是另一个独立模拟例子：50～59 和 241～250 各 96 次，总共 1920 个值，均值 150、平方偏差总和 17526720。</p><p>源码样本标准差为 √(17526720/1919)≈95.57 DN，严格超过示例阈值 50，因此 DOL 计数；该算例没有计算邻行或最终结果。</p>'},
+ {kicker:'汇总优先级',dur:27,draw:priority,caption:p=>'⑪ 列先、行后、DOL 最后，各分支根据 grade 比较',html:'<h3>多种异常同时发生怎么办？</h3><p>子项先判断列，然后行，最后 DOL。行分支进入前比较的是配置的行高等级 grade 6，进入后才决定结果是高等级 6 还是低等级 2；DOL 用 grade 5 严格比较当前结果。</p><p>比如列与行都为高等级时，先选列 2214 / 6；若只有低等级行与 DOL，DOL 2218 / 5 可覆盖。还要与其他测试子项汇总。</p>'},
+ {kicker:'实际运行与风险',dur:25,draw:risk,caption:p=>'⑫ 实际 Strip=0 不选目标线；还须留意源码释放后读取',html:'<h3>回到实际配置</h3><p>在该配置下按循环筛选逻辑没有目标行列，因此预计各检测计数为 0；这不代表全图不存在缺陷，也不能将假设算例的 bin 视为实际结果。</p><p><b>代码风险：</b><code>testitems.cpp</code> 的行和列函数先 delete 线程对象，随后仍从这些对象读取成员写日志，属于释放后读取，行为未定义。此外比例除法没有单独的零分母保护。请由开发人员检查，本页未修改生产源码。</p>'},
+ {kicker:'互动模拟',dur:26,draw:interactive,caption:p=>'⑬ 切换 StripRow=0 / 假设 2，再拖动目标行均值',html:'<h3>试试阈值边界</h3><p>先点“假设 StripRow=2”，再试 197.5、194.5、193。内侧参考固定 200，对应比例分别 1.25%、2.75%、3.5%；TA 严格大于、MA 大于等于。</p><p>互动仅模拟一个顶部 R 行，假设其他目标与 DOL 无异常；不更改前面固定的像素数据或 .data，也不代表完整检测。选择实际 StripRow=0 时此行不会被选中。</p>'}
+];
+const slider=document.getElementById('rowmean'),out=document.getElementById('rowout');
+function setMean(v){state.mean=Number(v);slider.value=state.mean;out.textContent=String(state.mean);AlgoAnim.render();}
+function setStrip(v){state.strip=v;AlgoAnim.render();}
+slider.addEventListener('input',()=>setMean(slider.value));
+[['actual',()=>setStrip(0)],['hypothetical',()=>setStrip(2)],['normal',()=>setMean(197.5)],['ta',()=>setMean(194.5)],['ma',()=>setMean(193)],['example',()=>setMean(189.5)]].forEach(x=>document.getElementById(x[0]).addEventListener('click',x[1]));
+AlgoAnim.start({scenes:SCENES});
+
+</script>
+
+<script>
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
+setTimeout(function () {
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
+  }
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
+</script>
+</body>
+</html>

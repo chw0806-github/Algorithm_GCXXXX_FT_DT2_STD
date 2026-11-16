@@ -28,6 +28,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
     {
+        "dir": "edge_deadrow_deadcol_bright",
+        "title": "Edge_Deadrow_Deadcol_bright",
+        "sub": "边缘坏行坏列：实际选区与假设算例",
+        "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+        "lead": "13 幕定格图、逐幕源码与配置原文。实际 Strip 为 0，算例另作假设。",
+    },
+    {
         "dir": "pixel_defect",
         "title": "Pixel_Defect_Test",
         "sub": "白帧像素缺陷：邻域比较、单点和团簇",

@@ -23,6 +23,11 @@ CONFIGS = {
         ('radius', '每侧邻行/邻列数'), ('Spec_DeadRow_R_TA', 'R 行 TA 比例阈值'),
         ('Spec_DeadCol_R_TA', 'R 列 TA 比例阈值'), ('SpecDOL_Row_R', 'R 行 DOL 阈值'),
         ('breakrow_spec_r', 'R 断行阈值'), ('bin_dead_row', '坏行 bin'), ('bin_dead_col', '坏列 bin')]),
+    'edge_deadrow_deadcol_bright': ('EdgeLineDefect.data', [
+        ('open_mode', '子项开关'), ('StripRow', '边缘行条带'), ('StripCol', '边缘列条带'),
+        ('radius', '向内参考的邻线数'), ('Spec_DeadRow_R_TA', 'R 行 TA'),
+        ('Spec_DeadRow_R_MA', 'R 行 MA'), ('Spec_DeadCol_R_TA', 'R 列 TA'),
+        ('Spec_DeadCol_R_MA', 'R 列 MA'), ('SpecDOL_Row_R', 'R 行 DOL 阈值')]),
     'pixel_defect': ('PixelDefect.data', [
         ('type', '1 为白帧类型'), ('open_mode', '检测开关'), ('radius', '邻域半径'),
         ('ratio_diff_gr', 'Gr 主缺陷比例阈值'), ('blemish_SpecGr', 'Gr blemish 比例阈值'),

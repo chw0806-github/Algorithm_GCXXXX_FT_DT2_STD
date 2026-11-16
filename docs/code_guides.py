@@ -55,6 +55,7 @@ EXPECTED_KICKERS = {
     'relative_illumination': ['定位','取窗口','求均值','算 ratio','防呆','判 Spec','归档'],
     'non_uniformity': ['定位','认识 RAW','拆四通道','一格从哪来','逐行铺格','放大像素','求均值','求标准差','格内百分比','平均与最大','左右镜像','上下镜像','判定与互动'],
     'deadrow_deadcol_bright': ['任务','分通道','认识行列','行均值','取邻行','算比例差','扫描行','扫描列','线内 DOL','半行均值','断线二次差','边界与零','汇总结果','互动判定'],
+    'edge_deadrow_deadcol_bright': ['任务','实际配置','拆通道','假设选边缘','目标行像素','向内找邻行','比例差','两级阈值','边缘列','线内 DOL','汇总优先级','实际运行与风险','互动模拟'],
     'pixel_defect': ['总览','拆通道','目标与邻域','一块求均值','四块均值','四次比较','主缺陷阈值','两张标记图','亮暗方向','逐点扫描','合回 Bayer','单点与团簇','子项与汇总','互动模拟'],
 }
 
@@ -76,6 +77,20 @@ GUIDES = {
   [calldead], [bayer,splitraw], [rowparams,basic], [rowmean], [rowneighbors], [rowratio,rowcount], [rowcount],
   [S(RAW,5225,5271,'mean_left','列检测用左右邻列；与行检测方向不同。')],
   [dol,std], [halves], [breakline], [edge,zero], [decision,priority], [rowratio,rowcount,priority]],
+ 'edge_deadrow_deadcol_bright': [
+  [S(BRIGHT,44,46,'Edge_Deadrow_Deadcol_bright','白帧调用该子项并保存返回值。')],
+  [S(ITEM,5580,5585,'open_mode_','开关为 1 才进入子项。'),S(RAW,7238,7244,'stripCnt/2','条带宽为 0 时，顶部条件不成立；底部条件也不成立，随后 continue。'),S(RAW,7262,7284,'continue','底部条件和 else continue；0 时任何索引均不满足。')],
+  [basic,bayer,S(TEST,4525,4543,'w/2,h/2','四个通道按半尺寸分别设置线程并等待。')],
+  [S(RAW,7238,7245,'stripCnt/2','顶部按 stripCnt/2 选择，整数除法；该页后续使用假设值。'),S(RAW,7262,7274,'mean_top','底部方向相反：参考上方 r 行。')],
+  [S(RAW,7223,7235,'mean_t/(2*N)','逐行遍历像素求均值；本例 w=1920，所以 2*N=1920。')],
+  [S(RAW,7242,7255,'mean_down/=cnt_t1','顶部从下一行到 i+r 累加 r 条邻行均值再求平均。')],
+  [S(RAW,7254,7260,'dif_down/mean_down','取目标与参考差的绝对值，Ratio 模式除以内侧参考。')],
+  [S(RAW,7286,7295,'diff>spec_line','保存最大差位置；严格大于 TA 才增加计数。'),S(ITEM,5685,5699,'deadrow_spec_r_MA_','有计数后，最大差大于或等于 MA 选择对应结果。')],
+  [S(RAW,7358,7381,'mean_right','左侧目标向右取参考列，计算同样的比例差。'),S(ITEM,5669,5683,'deadcol_spec_r_MA_','列有计数后，按 MA 判断高低等级。')],
+  [S(RAW,7303,7314,'GetDatasStd','读取整条选中行，用其均值计算 DOL，严格大于阈值才计数。'),S(RAW,32,40,'datas.size ()-1','使用传入的均值，平方偏差和除以 N−1 再开平方。')],
+  [S(ITEM,5663,5705,'grade_dead_row_>result_edge_line.grade','列先赋值；行先用高等级条件与现有 grade 比较，再选择高低结果；DOL 最后比较。'),finalbin],
+  [S(RAW,7262,7284,'continue','StripRow=0 时两边都没有目标，跳过比例与 DOL。'),S(TEST,4583,4602,'delete p_row_defect','delete 后仍读取指针成员写日志，存在释放后读取的未定义行为；列函数也有相同问题。')],
+  [S(RAW,7242,7258,'dif_down/mean_down','仅模拟顶部一行的参考与比例。'),S(RAW,7292,7295,'diff>spec_line','严格超过 TA 才计数。'),S(ITEM,5685,5699,'deadrow_spec_r_MA_','MA 判断包括等于；这里不模拟其他缺陷。')]],
  'pixel_defect': [
   [callpixel], [basic,bayer,splitraw],
   [S(RAW,9155,9164,'sum_t[0]','源码数组顺序是左上、左下、右上、右下；画面为便于阅读按左上、右上、左下、右下展示。本幕只示意内部点。'),pixneighbor],
