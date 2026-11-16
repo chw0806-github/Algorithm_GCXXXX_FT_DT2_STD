@@ -4,7 +4,7 @@ const html=fs.readFileSync(path.join(__dirname,'../color_ratio/index.html'),'utf
 const scripts=Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi),m=>m[1]);assert.strictEqual(scripts.length,3);
 const gradient={addColorStop(){}};
 let drawn=[];
-const ctx=new Proxy({fillText(s){drawn.push(String(s));}}, {get(t,k){if(k in t)return t[k];if(k==='createLinearGradient'||k==='createRadialGradient')return ()=>gradient;return ()=>{};}});
+const ctx=new Proxy({fillText(s){drawn.push(String(s));},measureText(s){return {width:String(s).length*7};}}, {get(t,k){if(k in t)return t[k];if(k==='createLinearGradient'||k==='createRadialGradient')return ()=>gradient;return ()=>{};}});
 const canvas={style:{},getContext:()=>ctx,getBoundingClientRect:()=>({width:1000,height:620})};
 let handler,frame;const buttons={};
 const input={value:'90.5',addEventListener:(event,fn)=>{handler=fn;}},out={textContent:''};
@@ -113,6 +113,18 @@ for(let i=0;i<5;i++){
  }
  assert.ok(!text.some(x=>/已累加|刚累加|当前和/.test(x)));
 }
+// 网格的五点与其他 76 格有区别；active=-1 不应把非五点误标。
+let cardCalls=[];const savedCard=sandbox.card;sandbox.card=(...args)=>{cardCalls.push(args);};
+run('regionGrid(55,190,-1)');assert.strictEqual(cardCalls.length,81);
+assert.strictEqual(cardCalls[0][4].stroke,cardCalls[8][4].stroke);assert.strictEqual(cardCalls[0][4].stroke,cardCalls[40][4].stroke);
+assert.notStrictEqual(cardCalls[0][4].stroke,cardCalls[1][4].stroke);assert.notStrictEqual(cardCalls[80][4].stroke,cardCalls[79][4].stroke);
+// 范围条按数据位置绘制，超限点确实位于右边界外；严格 golden 边界和普通边界区分。
+cardCalls=[];run('rangeBand(100,200,400,.31,.93,1.0134,1)');assert.strictEqual(cardCalls.length,5);assert.ok(cardCalls[4][0]+5>cardCalls[3][0]+1);
+cardCalls=[];run('rangeBand(100,200,400,.539,.561,.539,1,true)');assert.strictEqual(cardCalls[4][4].fill,run('C.fail'));
+cardCalls=[];run('rangeBand(100,200,400,.539,.561,.539,1,false)');assert.strictEqual(cardCalls[4][4].fill,run('C.accent2'));
+cardCalls=[];run('rangeBand(100,200,400,.44,.66,.545,0)');assert.strictEqual(cardCalls.length,4,'阶段开始不应提前显示修正值标记');
+sandbox.card=savedCard;
+for(const index of [5,6,7,8])assert.notStrictEqual(sandbox.__ANIM.scenes[index].caption(0),sandbox.__ANIM.scenes[index].caption(.8));
 // 右下 BG 通过与失败区间的邻近边界；仅在本演示的比例非截断范围内。
 const edgeRaw=.62*1.5+.007;
 const boundaryB=(edgeRaw*((200*25560+.1+192*25560+.1)/2)-.1)/25560;

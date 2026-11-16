@@ -45,6 +45,8 @@ z=run("calculate(Array.from({length:5},()=>({rg:-1,bg:-1})))");assert.ok(z.guard
 const scenes=sandbox.__ANIM.scenes;assert.strictEqual(scenes.length,16);assert.strictEqual(sandbox.__CODE_GUIDE.length,16);
 function renderAt(i,p){sandbox.__ANIM.gotoScene(i,true);drawn=[];sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();return drawn.slice();}
 for(let i=0;i<16;i++){sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'));for(const p of [0,.2,.4,.72,1]){sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();}}
+let overview=renderAt(0,0);assert.ok(!overview.includes('四角对角'));overview=renderAt(0,.8);assert.ok(overview.includes('四角对角'));assert.ok(overview.includes('五点：0 / 4 / 12 / 20 / 24'));
+let interactive=renderAt(15,1);assert.ok(interactive.includes('按源码顺序首个超限：BG1'));
 let center=renderAt(3,0);assert.ok(center.some(t=>t.startsWith('① 虚构像素')));assert.ok(!center.some(t=>t.startsWith('④ RG =')));
 center=renderAt(3,.62);assert.ok(center.some(t=>t.startsWith('③ 绿色参考和')));assert.ok(center.some(t=>t.startsWith('④ RG =')));assert.ok(!center.some(t=>t.startsWith('⑤ BG =')));
 center=renderAt(3,.8);assert.ok(center.some(t=>t.startsWith('⑤ BG =')));

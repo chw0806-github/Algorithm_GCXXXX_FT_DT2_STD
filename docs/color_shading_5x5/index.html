@@ -815,10 +815,10 @@ function grid(x,y,selected){
   txt(String(i),x+(i%5)*58+26,y+Math.floor(i/5)*58+31,{size:13,color:chosen?C.accent2:C.dim,align:'center',weight:chosen?700:400});
  }
 }
-function start(p){header(0,'一眼看懂','先算五点颜色比例，再看对角和中心相对四角的关系');
- const steps=[['① 分区','5 × 5'],['② 取五点','四角 + 中心'],['③ 求比例','RG 与 BG'],['④ 六项比较','对角 / 四角'],['⑤ 判阈值','返回子项']];
- steps.forEach((v,i)=>{const x=48+i*188,show=p>=i*.14;card(x,225,164,140,{fill:show?withA(C.accent,.15):C.panel,stroke:show?C.accent:C.line});txt(v[0],x+82,275,{size:16,align:'center',color:show?C.accent2:C.dim,weight:700});txt(v[1],x+82,310,{size:13,align:'center',color:show?C.ink:C.dim});if(i<4)arrow(x+166,295,x+184,295,show?C.accent:C.line,2);});
- note('此算法与 17×13 的“全图极值对中心”不同，主要看四角与中心。');}
+function panel(x,y,w,h){card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});}
+function chip(x,y,w,h,title,sub,color){card(x,y,w,h,{r:8,fill:withA(color,.12),stroke:withA(color,.6)});txt(title,x+14,y+25,{size:15,color,weight:700});if(sub)txt(sub,x+14,y+49,{size:12,color:C.ink});}
+function band(x,y,w,v){const lo=Math.min(.7,v-.1),hi=Math.max(1.4,v+.1),X=n=>x+(n-lo)/(hi-lo)*w;card(x,y,w,10,{r:5,fill:'rgba(125,155,195,.2)',stroke:false});card(X(.9),y,X(1.1)-X(.9),10,{r:5,fill:withA(C.pass,.55),stroke:false});card(X(v)-5,y-6,10,22,{r:4,fill:v<.9||v>1.1?C.fail:C.accent2,stroke:false});}
+function start(p){header(0,'一眼看懂','分区取五点，分别比较 RG / BG 的对角与中心');grid(55,155,p>.2?[0,4,12,20,24]:[]);txt('五点：0 / 4 / 12 / 20 / 24',55,475,{size:13,color:C.accent2});panel(420,155,515,315);chip(440,195,215,70,'RG / BG','每点各算一次',C.accent);if(p>.3){arrow(660,230,690,230,C.accent2,2);chip(705,195,205,70,'四角对角','两组方向比较',CH.R);}if(p>.6)chip(440,335,470,70,'中心 ÷ 四角平均','RG / BG 合计六项，再按顺序判定',C.accent2);note('本算法不是全图极值对中心；五点像素为模拟。');}
 function setup(p){header(1,'配置与入口','本示例启用 ColorShading_5x5.data，使用 V1.0');
  cardBox(55,155,430,315,'这次的真实配置',['Skip = 0；横向 5、纵向 5','open_mode = 1','六项上下限均为 0.9 ～ 1.1','失败：bin 158 / grade 5','配置文件原文在页面顶部'],p,C.accent2);
  cardBox(515,155,420,315,'与 17×13 不一样',['这里只检查 5×5 的 open_mode','不要求 ratio_open_mode = 1','调用同一底层函数重新求 5×5 比例','ColorRatio 的目标参与五点 map 键','这里的六项公式不加 ratio offset'],p);note('禁用时返回项 g_msg=false；版本未知也有单项回退。');}
@@ -879,10 +879,7 @@ function low(p){header(13,'前置均值异常','比例函数要求先前 Gr 和 
 function returns(p){header(14,'返回与追加','V1.0 只返回一个 Color_Shading_5*5 子项');
  cardBox(55,155,430,315,'示例结果',['本例 BG1 超过 1.1','子项 is_passed=false','bin 158 / grade 5','MA 对象已注释，未返回','其他测试仍会参与最终 bin'],p,C.accent2);
  cardBox(515,155,420,315,'调用方的 insert',['Color_Shading_5_5 返回向量','insert 将整个向量追加到 items_results','正常 V1.0 向量只有一个子项','open_mode 关闭：g_msg=false','未知版本：false 且 g_msg=false'],p);note('模拟子项结果不能直接等同于整机最终 bin。');}
-function interaction(p){header(15,'互动观察','改变右下 B，观察六项与首个超限项');
- const q=pointRatios(state.b),r=calculate(q).result,first=firstFail(r,LIMITS);
- cardBox(55,155,430,315,'固定其他点',['右下模拟 B = '+state.b,'右下 BG ≈ '+q[4].bg.toFixed(5),'BG1 ≈ '+r.BG1.toFixed(5),'BG2 ≈ '+r.BG2.toFixed(5),'BG3 ≈ '+r.BG3.toFixed(5)],1,C.accent2);
- cardBox(515,155,420,315,'按源码顺序判定',['范围均为 0.9 ～ 1.1','RG3 → RG1 → RG2','→ BG3 → BG1 → BG2','首个超限：'+(first||'无'),'子项：'+(first?'失败，158 / grade 5':'未超限')],1);note('改变右下 B 同时影响 BG1 与 BG3，不影响 RG；只在本页模拟。');}
+function interaction(p){header(15,'互动观察','改变右下 B，观察三项 BG 指标与首个超限项');const q=pointRatios(state.b),r=calculate(q).result,first=firstFail(r,LIMITS);grid(55,155,[24]);txt('右下 ROI 24，B = '+state.b,55,475,{size:13,color:C.accent2});panel(420,155,515,315);txt('绿色带为真实示例范围 [0.9, 1.1]',440,192,{size:13,color:C.dim});['BG1','BG2','BG3'].forEach((k,i)=>{const y=237+i*62;txt(k,440,y,{size:14,weight:700});band(500,y-10,230,r[k]);txt(r[k].toFixed(5),755,y,{size:13,color:r[k]<.9||r[k]>1.1?C.fail:C.ink});});txt('按源码顺序首个超限：'+(first||'无'),440,430,{size:15,weight:700,color:first?C.fail:C.pass});txt(first?'子项失败 158 / grade 5':'六项均未超限',440,458,{size:13});note('右下 B 同时影响 BG1 与 BG3；图中只画 BG，判定仍包含 RG。');}
 const SCENES=[
  {kicker:'一眼看懂',dur:16,draw:start,caption:p=>'① 5×5 色彩阴影：取五点，比较六个指标',html:'<h3>整体流程</h3><p>5×5 算法分别比较五点颜色比例的对角关系、中心与四角平均关系；不同于前一个 17×13 算法的全区域极值对中心。每一步分别展示。</p>'},
  {kicker:'配置与入口',dur:20,draw:setup,caption:p=>'② 5×5 开关、范围与版本',html:'<h3>真实配置与版本</h3><p>本示例 ColorShading_5x5.data 的 open_mode=1，选择 V1.0，六个范围均为 [0.9,1.1]，失败 bin=158、grade=5。只检查 5×5 自己的开关，不检查 ratio_open_mode；仍会调用共用 ROI 比例函数并以 ColorRatio 目标构造 map 键，这些目标和 offset 不是六项的阈值或修正。</p>'},

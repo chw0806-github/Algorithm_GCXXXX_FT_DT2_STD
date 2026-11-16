@@ -40,6 +40,8 @@ for(let i=0;i<16;i++){
  for(const p of [0,.2,.5,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
 function at(i,p){drawn=[];sandbox.__ANIM.scenes[i].draw(p);return drawn.slice();}
+assert.ok(!at(0,0).includes('四边各 5 块'));assert.ok(at(0,1).includes('四边各 5 块'));
+assert.ok(at(15,1).includes('假设超限：9000 / 5'));
 let early=at(4,0),late=at(4,1);assert.ok(!early.some(x=>x.includes('比例 = 9600')));assert.ok(late.some(x=>x.includes('比例 = 9600')));
 late=at(8,1);assert.ok(late.some(x=>x.includes('左上 ÷ 右下')));assert.ok(late.some(x=>x.includes('DiffCorner ≈ 33.3333%')));
 late=at(11,1);assert.ok(late.includes('右 ÷ (左 + 1e−8)'));assert.ok(late.some(x=>x.includes('Maxdiff = max')));

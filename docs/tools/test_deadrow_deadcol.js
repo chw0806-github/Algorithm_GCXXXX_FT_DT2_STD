@@ -44,9 +44,9 @@ for(let i=0;i<14;i++){
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
 let fills=0;ctx.fillRect=()=>{fills++;};
-sandbox.__ANIM.scenes[3].draw(0);assert.strictEqual(fills,1920,'行均值画面应绘出完整 1920 像素');
-fills=0;sandbox.__ANIM.scenes[3].draw(1);assert.strictEqual(fills,1940,'还应放大展示前 20 个像素');
-fills=0;sandbox.__ANIM.scenes[8].draw(1);assert.strictEqual(fills,1920,'DOL 示例应绘出完整 1920 像素');
+sandbox.__ANIM.scenes[3].draw(0);assert.strictEqual(fills,0,'行画面只示意局部，不绘制逐像素过程');
+fills=0;sandbox.__ANIM.scenes[3].draw(1);assert.strictEqual(fills,0);
+fills=0;sandbox.__ANIM.scenes[8].draw(1);assert.strictEqual(fills,0,'DOL 画面使用亮度范围示意');
 let texts=[];ctx.fillText=text=>texts.push(String(text));
 for(const i of [3,4,5,6,7,8,10,11,12,13]){
  texts=[];sandbox.__ANIM.scenes[i].draw(0);const before=texts.length;

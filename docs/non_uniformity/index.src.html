@@ -304,20 +304,7 @@ function drawPixels(p){
     txt('颜色深浅仅用于区分模拟亮度；不是四个颜色通道，也不是实测。',50,545,{size:12,color:C.dim});
   }
 }
-function drawPixelMean(p){
-  header(6,'求像素均值','先求这一格的平均亮度：1296 个亮度相加，再除以 1296');
-  txt('同一格：4 种模拟亮度，各 324 个',60,165,{size:15,weight:700,color:C.accent});
-  const levels=[180,190,210,220], colors=['#46709c','#6087b1','#84a8cd','#b3d0ea'];
-  const active=Math.min(3,Math.floor(clamp01(p/.6)*4));
-  levels.forEach((v,i)=>{
-    const y=190+i*65;card(60,y,390,52,{fill:withA(C.accent,i===active?.22:.06),stroke:i===active?C.accent:'rgba(110,168,254,.20)'});
-    ctx.fillStyle=colors[i];ctx.fillRect(78,y+14,24,24);
-    txt(v+' DN × 324 个',120,y+33,{size:16,color:C.ink});
-    if(i===active) txt('正在计入总和',300,y+33,{size:12,color:C.accent2});
-  });
-  stepPanel(500,155,435,295,'把 1296 个亮度平均',['① 180、190、210、220 各有 324 个','② 总和 = 324 × (180+190+210+220)','③ 总和 = 259200 DN','④ 259200 ÷ 1296 = 200 DN','⑤ 得到格内平均亮度：200 DN'],p,C.accent);
-  txt('左侧只是把 1296 个像素按相同数值归类，没有减少像素数量。',60,510,{size:13,color:C.dim});
-}
+function drawPixelMean(p){header(6,'求像素均值','把这一格的 1296 个模拟亮度求平均');card(60,155,390,300,{fill:withA(C.accent,.05),stroke:withA(C.accent,.3)});txt('格内亮度分布（模拟）',80,195,{size:15,color:C.accent,weight:700});const levels=[180,190,210,220],colors=['#46709c','#6087b1','#84a8cd','#b3d0ea'];levels.forEach((v,i)=>{const x=80+(i%2)*170,y=220+Math.floor(i/2)*88;card(x,y,145,66,{fill:withA(colors[i],.22),stroke:colors[i]});txt(v+' DN',x+12,y+28,{size:14,weight:700});txt('324 个',x+12,y+50,{size:12,color:C.dim});});card(500,155,435,300,{fill:withA(C.accent2,.05),stroke:withA(C.accent2,.3)});txt('直接展示计算结果',520,195,{size:15,color:C.accent2,weight:700});if(p>.22)txt('总和 = 259200 DN',520,265,{size:16});if(p>.5){arrow(520,290,520,325,C.accent2,2);txt('259200 ÷ 1296 = 200 DN',520,365,{size:18,color:C.accent2,weight:700});}txt('四种值各有 324 个，共 1296 个；不播放逐个累加。',60,510,{size:13,color:C.dim});}
 function drawPixelStd(p){
   header(7,'求标准差','离均值 200 有多远？先算偏差，平方后再汇总');
   txt('同一格的 4 类像素，各 324 个',60,165,{size:15,weight:700,color:C.accent});

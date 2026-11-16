@@ -48,6 +48,8 @@ for(let i=0;i<14;i++){
  sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'));
  for(const p of [0,.18,.3,.42,.55,.6,.76,.82,1]){sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();}
 }
+let overview=renderAt(0,0);assert.ok(!overview.includes('找最大 / 最小'));overview=renderAt(0,.8);assert.ok(overview.includes('找最大 / 最小'));
+let view=renderAt(13,1);assert.ok(view.some(x=>x.includes('最大 ROI 220')));assert.ok(view.some(x=>x.includes('最小 ROI 0')));
 let text=renderAt(4,0);assert.ok(text.includes('① 四通道模拟值'));assert.ok(!text.some(x=>x.startsWith('④ RG =')));
 text=renderAt(4,.61);assert.ok(text.some(x=>x.startsWith('③ G 参考和')));assert.ok(text.some(x=>x.startsWith('④ RG =')));assert.ok(!text.some(x=>x.startsWith('⑤ BG =')));
 text=renderAt(4,.8);assert.ok(text.some(x=>x.startsWith('⑤ BG =')));assert.ok(!text.some(x=>x.includes('刚累加')));

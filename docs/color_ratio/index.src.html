@@ -89,51 +89,43 @@ function box(x,y,w,h,title,lines,p,color){
   lines.forEach((s,i)=>{if(i<show)txt(s,x+18,y+67+i*30,{size:14,color:i===show-1?C.ink:C.dim});});
 }
 function note(s){txt(s,55,520,{size:12,color:C.dim});}
-function grid(x,y,focus){
-  const cell=36;
-  for(let i=0;i<81;i++){
-    const chosen=[0,8,40,72,80].includes(i), center=i===40;
-    const color=center?C.accent2:chosen?C.accent: C.dim;
-    card(x+(i%9)*cell,y+Math.floor(i/9)*cell,33,33,{r:3,fill:withA(color,chosen?.24:.05),stroke:withA(color,.5)});
-    txt(String(i),x+(i%9)*cell+16,y+Math.floor(i/9)*cell+21,{size:10,align:'center',color:focus&&!chosen?C.faint:C.ink});
-  }
+// 这些图形代表 ROI 和通道，不是逐像素累加；示意画面不按物理尺寸等比。
+function panel(x,y,w,h){card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});}
+function label(s,x,y,color,size=13){txt(s,x,y,{size,color:color||C.dim});}
+function chip(x,y,w,h,title,color,sub){card(x,y,w,h,{r:8,fill:withA(color,.13),stroke:withA(color,.65)});txt(title,x+14,y+24,{size:15,color,weight:700});if(sub)txt(sub,x+14,y+46,{size:12,color:C.ink});}
+function flow(x1,y1,x2,y2,t,color){const a=ease(clamp01(t));if(a>0)arrow(x1,y1,x1+(x2-x1)*a,y1+(y2-y1)*a,color||C.accent,2);}
+function grid(x,y,focus,active){
+ const cell=36;
+ for(let i=0;i<81;i++){
+  const chosen=focus&&[0,8,40,72,80].includes(i), hot=active===i, color=hot?C.accent2:chosen?C.accent2:C.accent;
+  card(x+(i%9)*cell,y+Math.floor(i/9)*cell,33,33,{r:3,fill:withA(color,hot?.43:chosen?.22:.055),stroke:withA(color,hot?1:chosen?.8:.26),lw:hot?2:1});
+  txt(String(i),x+(i%9)*cell+16,y+Math.floor(i/9)*cell+21,{size:10,align:'center',color:hot?C.ink:chosen?C.accent2:focus?C.faint:C.dim,weight:hot?700:400});
+ }
 }
-function intro(p){header(0,'调用与返回','一张图切成区域算颜色比例，最后返回多个子项');
-  box(55,160,425,290,'第一行：计算',['① 调用 Color_Ratio(test_manage)','② 计算各区域 R/G、B/G、Gr/Gb','③ 对选定位置做不同判定','④ 返回一个结果向量 ratio_res_'],p,C.accent2);
-  box(525,160,410,290,'第二行：插入结果',['① insert 不是再计算颜色','② 从 begin 到 end 取出所有子项','③ 追加到 items_results 的末尾','④ 最终结果还需要整体汇总'],p,C.accent);note('本页按示例 ColorRatio.data 的 V1.0 说明；所有像素为模拟。');}
-function gate(p){header(1,'先看前置条件','Light_Response 的 Gr、Gb ROI 均值必须大于 0');
-  box(55,155,445,310,'为什么要先检查？',['Light_Response 先计算 Gr、Gb 均值','Color_Ratio 把这两个值传给函数','两者都 > 0：构造 9×9 ROI 并计算','否则：比值向量和选点结果写 −1','−1 是特殊值，不是正常颜色比例'],p,C.accent2);
-  box(535,155,400,310,'示例配置',['LightResponse.data：开关为 1','ColorRatio.data：开关为 1','仅作为条件检查，不是比值分母','本算例假设前置均值均 > 0','没有假定实际产线测量值'],p,C.accent);note('页面顶部展示 ColorRatio.data、Basic.data 和 LightResponse.data 原文。');}
-function dimensions(p){header(2,'区域尺寸','从 RAW 拆成通道图，再按 9×9 划分');
-  box(55,155,445,310,'尺寸一步步算',['RAW：3840 × 2160（RG Bayer）','每通道：1920 × 1080','Skip=0，ROI_X_Cnt=9，ROI_Y_Cnt=9','宽：1920 ÷ 9 整数除法 = 213','高：1080 ÷ 9 = 120','每块每通道：213 × 120 = 25560'],p,C.accent2);
-  box(535,155,400,310,'有多余的列',['9 × 213 = 1917 列','1920 − 1917 = 3 列','右侧最后 3 列未被 ROI 覆盖','不等于全通道每个像素都参与','不同尺寸 / Skip 的结果不同'],p,C.accent);note('计算依照当前示例配置和 C++ 整数除法；区域坐标为通道坐标。');}
-function layout(p){header(3,'完整 9×9','一共 81 个 ROI；格内数字是从 0 开始的索引');
-  grid(65,155,false);
-  box(450,155,485,315,'源码怎样遍历？',['① 共 9 行 × 9 列 = 81 块','② 从上到下，每行从左向右','③ 第 0 行编号 0～8','④ 第 4 行编号 36～44','⑤ 中心位置是索引 40','⑥ 每个 ROI 都计算三种比值'],p,C.accent2);note('这里只画 ROI，不将每格误画成一个像素；每块含 25560 个通道像素。');}
-function five(p){header(4,'选出五块','81 块都算比值；四角与中心另用于本版本判定');
-  grid(65,155,true);
-  box(450,155,485,315,'四角 + 中心',['左上 0　　右上 8','中心 40','左下 72　　右下 80','共 5 块，各取 GG、RG、BG','81 块还用于最大、最小、均值和标准差','不代表其他 76 块都参与五点阈值'],p,C.accent2);note('画面颜色只标出五个判定位置；不是测量结果。');}
-function pixels(p){header(5,'中心 ROI 的像素','先看一块：R 通道 213×120 = 25560 个模拟位置');
-  ctx.fillStyle='rgba(255,122,122,.45)';
-  for(let i=0;i<N;i++){const x=55+(i%213)*1.55,y=155+Math.floor(i/213)*1.9;ctx.fillRect(x,y,1.2,1.5);}
-  txt('放大前 20 个模拟 R 像素（90、91 交替）',55,418,{size:12,color:C.dim});
-  for(let i=0;i<20;i++){let x=55+i%10*34,y=428+Math.floor(i/10)*25;card(x,y,31,22,{r:2,fill:withA(CH.R,.18),stroke:withA(CH.R,.4)});txt(90+i%2,x+15,y+15,{size:10,align:'center'});}
-  box(450,155,485,315,'四通道在相同 ROI 位置',['R：90、91 交替，均值 90.5','Gr：189、190 交替，均值 189.5','Gb：191、192 交替，均值 191.5','B：117、118 交替，均值 117.5','仅为简单的模拟值，并非真实规律','每个通道各 25560 个像素'],p,C.accent2);note('该分布仅便于复算，不是源码要求；图中小格只画 R，四通道各自取值。');}
-function sums(p){header(6,'四个累加和','每个通道累加 25560 个像素；源码先给各和加 0.1');
-  box(55,155,445,315,'逐通道计算',['R：90.5 × 25560 + 0.1 = 2313180.1','Gr：189.5 × 25560 + 0.1 = 4843620.1','Gb：191.5 × 25560 + 0.1 = 4894740.1','B：117.5 × 25560 + 0.1 = 3003300.1','0.1 是每个和的初始值，不是像素','本例没有发生比例截断'],p,C.accent2);
-  box(535,155,400,315,'为什么显示求和？',['实际代码先求和，再计算比值','G 参考和 = (Gr 和 + Gb 和) ÷ 2','= 4869180.1','不是用某一个 G 通道做 RG 分母','四个和都来自同一位置的 ROI'],p,C.accent);note('固定像素算例用于前几幕；互动更改均值不会重建这些像素。');}
-function compute(p){header(7,'三种比值','注意：RG 和 BG 分母是两个绿通道的平均和');
-  const r=ratios(90.5);
-  box(55,155,880,315,'中心 ROI 算例',['① RG = R 和 ÷ [(Gr 和 + Gb 和) ÷ 2] ≈ '+r.rg.toFixed(5),'② BG = B 和 ÷ [(Gr 和 + Gb 和) ÷ 2] ≈ '+r.bg.toFixed(5),'③ GG = Gr 和 ÷ Gb 和 ≈ '+r.gg.toFixed(5),'④ Gr/Gb 平均差 = |Gr 和 − Gb 和| ÷ 25560 = '+r.gdiff.toFixed(2)+' DN','⑤ 显示数值已四舍五入，源码判断使用未舍入数值'],p,C.accent2);
-  note('源码还有极端比例截断到 100 的分支；本例绿色参考非零，不触发。');}
-function compare(p){header(8,'中心 RG 判定','先给该区域比例加 offset，再与目标乘系数的范围比较');
-  const r=ratios(90.5);
-  box(55,155,445,315,'从配置取值',['中心 RG target = 0.55','中心 RG offset = +0.07','中心 Class2 factor = 0.20','下限：0.55 × (1 − 0.20) = 0.44','上限：0.55 × (1 + 0.20) = 0.66'],p,C.accent2);
-  box(535,155,400,315,'代入本算例',['原始 RG ≈ '+r.rg.toFixed(5),'加 offset ≈ '+r.adjustedRG.toFixed(5),'0.44 ≤ 修正值 ≤ 0.66','这一个中心 RG 条件通过','其他点 / 其他比值仍需检查'],p,C.accent);note('大于上限或小于下限才失败，等于边界不失败；判断用未舍入数。');}
-function other(p){header(9,'其他位置与比值','四角有不同目标、offset 和 factor；BG、GG 同理');
-  const r=ratios(90.5);
-  box(55,155,445,315,'中心 BG 和 GG',['中心 BG ≈ '+r.bg.toFixed(5)+'；offset = −0.008','修正后 ≈ '+r.adjustedBG.toFixed(5),'BG 目标 0.61，Class2 范围 0.488～0.732','中心 GG ≈ '+r.gg.toFixed(5)+'；offset = 0','GG 目标 1，Class2 范围 0.8～1.2'],p,C.accent2);
-  box(535,155,400,315,'左上 RG 配置示例',['目标 0.512；offset +0.05','角区 Class2 factor = 0.5','界限：0.256 ～ 0.768','右上、左下、右下分别取配置','后面会逐块构造模拟像素'],p,C.accent);note('各点 GG / RG / BG 各自查对应 target、offset，不能用中心值替代四角。');}
+// 范围带按数据比例绘制：只显示普通比较的含边界范围；golden 会明确写严格边界。
+function rangeBand(x,y,w,low,high,value,progress,strict=false){
+ const span=Math.max(high-low,.01),min=Math.min(low,value)-span*.25,max=Math.max(high,value)+span*.25;
+ const X=v=>x+w*(v-min)/(max-min),left=X(low),right=X(high),point=X(value);
+ card(x,y,w,10,{r:5,fill:'rgba(145,165,205,.16)',stroke:false});
+ card(left,y,Math.max(1,right-left),10,{r:5,fill:withA(C.pass,.55),stroke:false});
+ card(left-1,y-5,2,20,{r:1,fill:C.pass,stroke:false});card(right-1,y-5,2,20,{r:1,fill:C.pass,stroke:false});
+ const decimals=span<.1?4:3;
+ txt(low.toFixed(decimals),left,y+31,{size:11,color:C.dim,align:'center'});txt(high.toFixed(decimals),right,y+31,{size:11,color:C.dim,align:'center'});
+ if(progress>0){const a=ease(clamp01(progress)),px=left+(point-left)*a;card(px-5,y-7,10,24,{r:4,fill:(strict?(value<=low||value>=high):(value<low||value>high))?C.fail:C.accent2,stroke:false});}
+}
+function intro(p){header(0,'调用与返回','在白帧图像分区后算颜色比例，再返回多个子项');grid(55,155,p>.22);label('① 四角 + 中心用于五点判定',55,505);panel(425,155,510,320);label('一张图 → 81 个 ROI → 多个结果',450,192,C.accent,15);
+ if(p>.18){chip(450,220,135,65,'RG',CH.R,'红 / 绿色参考');chip(610,220,135,65,'BG',CH.B,'蓝 / 绿色参考');chip(770,220,135,65,'GG',CH.Gr,'Gr / Gb');}
+ if(p>.42){flow(675,292,675,332,seg(p,.42,.57),C.accent2);chip(455,345,440,74,'ratio  /  ratio_MA  /  ratio_grid  /  golden',C.accent2,'调用方 insert 追加子项，之后再汇总');}note('五点位置和模拟数据用于说明；不播放逐像素累加。');}
+function gate(p){header(1,'先看前置条件','Light_Response 的两个绿色中心均值必须都大于 0');panel(55,160,390,300);label('前一项 Light_Response',80,198,C.accent,15);chip(80,225,150,68,'Gr > 0',CH.Gr,'前置均值');chip(265,225,150,68,'Gb > 0',CH.Gb,'前置均值');label('这些值不是下游比值的分母',80,370);
+ if(p>.2){flow(452,260,510,260,seg(p,.2,.38));chip(520,215,395,90,'都 > 0：构造 ROI，计算比例',C.pass,'本算例假设满足');}if(p>.48){flow(452,375,510,375,seg(p,.48,.64));chip(520,340,395,90,'任一 ≤ 0：写入 −1',C.fail,'−1 是特殊值，不是有效比例');}note('开关和前置均值来自示例配置及其他测试项；这里不声称是实测。');}
+function dimensions(p){header(2,'区域尺寸','RAW 分成四个通道，每个通道按 9 × 9 划分');chip(55,185,215,110,'RAW 图像',C.accent,'3840 × 2160  ·  RG Bayer');if(p>.16){flow(280,240,330,240,seg(p,.16,.32));['R','Gr','Gb','B'].forEach((c,i)=>chip(345+(i%2)*135,160+Math.floor(i/2)*88,120,70,c,CH[c],'1920 × 1080'));}if(p>.43){flow(620,250,675,250,seg(p,.43,.6));chip(690,190,240,112,'9 × 9 ROI',C.accent2,'每块 213 × 120');}if(p>.7){panel(55,385,880,83);txt('1920 ÷ 9 = 213（整数除法）　·　1080 ÷ 9 = 120',80,420,{size:16,weight:700});label('9 × 213 = 1917，右侧 3 列不在 ROI 中；每通道每块 25560 个像素。',80,448);}note('图形仅为尺寸关系示意，不按真实宽高比例绘制。');}
+function layout(p){header(3,'完整 9×9','81 个 ROI 逐行编号，每块都计算三种比例');grid(65,155,false,p>.25?40:undefined);panel(450,155,485,320);label('每格是一个区域，不是一个像素',475,195,C.accent,15);chip(475,220,190,72,'第 0 行',C.accent,'索引 0 → 8');chip(700,220,190,72,'第 4 行',C.accent2,'索引 36 → 44');if(p>.35){flow(665,255,695,255,seg(p,.35,.5));txt('中心 = ROI 40',475,350,{size:22,color:C.accent2,weight:700});}if(p>.65)label('每个 ROI：RG、BG、GG 各算一次',475,407,C.ink,15);note('9 行 × 9 列 = 81；每个区域每通道含 25560 个像素。');}
+function five(p){header(4,'选出五块','81 块都算比值，四角和中心另用于五点判定');grid(65,155,p>.2);panel(450,155,485,320);label('黄色标出的 5 个位置',475,195,C.accent2,15);[['左上',0],['右上',8],['中心',40],['左下',72],['右下',80]].forEach((v,i)=>{if(p>=.2+i*.1){const x=i===2?650:i%3===0?485:795,y=i<2?230:i===2?300:370;chip(x,y,90,55,v[0],C.accent2,'ROI '+v[1]);}});note('其他 76 个区域也会算比例并参与统计日志，不参与这五点阈值比较。');}
+function pixels(p){header(5,'中心 ROI 的像素','看中心这一区域：四个通道在相同位置各取自己的值');grid(55,155,false,40);label('高亮：中心 ROI 40',55,505,C.accent2);panel(425,155,510,320);label('每个通道 213 × 120 个模拟像素',450,195);[['R','90 / 91','90.5'],['Gr','189 / 190','189.5'],['Gb','191 / 192','191.5'],['B','117 / 118','117.5']].forEach((v,i)=>{if(p>=i*.12){const x=450+(i%2)*225,y=220+Math.floor(i/2)*95;chip(x,y,200,76,v[0]+'：'+v[1],CH[v[0]],'模拟均值 '+v[2]+' DN');}});label('相邻整数交替只是本例假设',450,444);note('直接展示四通道示意，不画出 25560 个点，也不逐像素播放。');}
+function sums(p){header(6,'四个累加和','四个通道先分别求和，各自从 0.1 开始');panel(55,155,880,315);label('中心 ROI 的模拟输入 → 四个和',80,193,C.accent,15);const data=[['R','90.5','2313180.1'],['Gr','189.5','4843620.1'],['Gb','191.5','4894740.1'],['B','117.5','3003300.1']];data.forEach((v,i)=>{const y=220+i*55;chip(80,y-20,185,44,v[0]+'  均值 '+v[1],CH[v[0]]);if(p>.08+i*.12){flow(280,y+2,360,y+2,seg(p,.08+i*.12,.18+i*.12),CH[v[0]]);txt('× 25560 + 0.1  =  '+v[2],380,y+8,{size:15,color:C.ink});}});if(p>.64){card(690,273,215,105,{fill:withA(C.accent2,.08),stroke:withA(C.accent2,.5)});txt('绿色参考和',708,303,{size:15,color:C.accent2,weight:700});txt('(Gr 和 + Gb 和) ÷ 2',708,330,{size:12});txt('= 4869180.1',708,354,{size:15,weight:700});}note('直接显示求和结果；0.1 是源码初始值，不是额外的像素。');}
+function compute(p){header(7,'三种比值','RG、BG 都用两个绿色通道和的平均作为分母');const r=ratios(90.5);panel(55,155,880,315);label('各行分别用本 ROI 的通道和相除',80,180,C.accent,14);const rows=[{name:'RG',num:'R 和',nv:'2313180.1',den:'绿色参考和',dv:'4869180.1',value:r.rg,color:CH.R,start:.25},{name:'BG',num:'B 和',nv:'3003300.1',den:'绿色参考和',dv:'4869180.1',value:r.bg,color:CH.B,start:.43},{name:'GG',num:'Gr 和',nv:'4843620.1',den:'Gb 和',dv:'4894740.1',value:r.gg,color:CH.Gb,start:.61}];rows.forEach((v,i)=>{if(p<v.start)return;const y=195+i*84;chip(80,y,165,63,v.num,v.color,v.nv);txt('÷',265,y+38,{size:25,color:C.ink,weight:700});chip(300,y,190,63,v.den,CH.Gr,v.dv);flow(500,y+31,555,y+31,seg(p,v.start,v.start+.12));chip(570,y,270,63,v.name+' ≈ '+v.value.toFixed(5),v.color);});note('绿色参考和 = (Gr 和 + Gb 和) ÷ 2；GG 直接使用两个绿色和。');}
+function compare(p){header(8,'中心 RG 判定','原始 RG 加 offset，再对照中心 RG 的目标范围');const r=ratios(90.5);panel(55,155,880,315);label('配置：目标 0.55　×　(1 ± 0.20)　→　普通范围 [0.44, 0.66]',80,196,C.accent,15);chip(80,215,230,70,'原始 RG',CH.R,'≈ '+r.rg.toFixed(5));if(p>.2){flow(320,250,385,250,seg(p,.2,.35));chip(400,215,225,70,'加偏移 +0.07',C.accent2,'≈ '+r.adjustedRG.toFixed(5));}if(p>.4){rangeBand(120,350,700,.44,.66,r.adjustedRG,seg(p,.4,.7));label('绿色带：允许范围（含两端）',120,407);if(p>.7)txt('范围内：中心 RG 条件通过',610,430,{size:15,color:C.pass,weight:700});}note('仅演示中心 RG；完整 ratio 还要检查其他点、比值及中心 GG 加严。');}
+function other(p){header(9,'其他位置与比值','中心 BG、GG 和各个角都有自己的参数与范围');const r=ratios(90.5);panel(55,155,880,315);label('中心 BG：加 −0.008 后 ≈ '+r.adjustedBG.toFixed(5),80,195,CH.B,15);rangeBand(145,220,570,.488,.732,r.adjustedBG,seg(p,.08,.3));if(p>.32){label('中心 GG：≈ '+r.gg.toFixed(5)+'，offset = 0',80,315,CH.Gr,15);rangeBand(145,338,570,.8,1.2,r.gg,seg(p,.32,.55));}if(p>.62){chip(755,305,155,92,'左上 RG',C.accent2,'目标 0.512');label('offset +0.05',770,373);}note('各点各类型分别取对应配置；不能用中心目标替代四角。');}
 /* 五点使用不同的模拟像素分布，中心沿用前面的算例。 */
 const FIVE=[
   {name:'左上',index:0,r:90,gr:185,gb:195,b:120,rgTarget:.512,bgTarget:.62,rgOffset:.05,bgOffset:-.006,factor:.5},
@@ -153,29 +145,13 @@ function regionCompare(region,kind){
 }
 function regionGrid(x,y,active){
   for(let i=0;i<81;i++){
-    const id=FIVE.findIndex(v=>v.index===i),color=id===active?C.accent2:id>=0?C.accent:C.dim;
-    card(x+(i%9)*26,y+Math.floor(i/9)*26,24,24,{r:3,fill:withA(color,id===active?.42:id>=0?.17:.04),stroke:withA(color,id===active?1:.35)});
-    txt(String(i),x+(i%9)*26+12,y+Math.floor(i/9)*26+16,{size:9,align:'center',color:id===active?C.accent2:C.dim});
+    const id=FIVE.findIndex(v=>v.index===i), hot=id>=0&&(active<0||id===active),color=hot?C.accent2:id>=0?C.accent:C.dim;
+    card(x+(i%9)*26,y+Math.floor(i/9)*26,24,24,{r:3,fill:withA(color,hot?.30:id>=0?.17:.04),stroke:withA(color,hot?1:.35)});
+    txt(String(i),x+(i%9)*26+12,y+Math.floor(i/9)*26+16,{size:9,align:'center',color:hot?C.ink:C.dim});
   }
 }
-function regionConcept(p){
-  header(10,'区域怎么比较','不是将四角互相相减：每块都与本位置的标准比较');
-  grid(65,155,true);
-  box(450,155,485,315,'五个区域各自判定',['① 在每块分别求 RG、BG、GG','② 各自加该位置、该类型的 offset','③ 与本位置 target × (1±factor) 比较','④ 一项超范围，ratio 标记失败','⑤ 不直接做「左上 − 右上」','⑥ 81 块的最大 / 最小等另做日志统计'],p,C.accent2);
-  note('图中的演示顺序是为了阅读；源码用 QMap 遍历，不保证按图中顺序。');
-}
-function regionInputs(p){
-  header(11,'五块模拟数据','中心沿用前例；四角另给不同的模拟通道均值');
-  card(55,155,880,310,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
-  txt('ROI / 索引',75,190,{size:13,color:C.accent,weight:700});
-  ['R','Gr','Gb','B'].forEach((v,i)=>txt(v,270+i*130,190,{size:13,color:CH[v],weight:700}));
-  txt('单位：DN（均值）',750,190,{size:12,color:C.dim});
-  const shown=Math.min(5,1+Math.floor(clamp01(p/.72)*5));
-  FIVE.forEach((v,i)=>{if(i>=shown)return;const y=225+i*39;card(70,y-21,850,33,{r:4,fill:i===2?withA(C.accent2,.08):'rgba(255,255,255,.02)'});
-    txt(v.name+' / '+v.index,85,y,{size:14,color:i===2?C.accent2:C.ink});
-    [v.r,v.gr,v.gb,v.b].forEach((n,j)=>txt(String(n),270+j*130,y,{size:14,color:C.ink}));});
-  note('简单模拟：四角各通道取固定值；中心每通道两个相邻整数交替。');
-}
+function regionConcept(p){header(10,'区域怎么比较','五块分别对照各自标准，不做四角之间相减');grid(65,155,true,p>.2?0:undefined);panel(450,155,485,315);label('以左上为例，其他位置同理',475,193,C.accent,15);chip(475,215,195,70,'左上 ROI',C.accent2,'计算 RG / BG / GG');if(p>.18){flow(680,250,720,250,seg(p,.18,.34));chip(730,215,180,70,'对应配置',CH.Gr,'target / offset');}if(p>.44){flow(700,294,700,325,seg(p,.44,.6));chip(495,340,400,75,'比例 + offset  →  和范围比较',C.accent,'范围 = target × (1 ± factor)');}note('高亮顺序仅为教学展示，不代表 QMap 实际遍历顺序。');}
+function regionInputs(p){header(11,'五块模拟数据','五点分别使用不同的模拟通道均值，中心沿用前例');regionGrid(55,190,-1);label('黄色：参与五点比较的 ROI',55,455,C.accent2);panel(315,155,630,310);txt('ROI',335,190,{size:13,color:C.accent,weight:700});['R','Gr','Gb','B'].forEach((v,i)=>txt(v,470+i*105,190,{size:14,color:CH[v],weight:700}));const shown=Math.min(5,1+Math.floor(clamp01(p/.72)*5));FIVE.forEach((v,i)=>{if(i>=shown)return;const y=228+i*42;card(327,y-23,604,35,{r:5,fill:i===2?withA(C.accent2,.1):'rgba(255,255,255,.025)',stroke:false});txt(v.name+' / '+v.index,340,y,{size:13,color:i===2?C.accent2:C.ink});[v.r,v.gr,v.gb,v.b].forEach((n,j)=>txt(String(n),470+j*105,y,{size:14,color:CH[['R','Gr','Gb','B'][j]]}));});note('单位为 DN 均值；四角取固定值，中心两个相邻整数交替，均为假设。');}
 /* 简单模拟像素：整数均值用固定值，半整数均值用相邻整数交替；不代表真实图像。 */
 function regionPixel(region,ch,index){
   const m=region[ch],low=Math.floor(m);
@@ -203,20 +179,20 @@ function regionCalculation(which,p){
     const selected=n===v.index;
     card(startX+(n%9)*17,startY+Math.floor(n/9)*17,15,15,{r:2,fill:selected?withA(C.accent2,.45):withA(C.accent,.08),stroke:selected?C.accent2:withA(C.accent,.3)});
   }
-  txt(v.name+' ROI '+v.index,55,325,{size:13,color:C.accent2,weight:700});
+  txt(v.name+' ROI '+v.index,55,325,{size:13,color:C.accent2,weight:700});flow(205,230,225,230,seg(p,0,.13),C.accent2);
   card(235,154,290,162,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
   txt('① 此 ROI 的模拟输入',250,181,{size:14,color:C.accent,weight:700});
   txt('每通道 213 × 120 = 25560 个像素',250,208,{size:12});
   const chs=['r','gr','gb','b'],labels=['R','Gr','Gb','B'],colors=[CH.R,CH.Gr,CH.Gb,CH.B];
   labels.forEach((label,i)=>{
-    txt(label+' 均值: '+v[chs[i]]+' DN',250+(i%2)*130,235+Math.floor(i/2)*26,{size:12,color:colors[i],weight:700});
+    card(244+(i%2)*130,220+Math.floor(i/2)*26,5,16,{r:2,fill:colors[i],stroke:false});txt(label+' 均值: '+v[chs[i]]+' DN',254+(i%2)*130,235+Math.floor(i/2)*26,{size:12,color:colors[i],weight:700});
   });
   txt('仅为构造的模拟值，不是实测',250,296,{size:12,color:C.dim});
   card(55,344,470,158,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
   txt('四个通道的和：各自从 0.1 开始',70,368,{size:13,color:C.accent,weight:700});
   if(p>=.14)labels.forEach((label,i)=>{
     const y=394+i*25;
-    txt(label,72,y,{size:13,color:colors[i],weight:700});
+    card(70,y-12,5,14,{r:2,fill:colors[i],stroke:false});txt(label,80,y,{size:13,color:colors[i],weight:700});
     txt(v[chs[i]]+' × 25560 + 0.1 = '+pixelSum(v,chs[i],N).toFixed(1),120,y,{size:12});
   });
   else txt('接下来直接展示四个通道的和',72,405,{size:13,color:C.dim});
@@ -265,51 +241,31 @@ function comparisonRows(kind,p){
     txt(c.pass?'通过':'失败',850,y,{size:13,color:c.pass?C.pass:C.fail,weight:700});
   });
   const r=regionCompare(FIVE[active],kind);
-  txt(FIVE[active].name+'：目标 '+r.target+' × (1 ± '+FIVE[active].factor+')；修正值 '+r.adjusted.toFixed(4)+(r.pass?' 在范围内':' 超出范围'),55,495,{size:13,color:r.pass?C.ink:C.fail});
+  txt(FIVE[active].name+'  修正 '+r.adjusted.toFixed(4),55,480,{size:13,color:r.pass?C.ink:C.fail,weight:700});
+  rangeBand(365,465,360,r.low,r.high,r.adjusted,1);
+  txt(r.pass?'范围内':'超出范围',755,480,{size:13,color:r.pass?C.pass:C.fail,weight:700});
   note('按未舍入数比较；五块像素均为模拟，不是实测。动态高亮只是教学顺序。');
 }
 function regionGG(p){comparisonRows('GG',p);}
 function regionRG(p){comparisonRows('RG',p);}
 function regionBG(p){comparisonRows('BG',p);}
-function regionSummary(p){
-  header(20,'五点汇总','15 次普通比较中，只要有一项超限就使 ratio 失败');
-  const stats=['GG','RG','BG'].map(k=>FIVE.map(v=>regionCompare(v,k)));
-  const failures=stats.reduce((n,group)=>n+group.filter(v=>!v.pass).length,0);
-  box(55,155,445,315,'这个完整五点模拟',['5 块 × 3 种 = 15 次 Class2 比较','GG：5 项通过；RG：5 项通过','BG：右下超上限，另外 4 项通过','失败条件共 '+failures+' 项 → ratio 失败','中心 GG 加严也通过','子项 ratio → 2220 / grade 5'],p,C.accent2);
-  box(535,155,400,315,'继续执行的分支',['普通 ratio 已失败 → 跳过 Class1','ratio_MA 保持初始化的通过状态','五点绿色差均不会触发 GI','中心 RG 和 BG 满足 golden 条件','golden 子项赋 2222 / grade 0','这仍不是整个测试的最终 bin'],p,C.accent);
-  note('假设 Light_Response 前置均值 > 0 且各 ROI 有效；构造五点模拟像素，其他 76 块未模拟。');
-}
-function ggcheck(p){header(21,'中心 GG 加严','除了普通 Class2，还对中心 Gr/Gb 增加独立限制');
-  const r=ratios(90.5);
-  box(55,155,445,310,'中心额外比较',['中心 GG target = 1','Factor_Center_Gr_Gb_Ratio = 0.08','范围：1 × (1±0.08) = 0.92～1.08','本算例 GG ≈ '+r.gg.toFixed(5)+'，处于范围内','超出才使 result_ratio 失败'],p,C.accent2);
-  box(535,155,400,310,'代码顺序很重要',['普通五点 Class2 先判定','若通过才执行 Class1 / MA 比较','随后才执行中心 GG 加严','加严失败时 ratio 可变失败','MA 是否执行取决于前面的结果'],p,C.accent);note('本例中心 GG offset 为 0；等于边界时不触发此失败条件。');}
-function gridcheck(p){header(22,'Gr/Gb 差值','源码特殊处理使当前 GI 阈值存在值得注意的情况');
-  box(55,155,445,310,'中心算例',['Gr 均值 189.5；Gb 均值 191.5','绝对均值差 = 2 DN','5 个位置的差用于 ratio_grid','直接与 Gr_Gb_Diff=50 比较','本算例中心差 2，不超过 50'],p,C.accent2);
-  box(535,155,400,310,'注意：先转换再比较',['选点差值 > 10 时被改成 −1','随后代码才比较是否 > 50','0～10 不超过 50；−1 也不超过','因此此配置下该分支无法触发','并非代表实际没有绿色差异'],p,C.fail);note('仅针对 V1.0 此路径与这份阈值；建议开发人员确认设计意图。');}
-function ma(p){header(23,'Class1 与 Class2','这份配置两套系数相同，且 MA 判断有前置条件');
-  box(55,155,445,310,'实际执行顺序',['五点 GG / RG / BG 用 Class2 判 ratio','只有此时 ratio 通过才检查 Class1','Class1 超范围才使 ratio_MA 失败','之后才检查中心 GG 独立限制','显示的顺序不要倒过来'],p,C.accent2);
-  box(535,155,400,310,'当前配置的后果',['中心 Class1=Class2=0.2','四角 Class1=Class2=0.5','若进入 MA，普通比较范围相同','所以此配置下不会产生 MA 失败','其他配置 / 版本可能不同'],p,C.accent);note('此结论只针对当前配置的正常有限比值路径；不等于通用算法规律。');}
-function golden(p){header(24,'Golden 的特别逻辑','中心 RG、BG 都严格落入 ±2% 范围时触发特殊子项');
-  const r=ratios(90.5);
-  box(55,155,445,310,'中心修正比例',['RG ≈ '+r.adjustedRG.toFixed(5)+'，范围 (0.539, 0.561)','BG ≈ '+r.adjustedBG.toFixed(5)+'，范围 (0.5978, 0.6222)','两个条件都严格在范围内','边界相等不属于 golden 条件','此处只用中心两种比例'],p,C.accent2);
-  box(535,155,400,310,'返回值的写法',['内部 RG、BG 两标志初始 false','两者都 true：RG 标志改为 false','同时赋 golden bin 2222 / grade 0','最终只返回 RG 这个结果对象','不要按常见 PASS 语义猜测'],p,C.accent);note('如果只有 RG true、BG false，返回的 RG 标志仍为 true；其他情况另见源码。');}
-function results(p){header(25,'四个结果与追加','这两行代码为什么使用 vector 和 insert？');
-  box(55,155,445,320,'V1.0 返回顺序',['① ratio：普通比例及中心 GG','② ratio_MA：Class1 分支','③ ratio_grid：五点绿色差值','④ ratio_golden_RG：特殊 golden','BG 内部标志没有单独加入向量'],p,C.accent2);
-  box(535,155,400,320,'insert 到已有结果列表',['ratio_res_ 是 4 个子项的向量','begin() 指向第一个，end() 为末尾','insert 在 items_results 末尾追加','不是把整个 vector 当一个子项','之后还要与其他子项汇总'],p,C.accent);note('完整结果依赖五个区域、其他输入及版本；页面不计算最终 bin。');}
-function interact(p){header(26,'互动模拟','只调整中心 ROI 的 R 均值，观察 RG 与 golden 条件');
-  const r=ratios(state.r);
-  box(55,155,445,320,'中心 RG 条件',['模拟 R 均值：'+state.r+' DN','Gr / Gb 均值：189.5 / 191.5','RG 原始 ≈ '+r.rg.toFixed(5),'加 0.07 ≈ '+r.adjustedRG.toFixed(5),'Class2 范围 0.44～0.66','中心 RG：'+(r.centerRGPass?'通过':'失败')],p,C.accent2);
-  box(535,155,400,320,'中心 golden 条件',['RG 在严格范围内：'+(r.goldenRG?'是':'否'),'BG 固定；在严格范围内：'+(r.goldenBG?'是':'否'),r.goldenRG&&r.goldenBG?'两者满足：对应特殊 2222 / 0':'两者未同时满足：不赋 2222','此处不计算其他四角或全图','MA / GI 与最终 bin 不在此推断','滑杆不改变前面固定的像素'],p,C.accent);note('只模拟中心值；计算含各通道初始和 0.1，并不把显示舍入值用于判定。');}
+function regionSummary(p){header(20,'五点汇总','五个区域 × 三种比值，任何普通比较超限就使 ratio 失败');panel(55,155,510,315);label('模拟结果矩阵',80,195,C.accent,15);['GG','RG','BG'].forEach((k,j)=>txt(k,275+j*100,225,{size:14,color:[CH.Gr,CH.R,CH.B][j],weight:700}));FIVE.forEach((v,i)=>{const y=255+i*38;txt(v.name,80,y+8,{size:13,color:C.ink});['GG','RG','BG'].forEach((k,j)=>{if(p>=i*.1){const c=regionCompare(v,k);card(255+j*100,y-14,72,29,{r:5,fill:withA(c.pass?C.pass:C.fail,.13),stroke:withA(c.pass?C.pass:C.fail,.55)});txt(c.pass?'通过':'失败',291+j*100,y+5,{size:12,color:c.pass?C.pass:C.fail,align:'center',weight:700});}});});if(p>.5){flow(580,300,625,300,seg(p,.5,.66));chip(645,210,275,105,'ratio 失败',C.fail,'右下 BG 超上限');chip(645,350,275,75,'bin 2220 / grade 5',C.accent2,'其他子项仍独立计算');}note('只模拟五点；未构造其余 76 块，不能据此推断全图统计或最终 bin。');}
+function ggcheck(p){header(21,'中心 GG 加严','普通比较之后，中心 Gr / Gb 还有独立范围');const r=ratios(90.5);panel(55,155,880,315);chip(80,190,220,75,'中心 GG',CH.Gr,'≈ '+r.gg.toFixed(5));chip(335,190,250,75,'中心目标',C.accent,'1 × (1 ± 0.08)');if(p>.26){rangeBand(125,335,650,.92,1.08,r.gg,seg(p,.26,.6));label('额外范围：0.92 ～ 1.08（含边界）',125,394);}if(p>.65)txt('此项通过；超出时 ratio 可变失败',125,436,{size:15,color:C.pass,weight:700});note('源码先普通 Class2、条件性 Class1，之后才做中心 GG 加严。');}
+function gridcheck(p){header(22,'Gr/Gb 差值','特殊转换发生在与当前配置阈值 50 比较之前');chip(55,175,270,90,'选点绿色差',CH.Gr,'中心例子：2 DN');if(p>.2){flow(335,220,385,220,seg(p,.2,.38));chip(400,175,230,90,'先检查是否 > 10',C.accent2,'大于 10 → −1');}if(p>.45){flow(640,220,695,220,seg(p,.45,.6));chip(710,175,220,90,'再比较 > 50',C.fail,'−1 不超过 50');}if(p>.66){panel(55,325,875,115);txt('≤ 10：不超过 50　　> 10：先变 −1，也不超过 50',80,366,{size:16,weight:700});label('该配置下此分支不能触发失败；并非图像一定没有绿色差异。',80,403);}note('这里只解释 V1.0 与此示例阈值；设计意图应由开发人员确认。');}
+function ma(p){header(23,'Class1 与 Class2','源码先判断 Class2，通过时才进入 Class1');chip(55,180,265,90,'① Class2',C.accent,'五点 GG / RG / BG');if(p>.18){flow(330,225,380,225,seg(p,.18,.35));chip(395,180,230,90,'② Class1 / MA',C.accent2,'仅 Class2 通过时');}if(p>.4){flow(635,225,680,225,seg(p,.4,.57));chip(695,180,240,90,'③ 中心 GG 加严',CH.Gr,'在 Class1 之后');}if(p>.66){panel(55,340,880,100);txt('当前配置：中心系数 0.2 / 0.2，四角 0.5 / 0.5',80,380,{size:16,weight:700});label('正常有限比值路径下，进入 MA 时普通比较范围与 Class2 相同。',80,414);}note('其他配置或版本可以不同；Class2 已失败时 MA 分支不执行。');}
+function golden(p){header(24,'Golden 特殊逻辑','中心 RG 和 BG 都严格进入各自目标的 ±2% 区间');const r=ratios(90.5);panel(55,155,880,315);label('中心修正 RG ≈ '+r.adjustedRG.toFixed(5)+' ；严格区间 (0.539, 0.561)',80,197,CH.R,15);rangeBand(160,218,545,.539,.561,r.adjustedRG,seg(p,.1,.3),true);if(p>.32){label('中心修正 BG ≈ '+r.adjustedBG.toFixed(5)+' ；严格区间 (0.5978, 0.6222)',80,314,CH.B,15);rangeBand(160,335,545,.5978,.6222,r.adjustedBG,seg(p,.32,.55),true);}if(p>.62){chip(755,275,155,100,'两者都在内',C.accent2,'赋 2222 / 0');}note('golden 的边界严格不含等号；源码随后将 RG 结果标志置 false。');}
+function results(p){header(25,'四个结果与追加','V1.0 返回四个子项；insert 把它们加入已有列表');const items=[['ratio',C.accent],['ratio_MA',CH.Gr],['ratio_grid',CH.Gb],['ratio_golden_RG',C.accent2]];items.forEach((v,i)=>{if(p>=i*.12)chip(55,165+i*75,300,60,v[0],v[1]);});if(p>.45){flow(370,295,465,295,seg(p,.45,.65));chip(480,220,420,145,'items_results',C.accent2,'追加这四个子项，再与其他测试项汇总');}note('BG 内部 golden 标志没有单独返回；不以图中结果推断最终 bin。');}
+function interact(p){header(26,'互动模拟','调整中心 R 均值，观察中心 RG 和 golden 条件');const r=ratios(state.r);panel(55,155,880,315);chip(80,190,220,75,'中心 R：'+state.r+' DN',CH.R,'Gr 189.5，Gb 191.5');chip(335,190,240,75,'修正 RG ≈ '+r.adjustedRG.toFixed(5),C.accent2,'原始 ≈ '+r.rg.toFixed(5)+'  + 0.07');rangeBand(120,320,630,.44,.66,r.adjustedRG,1);txt(r.centerRGPass?'中心 RG：通过':'中心 RG：失败',775,330,{size:14,color:r.centerRGPass?C.pass:C.fail,weight:700});txt('golden：RG '+(r.goldenRG?'在严格范围内':'不在严格范围内')+'；BG '+(r.goldenBG?'在严格范围内':'不在严格范围内'),80,415,{size:14});txt(r.goldenRG&&r.goldenBG?'两者同时满足：赋特殊子项 2222 / 0':'未同时满足：不赋 2222',80,449,{size:14,color:C.accent2,weight:700});note('只模拟中心；绿色带为普通 RG 范围，golden 用另一个严格范围。');}
 const SCENES=[
  {kicker:'调用与返回',dur:22,draw:intro,caption:p=>'① Color_Ratio 返回多个子项，insert 将它们逐个追加',html:'<h3>两行代码分别做什么？</h3><p>第一行调用算法并得到一个 <code>vector&lt;Subitem_Result&gt;</code>。V1.0 返回多个结果，不是只有一个数字。第二行把这个向量从 begin 到 end 的所有结果追加到 items_results 末尾，不重新计算比值。</p><p>本页按 GC8613T 白帧 ColorRatio.data 所对应的 V1.0 教学；像素是模拟值。</p>'},
  {kicker:'前置条件',dur:24,draw:gate,caption:p=>'② Light_Response 的 Gr 和 Gb ROI 均值都须大于 0',html:'<h3>它依赖前面的 Light_Response</h3><p>白帧调用顺序中 Light_Response 先计算其 ROI 的 Gr 和 Gb 均值。Color_Ratio 将这两个值传给 <code>test_roi_colorratio</code> 作为前置条件；只有两者都大于 0 才构造区域并计算。否则向量及选点结果写 −1。</p><p>这两个前置均值不是每块 ROI 计算 RG/BG 的分母。算例假设条件成立；顶部也展示相关 LightResponse.data 原文。</p>'},
  {kicker:'区域尺寸',dur:26,draw:dimensions,caption:p=>'③ 通道尺寸 1920×1080；9×9 每块 213×120，右侧余 3 列',html:'<h3>先算一块 ROI 多大</h3><p>示例 RAW 为 3840×2160，RG Bayer 拆分后每通道为 1920×1080。Skip=0，配置横纵各分 9 块。C++ 整数除法得到每块 <b>213×120</b>，每通道每块有 25560 个像素。</p><p>9×213=1917，因此通道图右侧最后 3 列未被这些 ROI 覆盖。尺寸或 Skip 变化会改变结果。</p>'},
  {kicker:'完整 9×9',dur:25,draw:layout,caption:p=>'④ 画出实际 81 个 ROI，按行从 0 编号到 80',html:'<h3>完整的区域，不是简化网格</h3><p>源码先构造 9×9=81 个 ROI，从上到下、每行从左向右排列。本幕全部显示 81 格，格内编号从 0 到 80。每个 ROI 分别计算 RG、BG、GG 等值。</p><p>每格代表一个区域，不是一个像素。每块每通道含 25560 个像素。</p>'},
  {kicker:'选出五块',dur:24,draw:five,caption:p=>'⑤ 四角 0、8、72、80 和中心 40 用于五点判断',html:'<h3>81 块和五点的区别</h3><p>81 块的三种比值都被保存，求最大、最小、平均和标准差并记录日志。V1.0 另取左上 0、右上 8、中心 40、左下 72、右下 80，使用各自目标和 offset 进行判定。</p><p>中心使用模拟像素；后续逐块构造模拟像素展示四角，均非实测。</p>'},
- {kicker:'中心像素',dur:26,draw:pixels,caption:p=>'⑥ 展示中心 ROI 的 25560 个 R 像素位置与四通道不同模拟值',html:'<h3>一块 ROI 里是什么？</h3><p>画面显示中心 ROI 的 213×120 个 R 通道像素位置。为简化演示，中心 R 在 90 和 91 间交替，Gr 在 189 和 190 间交替，Gb 在 191 和 192 间交替，B 在 117 和 118 间交替；每通道各有 25560 个像素。</p><p>这些是构造的数据，并非要求实测重复；其他通道没有在画面中逐像素画出。</p>'},
- {kicker:'四个累加和',dur:25,draw:sums,caption:p=>'⑦ 源码累加四通道，四个和各自从 0.1 开始',html:'<h3>先求和，不是先算每个像素的比</h3><p>代码遍历 ROI，四个通道分别累加，而且各自从 0.1 开始。本例得到 R 和 2313180.1、Gr 和 4843620.1、Gb 和 4894740.1、B 和 3003300.1；两个绿通道和的平均为 4869180.1。</p><p>0.1 是源码的初始值；为了精确对应源码，后续计算保留它。</p>'},
- {kicker:'三种比值',dur:27,draw:compute,caption:p=>'⑧ RG、BG 用两个绿色和的平均作分母；GG 为 Gr 和除以 Gb 和',html:'<h3>三个比例各是什么？</h3><p>RG=R 和/两个绿色和的平均≈0.47507；BG=B 和/两个绿色和的平均≈0.61680；GG=Gr 和/Gb 和≈0.98956。额外的绿色差为两个绿色和之差绝对值除以 ROI 面积，本例为 2 DN。</p><p>源码还有极端时返回 100 的分支；选定五点的比例大于 10 会被改为 −1。本算例均不触发。</p>'},
- {kicker:'中心 RG 判定',dur:26,draw:compare,caption:p=>'⑨ 中心 RG 加 0.07，再与目标 0.55 的 ±20% 范围比较',html:'<h3>offset 加在哪里？</h3><p>中心 RG 原始约 0.47507，加配置 offset 0.07 得约 0.54507。目标 0.55、Class2 factor 0.2，所以范围是 0.55×(1±0.2) = [0.44, 0.66]。本中心 RG 条件通过。</p><p>源码只在修正值大于上限或小于下限时失败，边界相等不失败。完整 ratio 结果仍要检查五点全部比值及中心 GG 加严。</p>'},
+ {kicker:'中心像素',dur:26,draw:pixels,caption:p=>p<.24?'⑥ 先定位中心 ROI 40':p<.48?'⑥ 查看同一区域的 R 与 Gr 模拟值':'⑥ 四个通道各自有模拟像素值与均值',html:'<h3>一块 ROI 里是什么？</h3><p>中心 ROI 每通道包含 213×120 个像素，画面用四个通道色块示意，不逐个画出像素。为简化演示，中心 R 在 90 和 91 间交替，Gr 在 189 和 190 间交替，Gb 在 191 和 192 间交替，B 在 117 和 118 间交替；每通道各有 25560 个像素。</p><p>这些是构造的数据，并非要求实测重复；不播放逐像素累加。</p>'},
+ {kicker:'四个累加和',dur:25,draw:sums,caption:p=>p<.3?'⑦ 四个通道分别求和，各和从 0.1 开始':p<.64?'⑦ 直接展示模拟求和结果':'⑦ 将两个绿色通道的和取平均作为绿色参考',html:'<h3>先求和，不是先算每个像素的比</h3><p>代码遍历 ROI，四个通道分别累加，而且各自从 0.1 开始。本例得到 R 和 2313180.1、Gr 和 4843620.1、Gb 和 4894740.1、B 和 3003300.1；两个绿通道和的平均为 4869180.1。</p><p>0.1 是源码的初始值；为了精确对应源码，后续计算保留它。</p>'},
+ {kicker:'三种比值',dur:27,draw:compute,caption:p=>p<.25?'⑧ 先确定 R、B 和绿色参考和':p<.43?'⑧ RG = R 和 ÷ 绿色参考和':p<.61?'⑧ BG = B 和 ÷ 绿色参考和':'⑧ GG = Gr 和 ÷ Gb 和',html:'<h3>三个比例各是什么？</h3><p>RG=R 和/两个绿色和的平均≈0.47507；BG=B 和/两个绿色和的平均≈0.61680；GG=Gr 和/Gb 和≈0.98956。额外的绿色差为两个绿色和之差绝对值除以 ROI 面积，本例为 2 DN。</p><p>源码还有极端时返回 100 的分支；选定五点的比例大于 10 会被改为 −1。本算例均不触发。</p>'},
+ {kicker:'中心 RG 判定',dur:26,draw:compare,caption:p=>p<.2?'⑨ 中心 RG 先得到原始比例':p<.4?'⑨ 原始 RG 加上中心 offset 0.07':p<.7?'⑨ 修正比例对照目标 0.55 的 ±20% 范围':'⑨ 本例中心 RG 在范围内',html:'<h3>offset 加在哪里？</h3><p>中心 RG 原始约 0.47507，加配置 offset 0.07 得约 0.54507。目标 0.55、Class2 factor 0.2，所以范围是 0.55×(1±0.2) = [0.44, 0.66]。本中心 RG 条件通过。</p><p>源码只在修正值大于上限或小于下限时失败，边界相等不失败。完整 ratio 结果仍要检查五点全部比值及中心 GG 加严。</p>'},
  {kicker:'其他点与比值',dur:26,draw:other,caption:p=>'⑩ 中心 BG、GG 和四角用各自 target、offset 与 factor',html:'<h3>不能只看 RG</h3><p>中心 BG 修正约 0.60880，目标 0.61，普通范围 [0.488,0.732]；中心 GG 约 0.98956，目标 1，普通范围 [0.8,1.2]。它们在各自普通范围内。</p><p>例如左上 RG target=0.512、offset=0.05、角区 factor=0.5，允许范围 [0.256,0.768]。接下来将引入四角的模拟数据，不是实测。</p>'},
  {kicker:'区域怎么比较',dur:26,draw:regionConcept,caption:p=>'⑪ 五块各自与对应配置比较，而不是四角互相相减',html:'<h3>它们怎样比较？</h3><p>源码先分别算各 ROI 的 GG、RG、BG；对某一位置的某一比值，先加该位置配置的 offset，然后和该位置 target × (1±factor) 的范围比较。<b>不是把左上减右上，也不是把中心当作其他四角的分母。</b></p><p>81 块的最大、最小、平均及标准差另作日志统计；本动画依次高亮的顺序只是教学顺序，不代表 QMap 的实际遍历顺序。</p>'},
  {kicker:'五块模拟数据',dur:26,draw:regionInputs,caption:p=>'⑫ 中心沿用前例；四角输入各不相同的模拟均值',html:'<h3>先准备五块的数据</h3><p>中心继续使用前面的 90.5、189.5、191.5、117.5；四角分别给出不同的 R、Gr、Gb、B 模拟均值。表中每行是一块 ROI，每个均值都对应该通道的 25560 个像素。</p><p>接下来四角每个通道使用固定模拟像素值，中心使用相邻整数交替。画面直接展示各通道的和；没有模拟其余 76 块，也不是实测。</p>'},

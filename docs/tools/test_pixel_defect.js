@@ -48,6 +48,7 @@ for(let i=0;i<14;i++){
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
 let texts=[];ctx.fillText=text=>texts.push(String(text));
+sandbox.__ANIM.scenes[0].draw(0);assert.ok(!texts.includes('按阈值产生主缺陷 / blemish 标记'));texts=[];sandbox.__ANIM.scenes[0].draw(1);assert.ok(texts.includes('按阈值产生主缺陷 / blemish 标记'));texts=[];
 function meanAt(p){texts=[];sandbox.__ANIM.scenes[3].draw(p);return texts.slice();}
 let t=meanAt(0);assert.ok(t.includes('左上 5×5 邻域：全部 25 个模拟像素'));assert.ok(!t.some(x=>x.includes('25 个数之和')));
 t=meanAt(.4);assert.ok(t.includes('③ 25 个数之和 = 4500'));assert.ok(!t.some(x=>x.startsWith('④ 平均')));

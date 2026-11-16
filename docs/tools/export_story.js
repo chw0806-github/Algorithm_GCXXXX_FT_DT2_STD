@@ -81,6 +81,10 @@ setTimeout(() => {
     w.__ANIM.state.t = p * sc.dur;
     w.__ANIM.state.playing = false;
     w.__ANIM.render();
+    if (w.__ERR && w.__ERR.length) {
+      console.error('scene ' + (i + 1) + ' failed:', w.__ERR.join('\n'));
+      process.exit(1);
+    }
     const file = 's' + String(i + 1).padStart(2, '0') + '.png';
     fs.writeFileSync(path.join(outDir, file), backing.toBuffer('image/png'));
     meta.push({

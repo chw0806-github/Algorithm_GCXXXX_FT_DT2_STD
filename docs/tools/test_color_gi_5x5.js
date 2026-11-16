@@ -37,6 +37,8 @@ for(let i=6;i<=10;i++){
  text=at(i,.5);assert.ok(text.some(x=>x.startsWith('③ |Gr')));assert.ok(!text.some(x=>x.startsWith('④ 假设上限')));
  text=at(i,.8);assert.ok(text.some(x=>x.startsWith('④ 假设上限')));assert.notStrictEqual(scenes[i].caption(0),scenes[i].caption(.8));
 }
+assert.ok(!at(0,0).includes('五点各比自己的上限'));assert.ok(at(0,1).includes('五点各比自己的上限'));
+assert.ok(at(14,1).some(x=>x.includes('假设 9001 / 5')));
 assert.ok(at(11,1).some(x=>x.includes('本例右下约 0.139535 > 0.12')));
 buttons.normal();assert.strictEqual(out.textContent,'200');assert.strictEqual(run('calculate(state.gr).fail'),false);
 buttons.dark();assert.strictEqual(out.textContent,'160');assert.strictEqual(run('calculate(state.gr).fail'),true);

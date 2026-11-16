@@ -1,5 +1,7 @@
 # Color_Shading 色彩阴影（V1.0）
 
+概览、阈值与互动展示区域、极值和比较条；滑杆可改变极值位置和结果。
+
 - `index.html` 是动画，`storyboard.html` 是无脚本静态分镜；两页顶部展示 CP_SPEC 示例的 `ColorShading.data`、`ColorRatio.data`、`Basic.data` 和 `LightResponse.data` 原文，逐幕给出源码。画面与互动像素均为虚构，不是实测。
 - 本页针对 GC8613T 的 `param_4l_f_bright1_normal_30fps`。此目录提供 V1.0 的 `ColorShading.data`，未提供 `ColorShading_V1.1.data`；后者若加载成功会覆盖版本。其他目录及 V1.1 不能直接套用；本函数不同于之后分别调用的 5×5、15×15 版本。
 

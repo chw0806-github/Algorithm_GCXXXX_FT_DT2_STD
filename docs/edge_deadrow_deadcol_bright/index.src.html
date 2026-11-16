@@ -84,12 +84,11 @@ function box(x,y,w,h,title,lines,p,color){
   lines.forEach((s,i)=>{if(i<show)txt(s,x+18,y+67+i*32,{size:14,color:i===show-1?C.ink:C.dim});});
 }
 function note(t){txt(t,55,520,{size:12,color:C.dim});}
-function intro(p){
-  header(0,'任务','先看真实配置，再用假设值理解边缘坏行坏列');
-  box(55,160,420,290,'实际配置',['open_mode = 1：会进入该子项','StripRow = 0，StripCol = 0','边缘线检测循环选不到行和列','不能把教学算例当实际检测结果'],p,C.accent2);
-  box(525,160,410,290,'为了学习，后面假设',['StripRow = 2，StripCol = 2','每通道每侧各选一条边缘线','其余阈值仍参考示例配置','只演示单个目标，不跑整图'],p,C.accent);
-  note('假设只在页面里生效，不会写入配置文件；源代码另有释放后读取风险。');
-}
+function panel(x,y,w,h){card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});}
+function chip(x,y,w,h,title,sub,color){card(x,y,w,h,{r:8,fill:withA(color,.12),stroke:withA(color,.6)});txt(title,x+14,y+25,{size:15,color,weight:700});if(sub)txt(sub,x+14,y+49,{size:12,color:C.ink});}
+function flow(x,y,x2,y2,t){if(t>0)arrow(x,y,x+(x2-x)*ease(clamp01(t)),y+(y2-y)*ease(clamp01(t)),C.accent2,2);}
+function gauge(x,y,w,val,t){const scale=Math.max(.06,val*1.15);card(x,y,w,12,{r:6,fill:'rgba(125,155,195,.18)',stroke:false});card(x,y,Math.max(1,w*val/scale*ease(clamp01(t))),12,{r:6,fill:val>.025?C.fail:C.pass,stroke:false});for(const [v,c] of [[.025,C.accent],[.035,C.accent2]])card(x+w*v/scale-2,y-6,4,24,{r:2,fill:c,stroke:false});}
+function intro(p){header(0,'任务','检查边缘行列，但示例配置不选任何目标线');panel(55,155,425,315);card(100,205,320,200,{fill:withA(C.accent,.07),stroke:C.accent});txt('实际 StripRow = 0',120,270,{size:15,weight:700});txt('实际 StripCol = 0',120,310,{size:15,weight:700});txt('不选边缘目标',120,360,{size:14,color:C.dim});if(p>.3){flow(490,285,540,285,seg(p,.3,.48));panel(550,155,385,315);card(590,205,300,200,{fill:withA(C.accent,.07),stroke:C.accent});card(590,205,300,12,{r:2,fill:withA(C.accent2,.45),stroke:C.accent2});card(590,393,300,12,{r:2,fill:withA(C.accent2,.45),stroke:C.accent2});txt('假设 Strip = 2',610,280,{size:15,color:C.accent2,weight:700});txt('上下各选一行（示意）',610,320,{size:14});}note('后续 Strip=2 仅为教学假设，不修改实际配置或代表实测。');}
 function config(p){
   header(1,'实际配置','开关打开，不代表已经选择了要检测的边缘线');
   box(55,160,880,300,'EdgeLineDefect.data（实际值）',['① open_mode = 1：进入行列检测调用','② StripRow = 0：上、下每侧 0 ÷ 2 = 0 条','③ StripCol = 0：左、右每侧 0 ÷ 2 = 0 条','④ 比例及 DOL 扫描均没有目标线','⑤ 预计算一些参考均值 ≠ 实际检测了边缘线'],p,C.accent2);
@@ -110,46 +109,17 @@ function strip(p){
   box(455,165,480,280,'每侧各选几条？',['StripRow / 2 = 1：顶部、底部各 1 行','StripCol / 2 = 1：左侧、右侧各 1 列','顶部行只参考向内的下方 5 行','底部向上；左列向右；右列向左','选中边缘线还要检查 DOL'],p,C.accent2);
   note('整数除法；图形仅表示位置，不是按像素数量绘制的图。');
 }
-function line(p){
-  header(4,'目标行像素','假设 R 通道顶部第 0 行：真实数量为 1920 个像素');
-  const data=samplePixels();
-  for(let i=0;i<data.length;i++){const x=55+(i%48)*6,y=155+Math.floor(i/48)*6;ctx.fillStyle=withA(C.accent,.3+(data[i]-180)/45);ctx.fillRect(x,y,5,5);}
-  txt('1920 个位置排成 48×40 格展示数量',55,418,{size:12,color:C.dim});
-  txt('放大前 20 个：后面重复 95 次',55,440,{size:12,color:C.dim});
-  for(let i=0;i<20;i++){let x=55+(i%10)*34,y=448+Math.floor(i/10)*25;card(x,y,31,22,{r:2,fill:withA(C.accent,.18),stroke:withA(C.accent,.35)});txt(data[i],x+15,y+15,{size:10,align:'center'});}
-  box(450,160,485,300,'模拟的 1920 个不同位置',['每 20 个：180、181、…、199 DN','这一组顺序重复 96 次：20 × 96 = 1920','这只是复算用的构造，不是算法要求','总和 = 363840 DN','行均值 = 363840 ÷ 1920 = 189.5 DN'],p,C.accent2);
-  note('小方格重新排成矩阵只为展示数量；真实数据是一整行。');
-}
+function line(p){header(4,'目标行像素','顶部目标行含 1920 个模拟位置，画面只展示局部');panel(55,155,880,305);txt('目标行：前 10 个模拟值',80,195,{size:15,color:C.accent2,weight:700});for(let i=0;i<10;i++){const x=80+i*49;card(x,220,44,40,{r:4,fill:withA(C.accent,.15),stroke:withA(C.accent,.5)});txt(180+i,x+22,246,{size:13,align:'center'});}txt('…',585,247,{size:18,color:C.dim});txt('总计 1920 个像素（并非只取图示的 10 个）',80,295,{size:13,color:C.dim});if(p>.35)txt('模拟值 180～199 依次重复，得到总和 363840',80,350,{size:14});if(p>.65)txt('行均值 = 363840 ÷ 1920 = 189.5 DN',80,410,{size:17,color:C.accent2,weight:700});note('值仅为方便复算的假设；不播放逐像素累加。');}
 function refs(p){
   header(5,'向内找邻行','目标在顶部时，只看它下方的 5 条行均值');
   const vals=[189.5].concat(neighbors);vals.forEach((v,i)=>{if(p>=i*.1){let y=155+i*48;card(65,y,335,38,{r:5,fill:i===0?withA(C.accent2,.22):withA(C.accent,.10),stroke:i===0?C.accent2:C.accent});txt((i===0?'目标第 0 行':'下方第 '+i+' 行')+'：'+v+' DN',83,y+25,{size:14,color:i===0?C.accent2:C.ink});}});
   box(450,155,485,300,'5 个不同的模拟行均值',['下方：196、198、200、202、204','相加：196+198+200+202+204 = 1000','平均：1000 ÷ 5 = 200 DN','只朝图像内部取邻行，不取上方','本例参考均值非零'],p,C.accent);
   note('每个邻行均值来自该行的 1920 个像素；邻行的具体像素在此未模拟。');
 }
-function ratio(p){
-  header(6,'比例差','把目标行均值和内侧 5 行的平均值比较');
-  box(55,160,440,290,'依次计算',['① 目标行均值 = 189.5 DN','② 内侧 5 行参考平均 = 200 DN','③ 绝对差 = |189.5 − 200| = 10.5','④ 比例 = 10.5 ÷ 200 = 0.0525','⑤ 换成百分数 = 5.25%'],p,C.accent2);
-  box(535,160,400,290,'注意分母',['比例 = |目标 − 参考| ÷ 参考','分母是内侧邻行均值 200','不是除以目标行均值 189.5','此代码没有零分母保护','真实结果按未舍入数值判断'],p,C.accent);
-  note('完整计算只针对示例中这一个顶部目标；其他边缘位置未在此计算。');
-}
-function thresholds(p){
-  header(7,'两级阈值','先用 TA 判断是否计数，再用 MA 决定哪个 bin');
-  box(55,160,430,300,'第一步：TA 检出',['R 行 TA = 0.025 = 2.5%','5.25% > 2.5% → 该行计数加 1','等于 TA 不计数（严格大于）','只说明这条线被计数'],p,C.accent);
-  box(535,160,400,300,'第二步：MA 选 bin',['R 行 MA = 0.035 = 3.5%','5.25% ≥ 3.5% → 2216 / 6','介于 TA 和 MA → 2217 / 2','MA 比较是大于或等于'],p,C.accent2);
-  note('这里假设其他通道与边缘线没有更大差异，其他缺陷为零；不是最终 bin。');
-}
-function col(p){
-  header(8,'边缘列','同样假设 StripCol=2；左侧向右取 5 列');
-  box(55,160,430,300,'另一组列算例',['R 通道一列含 1080 个像素','假设目标列均值 = 192 DN','右侧 5 列均值：196、198、200、202、204','它们的平均 = 200 DN','|192 − 200| ÷ 200 = 4%'],p,C.accent);
-  box(535,160,400,300,'按列阈值判断',['列 TA = 3%，4% > 3%：计数','列 MA = 3.5%，4% ≥ 3.5%','仅此列异常时：2214 / grade 6','右边缘列向左取参考列','列和行算例相互独立'],p,C.accent2);
-  note('列均值是模拟输入，不代表完整列图像；右侧邻列平均不等于单列像素值。');
-}
-function dol(p){
-  header(9,'线内 DOL','不仅看行间差：还检查同一条线内部是否波动过大');
-  box(55,160,440,300,'独立的行内算例',['1920 个值：50～59、241～250','20 种值，每种出现 96 次','行均值 = 150 DN','平方偏差总和 = 17526720','样本标准差 = √(17526720 / 1919)','约 95.57 DN > DOL 阈值 50'],p,C.accent2);
-  box(535,160,400,300,'和前面有什么不同？',['比例差：目标行均值对比邻行','DOL：同一行的像素彼此波动','当前行被选中时才检查 DOL','示例 R 行、列阈值均为 50','这是独立算例，不是第 5 幕的行'],p,C.accent);
-  note('DOL 使用样本标准差（分母 N−1）；未模拟其邻线或整图结果。');
-}
+function ratio(p){header(6,'比例差','目标行与内侧邻行的平均比较，分母是参考均值');chip(55,195,240,90,'目标行均值','189.5 DN（模拟）',C.accent2);chip(350,195,240,90,'内侧参考均值','200 DN（模拟）',C.accent);if(p>.2){flow(605,240,660,240,seg(p,.2,.4));chip(675,195,245,90,'绝对差','|189.5 − 200| = 10.5',CH.Gr);}if(p>.5){panel(55,345,865,100);txt('比例差 = 10.5 ÷ 200 = 0.0525 = 5.25%',80,404,{size:20,color:C.accent2,weight:700});}note('只模拟一个顶部目标行；此路径没有单独的零分母保护。');}
+function thresholds(p){header(7,'两级阈值','TA 决定是否计数，MA 决定哪个 bin');panel(55,155,880,315);txt('模拟比例差 5.25%',80,205,{size:17,weight:700});gauge(95,270,650,.0525,seg(p,.1,.5));txt('TA 2.5%',95+650*.025/.060375,310,{size:13,align:'center',color:C.accent});txt('MA 3.5%',95+650*.035/.060375,310,{size:13,align:'center',color:C.accent2});if(p>.52)txt('5.25% > TA：计数',80,370,{size:15,color:C.pass,weight:700});if(p>.7)txt('5.25% ≥ MA：子项 2216 / 6',420,370,{size:15,color:C.fail,weight:700});note('TA 严格大于才计数；MA 大于等于。其他缺陷假设为零。');}
+function col(p){header(8,'边缘列','独立算例：左边目标列向右取五个参考列');panel(55,155,425,315);for(let i=0;i<6;i++){const x=90+i*52;card(x,205,38,210,{r:4,fill:withA(i?C.accent:C.accent2,.18),stroke:i?C.accent:C.accent2});txt(i?String(neighbors[i-1]):'192',x+19,320,{size:12,align:'center',color:i?C.ink:C.accent2});}txt('目标',90,445,{size:12,color:C.accent2});txt('向内 5 列',165,445,{size:12});panel(510,155,425,315);txt('参考平均 = 200 DN',530,215,{size:16,weight:700});if(p>.3)txt('|192 − 200| ÷ 200 = 4%',530,290,{size:17});if(p>.6)chip(530,345,360,70,'4% > TA 3%，且 ≥ MA 3.5%','假设仅此列异常：2214 / 6',C.fail);note('这里只模拟列均值，不表示真实整列像素分布。');}
+function dol(p){header(9,'线内 DOL','同一条线内部波动，与邻线比例差是不同检查');panel(55,155,425,315);chip(80,200,175,90,'低值 50～59','各出现 96 次',C.accent);chip(280,200,175,90,'高值 241～250','各出现 96 次',C.accent2);txt('独立假设算例：共 1920 个值',80,365,{size:14});panel(510,155,425,315);txt('均值 = 150 DN',530,215,{size:16});if(p>.3)txt('样本标准差 √(17526720 / 1919)',530,285,{size:14});if(p>.6)chip(530,330,365,80,'≈ 95.57 DN  >  50','严格超 DOL 阈值，计数',C.fail);note('这是独立模拟例子，与前面目标行不是同一组像素。');}
 function priority(p){
   header(10,'汇总优先级','先列、再行、再 DOL；还要看 grade 和具体分支');
   box(55,155,445,325,'部分情形（示例配置）',['仅列 MA 以上：2214 / 6','仅行 MA 以上：2216 / 6','列和行都 MA 以上：先列 2214 / 6','仅行 TA~MA：2217 / 2','仅 DOL：2218 / 5','行低级 + DOL：DOL 可覆盖'],p,C.accent2);
@@ -162,19 +132,13 @@ function risk(p){
   box(535,155,400,315,'源码有运行风险',['行、列线程对象释放之后','日志仍读取已释放对象的成员','这属于释放后读取，行为未定义','还要注意邻线参考均值为零','页面只讲逻辑，不保证真实运行'],p,C.fail);
   note('需由开发人员检查与修复后再验证；本演示不修改原始算法。');
 }
-function interactive(p){
-  header(12,'互动','切换实际 / 假设配置，再调整一条模拟顶部行均值');
-  const r=lineResult(state.mean,state.strip);
-  box(55,155,445,320,'当前模拟',['StripRow = '+state.strip+(state.strip?'（假设）':'（实际文件值）'),'目标行均值 = '+state.mean+' DN','内侧 5 行平均固定 = 200 DN','若计算，比例 = '+(r.diff*100).toFixed(2)+'%','是否选中该行：'+(r.selected?'是':'否'),r.selected?(r.hit?'超过 TA：计数':'未超过 TA：不计数'):'未选中：不检查此行'],p,C.accent2);
-  box(535,155,400,320,'只考虑这条行的简化结论',[r.selected?'模拟子项：'+r.bin+' / grade '+r.grade:'实际配置不扫描这条行','以下例子均假设 StripRow=2','197.5 → 1.25%，不计数','194.5 → 2.75%，2217 / 2','193 → 3.50%，2216 / 6','假设其他行列及 DOL 无异常','源码有释放后读取风险'],p,C.accent);
-  note('滑杆改变均值，不会同步改变第 5 幕的模拟像素，也不会修改配置。');
-}
+function interactive(p){header(12,'互动','切换实际 / 假设 Strip，再调整一条顶部行的均值');const r=lineResult(state.mean,state.strip);panel(55,155,880,315);chip(80,190,260,80,'StripRow = '+state.strip,state.strip?'假设选中顶部行':'实际值，不选中目标',state.strip?C.accent2:C.accent);chip(380,190,245,80,'行均值 '+state.mean,'内侧参考固定 200',CH.Gr);txt('若计算：比例差 '+(r.diff*100).toFixed(2)+'%',80,320,{size:16,weight:700,color:r.selected?C.ink:C.dim});gauge(80,350,600,r.diff,1);txt('TA 2.5%  /  MA 3.5%',80,400,{size:13,color:C.dim});txt(r.selected?(r.hit?'模拟子项：'+r.bin+' / grade '+r.grade:'未超过 TA：不计数'):'未选中：不检查该行',80,440,{size:15,color:r.selected&&r.hit?C.fail:C.accent2,weight:700});note('仅模拟一行；灰显的比例是假设计算，Strip=0 实际不检查。');}
 const SCENES=[
  {kicker:'任务',dur:23,draw:intro,caption:p=>'① 先看实际 Strip=0，再假设 Strip=2 理解计算',html:'<h3>先抓住主线</h3><p>这个子项检查图像四周的边缘行列：选边缘线、计算均值、与朝图像内部的邻线比较，并检查线内 DOL。</p><p><b>重要：</b>实际示例配置 StripRow=0、StripCol=0，不选任何目标线。下面用假设 Strip=2 教学，不修改文件，也不代表实际检测结果。</p>'},
  {kicker:'实际配置',dur:25,draw:config,caption:p=>'② open_mode=1，但 StripRow/Col 都是 0，不选中边缘目标',html:'<h3>开关和选区不是同一回事</h3><p><code>open_mode=1</code> 使程序进入子项并调用行、列处理；而 <code>StripRow=0</code>、<code>StripCol=0</code> 使目标线筛选条件两侧均选不到任何行列。线间比例和线内 DOL 均不会对目标线执行。</p><p>源码前面的预计算可能仍计算部分邻线均值，不能误认为已经检测了边缘线。源码还存在释放后读取，实际运行不能保证。</p>'},
  {kicker:'拆通道',dur:22,draw:channels,caption:p=>'③ 3840×2160 的 RG Bayer 拆成四个 1920×1080 通道',html:'<h3>从 RAW 到 R 通道</h3><p>示例 Basic.data 的 RAW 尺寸 3840×2160、Bayer 为 RG；拆成 R、Gr、Gb、B，每张通道图 1920×1080。代码对每个通道分别启动边缘行、列处理。</p><p>接下来选 R 通道举例；颜色只是为了区分通道。</p>'},
  {kicker:'假设选边缘',dur:26,draw:strip,caption:p=>'④ 假设 Strip=2，每通道上下各选 1 行、左右各选 1 列',html:'<h3>假设选出边缘线</h3><p>实际配置是零；为了讲解，假设 StripRow=2、StripCol=2。源码用整数除法 <code>stripCnt/2</code>，因此在一个通道中，上下各选 1 条行、左右各选 1 条列。</p><p>顶部只往下找 5 行；底部往上、左列往右、右列往左。这是内侧单方向参考，不是两边各找 5 条。</p>'},
- {kicker:'目标行像素',dur:28,draw:line,caption:p=>'⑤ 显示真实数量的 1920 个模拟位置，计算目标行平均 189.5 DN',html:'<h3>一条行的均值</h3><p>假设顶部目标行有 1920 个模拟像素：180～199 DN 每 20 个重复 96 次，共 1920 个；相加 363840，平均为 <b>189.5 DN</b>。画面 48×40 的小格重新排列了全部位置，便于数清数量；原图里它们在同一行。</p><p>这只是方便复算的数据，并非要求像素重复或等差。滑杆不会更改本幕的固定像素。</p>'},
+ {kicker:'目标行像素',dur:28,draw:line,caption:p=>p<.35?'⑤ 示意前 10 个位置，整条目标行有 1920 个模拟像素':p<.65?'⑤ 直接给出这一行的模拟总和':'⑤ 总和 ÷ 1920，得到均值 189.5 DN',html:'<h3>一条行的均值</h3><p>假设顶部目标行有 1920 个模拟像素：180～199 DN 每 20 个重复 96 次，共 1920 个；相加 363840，平均为 <b>189.5 DN</b>。画面只示意前 10 个位置，完整目标行仍有 1920 个像素；不逐点播放累加。</p><p>这只是方便复算的数据，并非要求像素重复或等差。滑杆不会更改本幕的固定像素。</p>'},
  {kicker:'向内找邻行',dur:27,draw:refs,caption:p=>'⑥ 顶部目标行下面 5 个不同均值，平均得到 200 DN',html:'<h3>为什么只找下方？</h3><p>目标行在顶部，外侧没有行，所以向图像内部找下面 5 行。模拟均值分别为 196、198、200、202、204 DN，合计 1000，除以 5 得 <b>200 DN</b>。</p><p>这 5 个数字是五整行的均值，不是 5 个像素；每行有 1920 个像素。只构造它们的均值，不推断其像素分布。</p>'},
  {kicker:'比例差',dur:26,draw:ratio,caption:p=>'⑦ |189.5−200| ÷ 200 = 5.25%',html:'<h3>如何计算比例差？</h3><p>先用目标均值减参考均值，取绝对值，再除以参考均值：<code>|189.5−200|/200=0.0525=5.25%</code>。绝对值让偏亮和偏暗都能检测。</p><p>源码本路径没有为零参考均值单独设置保护；此算例的分母为 200。</p>'},
  {kicker:'两级阈值',dur:28,draw:thresholds,caption:p=>'⑧ 5.25% 严格超过 TA 2.5%，且达到 MA 3.5%',html:'<h3>TA 与 MA 各做什么？</h3><p>先与 R 行 TA 2.5% 比较，<b>严格大于</b>才计数。若有行被计数，再比较通道最大差与 MA 3.5%，<b>大于或等于</b>选 2216 / grade 6；未达到 MA 则选 2217 / grade 2。</p><p>假设其他通道、列和 DOL 无异常，本例 5.25% 给出子项 2216 / 6，不等于整机最终 bin。</p>'},

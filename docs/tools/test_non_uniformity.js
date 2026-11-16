@@ -52,6 +52,8 @@ assert.strictEqual(tilesDrawn,1600+1296, '放大后应显示完整 48×27 个像
 assert.notStrictEqual(sandbox.__ANIM.scenes[5].caption(0),sandbox.__ANIM.scenes[5].caption(0.6));
 let words=[];
 ctx.fillText = text => { words.push(String(text)); };
+words=[];sandbox.__ANIM.scenes[6].draw(0);assert.ok(!words.includes('总和 = 259200 DN'));
+words=[];sandbox.__ANIM.scenes[6].draw(.8);assert.ok(words.includes('259200 ÷ 1296 = 200 DN'));assert.ok(!words.includes('正在计入总和'));
 for(const i of [6,7,8,9,10,11,12]){
   words=[]; sandbox.__ANIM.scenes[i].draw(0);
   const early=words.slice();

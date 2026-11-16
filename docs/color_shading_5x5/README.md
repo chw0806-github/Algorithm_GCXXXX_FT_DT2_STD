@@ -1,5 +1,7 @@
 # Color_Shading_5_5（V1.0）
 
+概览标出五点；互动用三条 BG 范围条展示右下 B 对指标的影响。
+
 `index.html` 为动画，`storyboard.html` 为静态分镜。两页顶部展示示例 `ColorShading_5x5.data`、`ColorRatio.data`、`Basic.data` 和 `LightResponse.data` 原文，逐幕关联源码。**画面只演示算法步骤，不逐像素播放累加；数据均为虚构。**
 
 ## 本例配置与分区

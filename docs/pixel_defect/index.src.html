@@ -115,12 +115,7 @@ function patch(x0,y0,focus){
   }
   txt('完整局部：11 列 × 11 行 = 121 个像素',x0,y0+363,{size:12,color:C.dim});
 }
-function intro(p){
-  header(0,'总览','先找一个像素，问：它与周围的同色像素差多少？');
-  const cards=[['① 取目标','一个 Gr 像素'],['② 找邻居','四块各 25 像素'],['③ 计算差','四个比例各自算'],['④ 做标记','生成两张候选图']];
-  cards.forEach((v,i)=>{if(p>=i*.15){const x=55+i*225;card(x,205,200,145,{fill:'rgba(110,168,254,.07)',stroke:i===0?C.accent2:C.accent});txt(v[0],x+18,248,{size:17,weight:700,color:i===0?C.accent2:C.accent});txt(v[1],x+18,295,{size:14});if(i)arrow(x-25,278,x-5,278,C.dim,2);}});
-  if(p>=.6){txt('本页只用一个内部 Gr 像素做模拟，最后才解释全图统计。',55,430,{size:14,color:C.ink});txt('所有数字都是教学值，不是实测；亮场示例使用 V1.0。',55,465,{size:13,color:C.dim});}
-}
+function intro(p){header(0,'总览','选一个目标像素，比较周围同色像素的四块邻域');patch(55,155,null);card(450,155,485,315,{fill:'rgba(110,168,254,.05)',stroke:'rgba(110,168,254,.25)'});txt('黄色：目标像素（模拟）',475,200,{size:16,color:C.accent2,weight:700});if(p>.2){txt('四块不同颜色：四个 5×5 邻域',475,260,{size:15});arrow(410,315,450,315,C.accent2,2);}if(p>.45)txt('分别比较目标与四块均值的比例差',475,325,{size:15});if(p>.7)txt('按阈值产生主缺陷 / blemish 标记',475,395,{size:15,color:C.accent2,weight:700});txt('画面为一个内部 Gr 像素的虚构局部，不是实测。',55,545,{size:12,color:C.dim});}
 function channels(p){
   header(1,'拆通道','一张 Bayer 原图，先拆成四张单色通道图');
   card(55,175,250,170,{fill:'rgba(110,168,254,.07)',stroke:C.accent});txt('RAW：3840 × 2160',75,220,{size:16,weight:700});txt('RG Bayer',75,260,{size:15,color:C.dim});

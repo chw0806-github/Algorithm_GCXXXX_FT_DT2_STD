@@ -20,6 +20,8 @@ assert.strictEqual(run('model(4,0,1).size'),2);assert.strictEqual(run('model(4,0
 const scenes=sandbox.__ANIM.scenes;assert.strictEqual(scenes.length,15);assert.strictEqual(sandbox.__CODE_GUIDE.length,15);
 for(let i=0;i<15;i++){sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'));for(const p of [0,.2,.45,.78,1]){sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();}}
 function at(i,p){drawn=[];scenes[i].draw(p);return drawn.slice();}
+assert.ok(!at(0,0).includes('排除 PD → 匹配'));assert.ok(at(0,1).includes('排除 PD → 匹配'));
+assert.ok(at(6,1).includes('外接框 4×4 → 最大边 4'));
 assert.ok(!at(9,0).some(x=>x.includes('(505,400)')));assert.ok(at(9,.5).some(x=>x.includes('1010,800')));assert.ok(at(9,.8).some(x=>x.includes('横差 10')));
 events.removed();assert.strictEqual(elements.pdout.textContent,'3');assert.strictEqual(run('model(state.pd,state.offset,state.width).removed'),true);
 events.unmatched();assert.strictEqual(elements.offsetout.textContent,'51');assert.strictEqual(run('model(state.pd,state.offset,state.width).matched'),false);
