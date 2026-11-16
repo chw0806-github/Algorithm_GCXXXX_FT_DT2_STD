@@ -51,6 +51,8 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
+    'roi_prnu': ['一眼看懂','真实示例配置','前置与开关','通道与区域','Delta 来源','模拟 ROI','原始像素均值','Delta 平方','计算 PRNU','四通道判定','共享缓冲','边界与无效值','返回与追加','互动模拟'],
+    'single_pixel_defect': ['一眼看懂','配置与版本','模式选择','分通道','四块邻域','比例比较','标记与方向','合图与计数','亮点分档','亮暗竞争','总数覆盖','返回与追加','风险与边界','互动分档'],
     'blemish_test': ['一眼看懂','配置与版本','图像预处理','亮度修正与增强','大小窗口找暗斑','区域阈值','提取连通候选','找 PD 标记','排除附近 PD','匹配增强候选','增强包围框','没匹配到增强','返回与特殊情况','边界与版本','互动观察'],
     'color_gi_5x5': ['一眼看懂','配置与假设','前置与开关','假设分成 25 块','准备五点输入','一块的计算方法','左上逐步比较','右上逐步比较','中心逐步比较','左下逐步比较','右下逐步比较','五点汇总','异常值与映射','返回与追加','互动观察'],
     'color_gi': ['一眼看懂','配置与入口','先检查前置条件','分通道和区域','一块怎么算','得到 81 个比例','找到最大和最小','两端离 1 多远','得到 GI','对照 GI 阈值','低亮度与无效前置','原始向量与特殊值','返回与追加','互动观察'],
@@ -67,6 +69,38 @@ EXPECTED_KICKERS = {
 }
 
 GUIDES = {
+ 'roi_prnu': [
+  [S(BRIGHT,154,162,'ROI_PRNU','调用方将单个子项追加，然后继续汇总。'),S(RAW,8320,8351,'return sigma/mean*100','同一 ROI 的 Delta 平方量除以原始均值。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',16994,17011,'ROI_PRNU_V1.0','打开文件后赋版本；后续解析未必成功。'),S(ITEM,5789,5796,'spec_prnu_r_','四通道分别比较各自上限，失败使用配置 bin 和 grade。')],
+  [S(ITEM,5741,5762,'mean_gr_roi>1','ROI 开关与像素缺陷开关共同控制，Gr 大于 1 才计算。'),S(ITEM,897,915,'mean_gr_roi','Light_Response V1.0 初始化并计算此前的 Gr 均值。')],
+  [basic,bayer,splitraw,S(TEST,1221,1234,'width/2,height/2','通道宽高减半，ROI 配置参数原样传入。')],
+  [S(ITEM,3518,3524,'g_buf_delta_r_','Pixel_Defect V1.0 将 Delta 缓冲交给缺陷检测。'),S(RAW,9175,9193,'delta_data[w*i+j]','Delta 为像素减四块邻域均值的平均。')],
+  [S(RAW,9155,9178,'sum_t[n]/cnt','四块邻域按 radius 的平方求均值；画面棋盘为假设。'),S(RAW,9192,9193,'mean_ref','本页的模拟 Delta 取自该定义。')],
+  [S(RAW,8338,8349,'mean_t/cnt','在同一 ROI 内计算原始通道像素均值。')],
+  [S(RAW,8323,8335,'Delta[width*i+j] * Delta[width*i+j]','对 Delta 平方求和，除以 N−1 后开平方，没有对 Delta 做均值中心化。')],
+  [S(RAW,8335,8351,'return sigma/mean*100','零参考平方量除以原始均值并转百分数。')],
+  [S(ITEM,5789,5796,'roi_prnu_gr>','四通道任一严格超过各自阈值时失败。')],
+  [S(BRIGHT,149,160,'Single_Pixel_Defect_Test','缓冲分配后多个步骤可依序写入共享区域；ROI_PRNU 读取后才释放。'),S(ITEM,3285,3292,'g_buf_delta_r_','Single 像素检测也可能写入同一组 Delta。'),S(ITEM,5754,5762,'g_buf_delta_r_','本函数读取现有通道 Delta 缓冲。')],
+  [S(RAW,8323,8351,'line+win_h>=height','贴边返回 −1，分母及输入边界缺乏完整防护。'),S(ITEM,5749,5755,'mean_gr_roi>1','Gr 不满足时保留 −1，之后仍比较阈值。'),S(ITEM,5789,5796,'roi_prnu_r>','普通浮点大于比较不是有效性检查。')],
+  [S(ITEM,5723,5737,'g_msg = false','未知版本和 V1.0 初始化。'),S(ITEM,5789,5809,'result_real_roi_prnu.g_msg = false','超限设失败；关闭条件时不参与汇总。'),S(BRIGHT,156,162,'ROI_PRNU','调用方 push_back 后汇总。'),finalbin],
+  [S(RAW,9175,9193,'delta_data[w*i+j]','假设棋盘在 radius=5 下产生局部 Delta。'),S(RAW,8323,8351,'return sigma/mean*100','对假设 ROI 数据计算；互动不运行完整 C++ 检测。'),S(ITEM,5789,5796,'roi_prnu_r>','使用真实示例上限 3 比较模拟值。')]],
+
+ 'single_pixel_defect': [
+  [S(BRIGHT,154,158,'Single_Pixel_Defect_Test','调用此函数并追加一个子项；并非前一个 Pixel_Defect_Test 的返回值。'),S(ITEM,3285,3300,'find_pixel_defect','重新运行四通道像素检测并取得计数。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',400,404,'PD.data','初始化参数时尝试加载 PD.data。'),S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',4988,5002,'PD_V1.0','打开成功后赋版本，解析尚未完成。'),S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',5387,5403,'cnt_param != 37','检查解析及字段数量；文件缺失时无法确定实际配置。')],
+  [S(ITEM,3205,3209,'Pixel_Defect_bright','type 为 0 或 1 时覆盖传入类型。'),S(ITEM,3253,3282,'spec_mode_=DN','bright 使用比例阈值，dark 使用 DN 阈值。')],
+  [basic,bayer,splitraw,S(TEST,2855,2877,'w/2,h/2','四通道分别检测并合回 Bayer。')],
+  [S(RAW,9155,9164,'sum_t[0]','内部点四块邻域的和；假设半径为 5。'),pixneighbor],
+  [pixratio,S(RAW,9195,9204,'flag>0','只要有一个严格超主阈值就标记主图。')],
+  [S(RAW,9192,9217,'mean_ref','方向差使用四块均值的平均；主图和 blemish 标记互斥。'),S(TEST,2924,2937,'g_buf_delta_raw_','方向差严格大于零计亮，否则计暗。')],
+  [S(TEST,2875,2881,'RGGB_Map_Integrate_chao','合并标记及差值。'),S(TEST,2905,2942,'cnt_white_pix = cnt_white_pix','团簇计数和亮暗计数的具体处理；并非删除所有团簇。')],
+  [S(ITEM,3303,3325,'limit_wp1_','亮点三档分别比较，示例分档均是假设。'),S(ITEM,3327,3346,'limit_dp1_','暗点也采用三档。')],
+  [S(ITEM,3348,3359,'res_singe_dp.grade > res_singe_wp.grade','暗 grade 严格更高才选暗；相等选亮。')],
+  [S(ITEM,3362,3386,'pixel_count_to_check','选亮、暗或总数；超过上限时直接覆盖，无 grade 比较。')],
+  [S(ITEM,3190,3203,'Single_Pixel_Defect','未知版本与 V1.0 初始结果不同。'),S(ITEM,3399,3407,'g_msg = false','关闭开关不参与汇总并返回。'),S(BRIGHT,154,158,'Single_Pixel_Defect_Test','调用方 push_back 一个子项。'),finalbin],
+  [S(ITEM,3255,3300,'blemish_global_size_limit_','该路径读取 blemish 字段并传入检测函数；需检查其初始化。'),S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',5387,5403,'cnt_param != 37','专用加载器的结束处；核查完整 4988–5403 行有哪些字段被读取。'),S(RAW,9180,9189,'mean_t[n]','比例模式没有单独的零分母检查。')],
+  [S(ITEM,3303,3359,'res_singe_dp.grade > res_singe_wp.grade','分别分档，再按 grade 竞争。'),S(ITEM,3362,3386,'pixel_count_to_check','仅以假设输入和参数模拟最终覆盖。')]],
+
  'blemish_test': [
   [S(BRIGHT,149,156,'Blemish_Test','申请资源后调用此子项并追加结果。'),S(ITEM,3031,3040,'PD_all_single_pix_find','V1.1 先准备 PD 标记，再调用双路污点检测。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',423,429,'Blemish_V1.1.data','先尝试 V1.1 再尝试 V1.0，其他目录可能覆盖版本。'),S(ITEM,2968,2977,'blemish_V1.1','版本分派；未知版本返回 false 且不参与汇总。'),S(ITEM,3031,3050,'code_Blemish>0','V1.1 开关与结果。')],

@@ -1,0 +1,679 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Single_Pixel_Defect_Test 动画讲解</title><style>
+:root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 目录页 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px}
+.card-link{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(110,168,254,.10),rgba(255,255,255,.02));padding:18px 20px;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.card-link:hover{transform:translateY(-2px);border-color:rgba(110,168,254,.5);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.card-link h3{margin:0 0 8px;font-size:15px;color:#eaf2ff}
+.card-link p{margin:0;font-size:12.5px;line-height:1.75;color:var(--dim)}
+.card-link .tag{display:inline-block;font-size:10.5px;color:#ffd166;border:1px solid rgba(255,209,102,.35);
+  background:rgba(255,209,102,.08);border-radius:999px;padding:2px 8px;margin-bottom:10px}
+.sliders.two{grid-template-columns:repeat(2,1fr)}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+</style></head>
+<body><div class="app"><header class="top"><div class="brand"><div class="logo">◎</div><div><h1>图像传感器 FT 测试 · 单点缺陷分档</h1><p class="sub"><code>items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));</code></p></div></div><div class="badges"><span class="badge">PD.data 缺失 · 参数是假设</span><a class="badge link" href="storyboard.html">静态分镜 →</a></div></header>
+<section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p><b>仓库没有 PD.data；无法确认该子项实际版本及专用配置。</b> 以下仅为 Basic.data 原文；本页像素、阈值、开关、分档与 bin 均为教学假设。</p>
+<div class="config-keys"><span class="config-key">RAW 宽：<code>[width]=3840</code></span><span class="config-key">RAW 高：<code>[height]=2160</code></span><span class="config-key">Bayer 排列：<code>[bayer]=RG</code></span></div><div class="config-layout"><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section></div>
+</section>
+  <main>
+<section class="stage-col"><div class="stage-card"><canvas id="stage" aria-label="算法动画舞台"></canvas><div class="caption"><span class="dot"></span><span id="caption">单点检测与分档</span></div></div><div class="controls"><button id="prev">◀ 上一节</button><button id="play" class="primary">⏸ 暂停</button><button id="next">下一节 ▶</button><button id="replay">↺ 重播</button><div class="progress"><div id="bar"></div></div><div class="speed"><button data-speed="0.5">0.5×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div></div>
+<div class="tuner"><div class="tuner-head"><h2>互动：直接输入已经统计好的亮 / 暗点数</h2><span>只模拟分档；不是对图像运行检测。所有分档参数与 bin 均为假设。</span></div><div class="sliders two"><label class="slider"><span>亮点 WP</span><input id="wp" type="range" min="0" max="10" step="1" value="3"><output id="wpout">3</output></label><label class="slider"><span>暗点 DP</span><input id="dp" type="range" min="0" max="10" step="1" value="3"><output id="dpout">3</output></label></div><div class="presets"><button id="tie">同级：3 / 3</button><button id="override">总数覆盖：6 / 3</button><button id="normal">未命中：0 / 0</button></div></div></section>
+<aside class="side"><nav class="chapters" id="chapters" aria-label="章节"></nav><section class="code-guide" id="code-guide"><h3>本幕对应源码</h3><p>打开生成后的 index.html 查看源码。</p></section><div class="explain" id="explain"><h3>单点与分档</h3><p>本页采用假设数据，先展示检测的结构，再观察计数后的分档和覆盖。</p></div></aside></main>
+<footer class="foot">仓库未找到 PD.data；示例 Basic.data 的尺寸真实，其余阈值、像素、计数及 bin 均是假设，不代表实际结果。</footer></div>
+<script>
+/* ==========================================================================
+   AlgoAnim · 算法动画共用播放器
+   --------------------------------------------------------------------------
+   页面里只需要写「场景」，播放器负责：画布自适应、章节、控制条、字幕、快捷键。
+
+   用法：
+     <link rel="stylesheet" href="../shared/player.css">
+     <script src="../shared/player.js"><\/script>
+     <script>
+       const state = AlgoAnim.state;          // 共用状态（scene/t/speed + 自定义字段）
+       state.xxx = ...;
+       function drawStep1(p){ ... }           // p = 0..1，用全局 ctx / txt / card 画
+       const SCENES = [{ kicker, dur, draw:drawStep1, caption:p=>'...', html:'...' }];
+       AlgoAnim.start({ scenes: SCENES });
+     <\/script>
+
+   绘图工具箱（全部是全局函数）：txt card arrow rr para wrapLines withA
+   常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
+   ========================================================================== */
+'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / ' + String(scenes.length).padStart(2,'0') + ' · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+
+
+/* ==========================================================================
+   播放器
+   ========================================================================== */
+const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
+let scenes = [];
+let elCaption = null, elBar = null;
+
+function resize(){
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  if(!ctx || !scenes.length) return;
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = scenes[PState.scene];
+  const p = clamp01(PState.t / sc.dur);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
+  if(elCaption){
+    const cap = sc.caption(p);
+    if(elCaption.textContent !== cap) elCaption.textContent = cap;
+  }
+}
+
+let lastTime = performance.now();
+
+function tick(now){
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  const sc = scenes[PState.scene];
+  if(sc && PState.playing){
+    PState.t += dt * PState.speed;
+    if(PState.t >= sc.dur){
+      if(PState.scene < scenes.length - 1){
+        gotoScene(PState.scene + 1, true);
+      } else {
+        PState.t = sc.dur;
+        PState.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  if(!elBar || !scenes.length) return;
+  const sc = scenes[PState.scene];
+  const overall = (PState.scene + clamp01(PState.t/sc.dur)) / scenes.length;
+  elBar.style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
+function gotoScene(i, autoplay){
+  if(!scenes.length) return;
+  PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
+  PState.t = 0;
+  PState.playing = autoplay !== false;
+  syncPlayButton();
+  const ex = document.getElementById('explain');
+  if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === PState.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+  render();
+}
+
+function buildChapters(){
+  const box = document.getElementById('chapters');
+  if(!box) return;
+  box.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'chapter';
+    b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') +
+                  '</span><span class="name">' + s.kicker + '</span>';
+    b.addEventListener('click', ()=> gotoScene(i, true));
+    box.appendChild(b);
+  });
+}
+
+function bindControls(){
+  const play = document.getElementById('play');
+  if(play) play.addEventListener('click', ()=>{
+    if(!PState.playing && PState.t >= scenes[PState.scene].dur - 0.01) PState.t = 0;
+    PState.playing = !PState.playing;
+    syncPlayButton();
+  });
+  const prev = document.getElementById('prev');
+  if(prev) prev.addEventListener('click', ()=> gotoScene(PState.scene-1, true));
+  const next = document.getElementById('next');
+  if(next) next.addEventListener('click', ()=> gotoScene(PState.scene+1, true));
+  const replay = document.getElementById('replay');
+  if(replay) replay.addEventListener('click', ()=> gotoScene(0, true));
+
+  document.querySelectorAll('.speed button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      PState.speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(play) play.click(); }
+    if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(PState.scene+1, true); }
+    if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(PState.scene-1, true); }
+  });
+}
+
+const AlgoAnim = {
+  get state(){ return PState; },
+  get ctx(){ return ctx; },
+  get canvas(){ return canvas; },
+  get scenes(){ return scenes; },
+  gotoScene: gotoScene,
+  render: render,
+  start: function(opts){
+    opts = opts || {};
+    canvas = document.getElementById(opts.canvas || 'stage');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
+    scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    Object.assign(PState, opts.state || {});
+    elCaption = document.getElementById('caption');
+    elBar = document.getElementById('bar');
+    buildChapters();
+    bindControls();
+    if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize);
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
+  }
+};
+window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 154, "last": 158, "note": "调用此函数并追加一个子项；并非前一个 Pixel_Defect_Test 的返回值。", "code": "  154      items_results.push_back(Algorithm_all[site_].PKG_Test(test_manage));\n  155      items_results.push_back(Algorithm_all[site_].Blemish_Test(test_manage));\n  156      items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage,External_Configuration));\n  157      items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));//只想卡单点，且可以分梯度\n  158      items_results.push_back(Algorithm_all[site_].ROI_PRNU( test_manage));"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3285, "last": 3300, "note": "重新运行四通道像素检测并取得计数。", "code": " 3285          TestItem::find_pixel_defect(g_buf_r_, g_buf_gr_, g_buf_gb_, g_buf_b_,\n 3286                                      g_buf_delta_r_, g_buf_delta_gr_, g_buf_delta_gb_, g_buf_delta_b_, g_buf_delta_raw_,\n 3287                                      g_binary_r_, g_binary_gr_, g_binary_gb_, g_binary_b_, g_binary_,\n 3288                                      g_buf_blemish_r_, g_buf_blemish_gr_, g_buf_blemish_gb_, g_buf_blemish_b_, g_buf_blemish_raw_,\n 3289                                      w, h, manage.param_single_pixel_defect_.cnt_skip_, manage.param_single_pixel_defect_.r_area_,\n 3290                                      diff_spec_r_,diff_spec_gr_,diff_spec_gb_,diff_spec_b_,\n 3291                                      diff_blemish_spec_r_,diff_blemish_spec_gr_,diff_blemish_spec_gb_,diff_blemish_spec_b_,\n 3292                                      spec_mode_, manage.bayer_,cnts_cluster, cnt_2x4_pix, cnt_2x2_pix,\n 3293                                      cnt_1x2_2x1_pix, cnt_2x2_diagonal_pix, cnt_1x2_ch,\n 3294                                      cnt_2x1_ch, cnt_2x2_leftdiagonal_ch, cnt_2x2_rightdiagonal_ch,\n 3295                                      cnt_white_pix, cnt_dark_pix, paticle, other_cluster,\n 3296                                      other_cluster_ch, total_cluster_cnt,\n 3297                                      manage.param_single_pixel_defect_.blemish_global_size_limit_,\n 3298                                      manage.param_single_pixel_defect_.blemish_bychannel_size_limit_,\n 3299                                      blemish_cnt,cnt_white_pix_blemish,cnt_dark_pix_blemish,g_buf_tmp_,\n 3300                                      manage.param_single_pixel_defect_.save_image_, g_str_msg_all[site_]);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp", "first": 400, "last": 404, "note": "初始化参数时尝试加载 PD.data。", "code": "  400  \n  401  \n  402      item =QString(\"PD.data\");\n  403      ok = tmp->load_Pixel_Defect_Single_Param (path_txt.toStdString());\n  404      if (ok) item_actual.append(item);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp", "first": 4988, "last": 5002, "note": "打开成功后赋版本，解析尚未完成。", "code": " 4988  bool ParamManage::load_Pixel_Defect_Single_Param(const std::string &dir)\n 4989  {\n 4990      std::string path_file = dir;\n 4991      path_file.append(\"/PD.data\");\n 4992      QFile file(QString::fromStdString(path_file));\n 4993      if(!file.open(QFile::Text | QFile::ReadOnly))\n 4994          return false;\n 4995  \n 4996      QTextStream rd(&file);\n 4997      bool ok = true;\n 4998      int cnt_param = 0;\n 4999  \n 5000      single_pixel_defect_version = \"PD_V1.0\";\n 5001  \n 5002      while(ok && !rd.atEnd())"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp", "first": 5387, "last": 5403, "note": "检查解析及字段数量；文件缺失时无法确定实际配置。", "code": " 5387      file.close();\n 5388  \n 5389      if(!ok)\n 5390      {\n 5391          msg_.append(\"PixelDefect Param error, please check!!!\\n\");\n 5392          return false;\n 5393      }\n 5394      else if(cnt_param != 37)\n 5395      {\n 5396          msg_.append(\"PixelDefect Param not enough, loaded \"+QString::number(cnt_param)+\" params\\n\");\n 5397          return false;\n 5398      }\n 5399      else\n 5400          return true;\n 5401  }\n 5402  \n 5403  "}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3205, "last": 3209, "note": "type 为 0 或 1 时覆盖传入类型。", "code": " 3205      if(manage.param_single_pixel_defect_.type_ == 0)\n 3206          type = Pixel_Defect_dark;\n 3207      else if(manage.param_single_pixel_defect_.type_ == 1)\n 3208          type = Pixel_Defect_bright;\n 3209  "}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3253, "last": 3282, "note": "bright 使用比例阈值，dark 使用 DN 阈值。", "code": " 3253          Spec_Mode spec_mode_=Ratio;\n 3254  \n 3255          if(type==Pixel_Defect_bright)\n 3256          {\n 3257              g_str_msg_all[site_]+=boost::str(boost::format(\"type==Pixel_Defect_bright \\n\"));\n 3258  \n 3259              diff_spec_r_= manage.param_single_pixel_defect_.ratio_diff_spec_r_;\n 3260              diff_spec_gr_= manage.param_single_pixel_defect_.ratio_diff_spec_gr_;\n 3261              diff_spec_gb_ =manage.param_single_pixel_defect_.ratio_diff_spec_gb_;\n 3262              diff_spec_b_= manage.param_single_pixel_defect_.ratio_diff_spec_b_;\n 3263  \n 3264              diff_blemish_spec_r_= manage.param_single_pixel_defect_.blemish_spec_r_;\n 3265              diff_blemish_spec_gr_= manage.param_single_pixel_defect_.blemish_spec_gr_;\n 3266              diff_blemish_spec_gb_ = manage.param_single_pixel_defect_.blemish_spec_gb_;\n 3267              diff_blemish_spec_b_= manage.param_single_pixel_defect_.blemish_spec_b_;\n 3268          }\n 3269          else if(type==Pixel_Defect_dark)\n 3270          {\n 3271              g_str_msg_all[site_]+=boost::str(boost::format(\"type==Pixel_Defect_dark \\n\"));\n 3272  \n 3273              diff_spec_r_= manage.param_single_pixel_defect_.DN_diff_spec_r_;\n 3274              diff_spec_gr_= manage.param_single_pixel_defect_.DN_diff_spec_gr_;\n 3275              diff_spec_gb_ =manage.param_single_pixel_defect_.DN_diff_spec_gb_;\n 3276              diff_spec_b_= manage.param_single_pixel_defect_.DN_diff_spec_b_;\n 3277  \n 3278              diff_blemish_spec_r_= manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3279              diff_blemish_spec_gr_= manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3280              diff_blemish_spec_gb_ = manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3281              diff_blemish_spec_b_= manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3282              spec_mode_=DN;"}], [{"path": "STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data", "first": 1, "last": 3, "note": "这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。", "code": "    1  [width]=3840\n    2  [height]=2160\n    3  [bayer]=RG"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 64, "last": 78, "note": "循环每次跨两行、两列，把 2×2 各位置写入对应通道。", "code": "   64      distribute_pointer_by_RGB_BAYER(bayer,&pb1,&pb2,&pb3,&pb4,\n   65                                      g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);\n   66  \n   67      for (int i=0; i<h; i=i+2)\n   68      {\n   69          for (int j=0; j<w; j=j+2)\n   70          {\n   71              *pb1++ = g_buf_raw_[w*i+ j];\n   72              *pb2++ = g_buf_raw_[w*i+ j+1];\n   73          }\n   74          for (int j=0; j<w; j=j+2)\n   75          {\n   76              *pb3++ = g_buf_raw_[w*(i+1)+ j];\n   77              *pb4++ = g_buf_raw_[w*(i+1)+ j+1];\n   78          }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 2855, "last": 2877, "note": "四通道分别检测并合回 Bayer。", "code": " 2855      MultiThread::bychannel_pixel_defect_binarization *p_binary[Channel_Num];\n 2856      for (int i=0; i < Channel_Num; i++)\n 2857      {\n 2858          p_binary[i] = new MultiThread::bychannel_pixel_defect_binarization();\n 2859      }\n 2860  \n 2861      p_binary[R]->setparam(g_buf_r_,g_buf_delta_r_,g_binary_r_,g_blemish_r_,w/2,h/2,skip,radius,spec_r,spec_blemish_r,mode);\n 2862      p_binary[Gr]->setparam(g_buf_gr_,g_buf_delta_gr_,g_binary_gr_,g_blemish_gr_,w/2,h/2,skip,radius,spec_gr,spec_blemish_gr,mode);\n 2863      p_binary[Gb]->setparam(g_buf_gb_,g_buf_delta_gb_,g_binary_gb_,g_blemish_gb_,w/2,h/2,skip,radius,spec_gb,spec_blemish_gb,mode);\n 2864      p_binary[B]->setparam(g_buf_b_,g_buf_delta_b_,g_binary_b_,g_blemish_b_,w/2,h/2,skip,radius,spec_b,spec_blemish_b,mode);\n 2865  \n 2866      for (int i=0; i < Channel_Num; i++)\n 2867      {\n 2868          p_binary[i]->start();\n 2869      }\n 2870      for (int i=0; i < Channel_Num; i++)\n 2871      {\n 2872          p_binary[i]->wait();\n 2873      }\n 2874  \n 2875      //若为4C结构，此处存在问题\n 2876      AlgorithmFuncs::RGGB_Map_Integrate_chao (g_binary_r_,g_binary_gr_,g_binary_gb_,\n 2877                                              g_binary_b_,g_binary_,w,h,bayer);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9155, "last": 9164, "note": "内部点四块邻域的和；假设半径为 5。", "code": " 9155          vector<double> sum_t(4,0.0);\n 9156          for(int x=0; x<r; x++)\n 9157          {\n 9158              sum_t[0]+=vec_up[x];\n 9159              sum_t[1]+=vec_done[x];\n 9160              sum_t[2]+=vec_up[x+r+1];\n 9161              sum_t[3]+=vec_done[x+r+1];\n 9162          }\n 9163  \n 9164          for (int j=skipCnt; j<w-skipCnt; ++j)"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9164, "last": 9184, "note": "四个滑动邻域的和除以 r*r 得均值，再计算目标与各邻域的比例差。", "code": " 9164          for (int j=skipCnt; j<w-skipCnt; ++j)\n 9165          {\n 9166  \n 9167              if( j>r && j< w-r)\n 9168              {\n 9169                  sum_t[0] = sum_t[0] - vec_up[j-r-1]   + vec_up[j-1] ;\n 9170                  sum_t[1] = sum_t[1] - vec_done[j-r-1] + vec_done[j-1] ;\n 9171                  sum_t[2] = sum_t[2] - vec_up[j]       + vec_up[j+r] ;\n 9172                  sum_t[3] = sum_t[3] - vec_done[j]     + vec_done[j+r] ;\n 9173              }\n 9174  \n 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9175, "last": 9198, "note": "Ratio 模式计算绝对差与邻域均值的比；任何一个超过 spec 就增加 flag。", "code": " 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];\n 9185              }\n 9186              else if(mode==DN)\n 9187              {\n 9188                  for(int n=0; n<4; n++)\n 9189                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n]);\n 9190              }\n 9191  \n 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);\n 9194  \n 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9195, "last": 9204, "note": "只要有一个严格超主阈值就标记主图。", "code": " 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;\n 9199  \n 9200  \n 9201              if (flag>0)\n 9202              {\n 9203                  out_raw8[w*i+j] = 255;\n 9204                  out_blemish[w*i+j] = 0;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9192, "last": 9217, "note": "方向差使用四块均值的平均；主图和 blemish 标记互斥。", "code": " 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);\n 9194  \n 9195              int flag=0;\n 9196              for(int n=0; n<4; n++)\n 9197                  if(compareValue[n]>spec)\n 9198                      flag++;\n 9199  \n 9200  \n 9201              if (flag>0)\n 9202              {\n 9203                  out_raw8[w*i+j] = 255;\n 9204                  out_blemish[w*i+j] = 0;\n 9205              }\n 9206              else\n 9207              {\n 9208                  out_raw8[w*i+j] = 0;\n 9209  \n 9210                  int flag_b=0;\n 9211                  for(int n=0; n<4; n++)\n 9212                      if(compareValue[n]>spec_b)\n 9213                          flag_b++;\n 9214                  if(flag_b>0)\n 9215                      out_blemish[w*i+j] = 255;\n 9216                  else\n 9217                      out_blemish[w*i+j] = 0;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 2924, "last": 2937, "note": "方向差严格大于零计亮，否则计暗。", "code": " 2924      for (int i=0; i<h; ++i)\n 2925      {\n 2926          for (int j=0; j<w; ++j)\n 2927          {\n 2928              if (g_binary_[w*i+j] > 128)\n 2929              {\n 2930                  if(g_buf_delta_raw_[w*i+j] >0)\n 2931                      cnt_white_pix++;\n 2932                  else\n 2933                      cnt_dark_pix++;}\n 2934          }\n 2935      }\n 2936      cnt_white_pix = cnt_white_pix - cnt_1x2_2x1_pix - cnt_2x2_diagonal_pix;\n 2937      cnt_dark_pix = cnt_dark_pix - cnt_1x2_2x1_pix - cnt_2x2_diagonal_pix;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 2875, "last": 2881, "note": "合并标记及差值。", "code": " 2875      //若为4C结构，此处存在问题\n 2876      AlgorithmFuncs::RGGB_Map_Integrate_chao (g_binary_r_,g_binary_gr_,g_binary_gb_,\n 2877                                              g_binary_b_,g_binary_,w,h,bayer);\n 2878      AlgorithmFuncs::RGGB_Map_Integrate_chao (g_blemish_r_,g_blemish_gr_,g_blemish_gb_,\n 2879                                               g_blemish_b_,g_blemish_,w,h,bayer);\n 2880      AlgorithmFuncs::RGGB_Map_Integrate_chao (g_buf_delta_r_,g_buf_delta_gr_,g_buf_delta_gb_,\n 2881                                               g_buf_delta_b_,g_buf_delta_raw_,w,h,bayer);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 2905, "last": 2942, "note": "团簇计数和亮暗计数的具体处理；并非删除所有团簇。", "code": " 2905      clock_t start_time = clock();\n 2906      total_cluster_cnt = AlgorithmFuncs::FindALLClusterBayer_in_binary(g_binary_, buf_map,\n 2907                                                                        w, h,\n 2908                                                                        cnts_cluster,\n 2909                                                                        cnt_2x4_pix,\n 2910                                                                        cnt_2x2_pix,\n 2911                                                                        cnt_1x2_2x1_pix,\n 2912                                                                        cnt_2x2_diagonal_pix,\n 2913                                                                        cnt_1x2_ch,\n 2914                                                                        cnt_2x1_ch,\n 2915                                                                        cnt_2x2_leftdiagonal,\n 2916                                                                        cnt_2x2_rightdiagonal,\n 2917                                                                        cnt_white_pix,\n 2918                                                                        cnt_dark_pix,\n 2919                                                                        paticle,\n 2920                                                                        other_cluster,\n 2921                                                                        other_cluster_ch,\n 2922                                                                        g_str_msg_);\n 2923  \n 2924      for (int i=0; i<h; ++i)\n 2925      {\n 2926          for (int j=0; j<w; ++j)\n 2927          {\n 2928              if (g_binary_[w*i+j] > 128)\n 2929              {\n 2930                  if(g_buf_delta_raw_[w*i+j] >0)\n 2931                      cnt_white_pix++;\n 2932                  else\n 2933                      cnt_dark_pix++;}\n 2934          }\n 2935      }\n 2936      cnt_white_pix = cnt_white_pix - cnt_1x2_2x1_pix - cnt_2x2_diagonal_pix;\n 2937      cnt_dark_pix = cnt_dark_pix - cnt_1x2_2x1_pix - cnt_2x2_diagonal_pix;\n 2938  \n 2939      if(cnt_white_pix<0)\n 2940          cnt_white_pix =0;\n 2941      if(cnt_dark_pix<0)\n 2942          cnt_dark_pix =0;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3303, "last": 3325, "note": "亮点三档分别比较，示例分档均是假设。", "code": " 3303              Subitem_Result res_singe_wp(\"single_pix_WP_\",true,1,0);\n 3304              Subitem_Result res_singe_dp(\"single_pix_DP_\",true,1,0);\n 3305  \n 3306              if (cnt_white_pix>=manage.param_single_pixel_defect_.limit_wp1_ &&\n 3307                      cnt_white_pix<manage.param_single_pixel_defect_.limit_wp2_)\n 3308              {\n 3309                  res_singe_wp.bin =manage.param_single_pixel_defect_.bin_limit_wp1_ ;\n 3310                  res_singe_wp.grade = manage.param_single_pixel_defect_.grade_limit_wp1_;\n 3311                  res_singe_wp.is_passed = false;\n 3312              }\n 3313              else if (cnt_white_pix>=manage.param_single_pixel_defect_.limit_wp2_ &&\n 3314                       cnt_white_pix<manage.param_single_pixel_defect_.limit_wp3_)\n 3315              {\n 3316                  res_singe_wp.bin =manage.param_single_pixel_defect_.bin_limit_wp2_ ;\n 3317                  res_singe_wp.grade = manage.param_single_pixel_defect_.grade_limit_wp2_;\n 3318                  res_singe_wp.is_passed = false;\n 3319              }\n 3320              else if (cnt_white_pix>=manage.param_single_pixel_defect_.limit_wp3_)\n 3321              {\n 3322                  res_singe_wp.bin =manage.param_single_pixel_defect_.bin_limit_wp3_ ;\n 3323                  res_singe_wp.grade = manage.param_single_pixel_defect_.grade_limit_wp3_;\n 3324                  res_singe_wp.is_passed = false;\n 3325              }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3327, "last": 3346, "note": "暗点也采用三档。", "code": " 3327              if (cnt_dark_pix>=manage.param_single_pixel_defect_.limit_dp1_ &&\n 3328                      cnt_dark_pix< manage.param_single_pixel_defect_.limit_dp2_)\n 3329              {\n 3330                  res_singe_dp.bin = manage.param_single_pixel_defect_.bin_limit_dp1_ ;\n 3331                  res_singe_dp.grade = manage.param_single_pixel_defect_.grade_limit_dp1_;\n 3332                  res_singe_dp.is_passed = false;\n 3333              }\n 3334              else if (cnt_dark_pix>=manage.param_single_pixel_defect_.limit_dp2_ &&\n 3335                       cnt_dark_pix< manage.param_single_pixel_defect_.limit_dp3_)\n 3336              {\n 3337                  res_singe_dp.bin = manage.param_single_pixel_defect_.bin_limit_dp2_ ;\n 3338                  res_singe_dp.grade = manage.param_single_pixel_defect_.grade_limit_dp2_;\n 3339                  res_singe_dp.is_passed = false;\n 3340              }\n 3341              else if (cnt_dark_pix>=manage.param_single_pixel_defect_.limit_dp3_ )\n 3342              {\n 3343                  res_singe_dp.bin = manage.param_single_pixel_defect_.bin_limit_dp3_ ;\n 3344                  res_singe_dp.grade = manage.param_single_pixel_defect_.grade_limit_dp3_;\n 3345                  res_singe_dp.is_passed = false;\n 3346              }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3348, "last": 3359, "note": "暗 grade 严格更高才选暗；相等选亮。", "code": " 3348              if(res_singe_dp.grade > res_singe_wp.grade)\n 3349              {\n 3350                  res.bin = res_singe_dp.bin;\n 3351                  res.grade = res_singe_dp.grade;\n 3352                  res.is_passed = res_singe_dp.is_passed;\n 3353              }\n 3354              else\n 3355              {\n 3356                  res.bin = res_singe_wp.bin;\n 3357                  res.grade = res_singe_wp.grade;\n 3358                  res.is_passed = res_singe_wp.is_passed;\n 3359              }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3362, "last": 3386, "note": "选亮、暗或总数；超过上限时直接覆盖，无 grade 比较。", "code": " 3362              //通过外配来卡黑点、白点还是白点+黑点\n 3363              int pixel_count_to_check = 0;\n 3364              if(manage.param_single_pixel_defect_.single_pix_type_ == 0)          // cnt_dark_pix\n 3365              {\n 3366                  pixel_count_to_check = cnt_dark_pix;\n 3367                  g_str_msg_all[site_]+=boost::str(boost::format(\"cnt_dark_pix check\\n\"));\n 3368              }\n 3369              else if(manage.param_single_pixel_defect_.single_pix_type_ == 1)     // cnt_white_pix\n 3370              {\n 3371                  pixel_count_to_check = cnt_white_pix;\n 3372                  g_str_msg_all[site_]+=boost::str(boost::format(\"cnt_white_pix check\\n\"));\n 3373              }\n 3374              else if(manage.param_single_pixel_defect_.single_pix_type_ == 2)     // cnt_white_pix + cnt_dark_pix\n 3375              {\n 3376                  pixel_count_to_check = cnt_white_pix + cnt_dark_pix;\n 3377                  g_str_msg_all[site_]+=boost::str(boost::format(\"cnt_white_pix + cnt_dark_pix check\\n\"));\n 3378              }\n 3379  \n 3380  \n 3381              if ((pixel_count_to_check) > manage.param_single_pixel_defect_.single_pix_limit_)\n 3382              {\n 3383                  res.bin = manage.param_single_pixel_defect_.bin_single_pix_;\n 3384                  res.grade = manage.param_single_pixel_defect_.grade10_;\n 3385                  res.is_passed = false;\n 3386              }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3190, "last": 3203, "note": "未知版本与 V1.0 初始结果不同。", "code": " 3190      Subitem_Result res(\"Single_Pixel_Defect\", false);\n 3191      res.g_msg = false;\n 3192      return res;\n 3193  }\n 3194  \n 3195  Subitem_Result AlgorithmItems::Single_Pixel_Defect_Test_V1_0( ParamManage& manage,Pixel_Defect_type type)\n 3196  {\n 3197  \n 3198  //    Subitem_Result res(\"Single_Pixel_Defect\",false,\n 3199  //                       0,\n 3200  //                       0);\n 3201          Subitem_Result res(\"Single_Pixel_Defect\",true,\n 3202                             1,\n 3203                             0);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3399, "last": 3407, "note": "关闭开关不参与汇总并返回。", "code": " 3399      }\n 3400      else\n 3401      {\n 3402          res.g_msg = false;\n 3403      }\n 3404  \n 3405  \n 3406  \n 3407      return res;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 154, "last": 158, "note": "调用方 push_back 一个子项。", "code": "  154      items_results.push_back(Algorithm_all[site_].PKG_Test(test_manage));\n  155      items_results.push_back(Algorithm_all[site_].Blemish_Test(test_manage));\n  156      items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage,External_Configuration));\n  157      items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));//只想卡单点，且可以分梯度\n  158      items_results.push_back(Algorithm_all[site_].ROI_PRNU( test_manage));"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5903, "last": 5926, "note": "遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。", "code": " 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector<Subitem_Result>& items_results)\n 5904  {\n 5905      Subitem_Result final_result(\"The initial value\",true,1,0,true);\n 5906  \n 5907      for(int i=0;i!=items_results.size();++i)\n 5908      {\n 5909          const Subitem_Result& item=items_results[i];\n 5910  \n 5911          if(item.g_msg == false)\n 5912              continue;\n 5913  \n 5914          std::string item_log =item.name;\n 5915          QString log_;\n 5916          if(item.is_passed)\n 5917              log_+=\" is Pass. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5918          else\n 5919              log_+=\" is Failed. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5920  \n 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();\n 5922  \n 5923          if(!item.is_passed && item.grade>final_result.grade)\n 5924              final_result=item;\n 5925      }\n 5926      return final_result;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3255, "last": 3300, "note": "该路径读取 blemish 字段并传入检测函数；需检查其初始化。", "code": " 3255          if(type==Pixel_Defect_bright)\n 3256          {\n 3257              g_str_msg_all[site_]+=boost::str(boost::format(\"type==Pixel_Defect_bright \\n\"));\n 3258  \n 3259              diff_spec_r_= manage.param_single_pixel_defect_.ratio_diff_spec_r_;\n 3260              diff_spec_gr_= manage.param_single_pixel_defect_.ratio_diff_spec_gr_;\n 3261              diff_spec_gb_ =manage.param_single_pixel_defect_.ratio_diff_spec_gb_;\n 3262              diff_spec_b_= manage.param_single_pixel_defect_.ratio_diff_spec_b_;\n 3263  \n 3264              diff_blemish_spec_r_= manage.param_single_pixel_defect_.blemish_spec_r_;\n 3265              diff_blemish_spec_gr_= manage.param_single_pixel_defect_.blemish_spec_gr_;\n 3266              diff_blemish_spec_gb_ = manage.param_single_pixel_defect_.blemish_spec_gb_;\n 3267              diff_blemish_spec_b_= manage.param_single_pixel_defect_.blemish_spec_b_;\n 3268          }\n 3269          else if(type==Pixel_Defect_dark)\n 3270          {\n 3271              g_str_msg_all[site_]+=boost::str(boost::format(\"type==Pixel_Defect_dark \\n\"));\n 3272  \n 3273              diff_spec_r_= manage.param_single_pixel_defect_.DN_diff_spec_r_;\n 3274              diff_spec_gr_= manage.param_single_pixel_defect_.DN_diff_spec_gr_;\n 3275              diff_spec_gb_ =manage.param_single_pixel_defect_.DN_diff_spec_gb_;\n 3276              diff_spec_b_= manage.param_single_pixel_defect_.DN_diff_spec_b_;\n 3277  \n 3278              diff_blemish_spec_r_= manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3279              diff_blemish_spec_gr_= manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3280              diff_blemish_spec_gb_ = manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3281              diff_blemish_spec_b_= manage.param_single_pixel_defect_.blemish_dn_spec_;\n 3282              spec_mode_=DN;\n 3283          }\n 3284  \n 3285          TestItem::find_pixel_defect(g_buf_r_, g_buf_gr_, g_buf_gb_, g_buf_b_,\n 3286                                      g_buf_delta_r_, g_buf_delta_gr_, g_buf_delta_gb_, g_buf_delta_b_, g_buf_delta_raw_,\n 3287                                      g_binary_r_, g_binary_gr_, g_binary_gb_, g_binary_b_, g_binary_,\n 3288                                      g_buf_blemish_r_, g_buf_blemish_gr_, g_buf_blemish_gb_, g_buf_blemish_b_, g_buf_blemish_raw_,\n 3289                                      w, h, manage.param_single_pixel_defect_.cnt_skip_, manage.param_single_pixel_defect_.r_area_,\n 3290                                      diff_spec_r_,diff_spec_gr_,diff_spec_gb_,diff_spec_b_,\n 3291                                      diff_blemish_spec_r_,diff_blemish_spec_gr_,diff_blemish_spec_gb_,diff_blemish_spec_b_,\n 3292                                      spec_mode_, manage.bayer_,cnts_cluster, cnt_2x4_pix, cnt_2x2_pix,\n 3293                                      cnt_1x2_2x1_pix, cnt_2x2_diagonal_pix, cnt_1x2_ch,\n 3294                                      cnt_2x1_ch, cnt_2x2_leftdiagonal_ch, cnt_2x2_rightdiagonal_ch,\n 3295                                      cnt_white_pix, cnt_dark_pix, paticle, other_cluster,\n 3296                                      other_cluster_ch, total_cluster_cnt,\n 3297                                      manage.param_single_pixel_defect_.blemish_global_size_limit_,\n 3298                                      manage.param_single_pixel_defect_.blemish_bychannel_size_limit_,\n 3299                                      blemish_cnt,cnt_white_pix_blemish,cnt_dark_pix_blemish,g_buf_tmp_,\n 3300                                      manage.param_single_pixel_defect_.save_image_, g_str_msg_all[site_]);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp", "first": 5387, "last": 5403, "note": "专用加载器的结束处；核查完整 4988–5403 行有哪些字段被读取。", "code": " 5387      file.close();\n 5388  \n 5389      if(!ok)\n 5390      {\n 5391          msg_.append(\"PixelDefect Param error, please check!!!\\n\");\n 5392          return false;\n 5393      }\n 5394      else if(cnt_param != 37)\n 5395      {\n 5396          msg_.append(\"PixelDefect Param not enough, loaded \"+QString::number(cnt_param)+\" params\\n\");\n 5397          return false;\n 5398      }\n 5399      else\n 5400          return true;\n 5401  }\n 5402  \n 5403  "}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9180, "last": 9189, "note": "比例模式没有单独的零分母检查。", "code": " 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];\n 9185              }\n 9186              else if(mode==DN)\n 9187              {\n 9188                  for(int n=0; n<4; n++)\n 9189                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n]);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3303, "last": 3359, "note": "分别分档，再按 grade 竞争。", "code": " 3303              Subitem_Result res_singe_wp(\"single_pix_WP_\",true,1,0);\n 3304              Subitem_Result res_singe_dp(\"single_pix_DP_\",true,1,0);\n 3305  \n 3306              if (cnt_white_pix>=manage.param_single_pixel_defect_.limit_wp1_ &&\n 3307                      cnt_white_pix<manage.param_single_pixel_defect_.limit_wp2_)\n 3308              {\n 3309                  res_singe_wp.bin =manage.param_single_pixel_defect_.bin_limit_wp1_ ;\n 3310                  res_singe_wp.grade = manage.param_single_pixel_defect_.grade_limit_wp1_;\n 3311                  res_singe_wp.is_passed = false;\n 3312              }\n 3313              else if (cnt_white_pix>=manage.param_single_pixel_defect_.limit_wp2_ &&\n 3314                       cnt_white_pix<manage.param_single_pixel_defect_.limit_wp3_)\n 3315              {\n 3316                  res_singe_wp.bin =manage.param_single_pixel_defect_.bin_limit_wp2_ ;\n 3317                  res_singe_wp.grade = manage.param_single_pixel_defect_.grade_limit_wp2_;\n 3318                  res_singe_wp.is_passed = false;\n 3319              }\n 3320              else if (cnt_white_pix>=manage.param_single_pixel_defect_.limit_wp3_)\n 3321              {\n 3322                  res_singe_wp.bin =manage.param_single_pixel_defect_.bin_limit_wp3_ ;\n 3323                  res_singe_wp.grade = manage.param_single_pixel_defect_.grade_limit_wp3_;\n 3324                  res_singe_wp.is_passed = false;\n 3325              }\n 3326  \n 3327              if (cnt_dark_pix>=manage.param_single_pixel_defect_.limit_dp1_ &&\n 3328                      cnt_dark_pix< manage.param_single_pixel_defect_.limit_dp2_)\n 3329              {\n 3330                  res_singe_dp.bin = manage.param_single_pixel_defect_.bin_limit_dp1_ ;\n 3331                  res_singe_dp.grade = manage.param_single_pixel_defect_.grade_limit_dp1_;\n 3332                  res_singe_dp.is_passed = false;\n 3333              }\n 3334              else if (cnt_dark_pix>=manage.param_single_pixel_defect_.limit_dp2_ &&\n 3335                       cnt_dark_pix< manage.param_single_pixel_defect_.limit_dp3_)\n 3336              {\n 3337                  res_singe_dp.bin = manage.param_single_pixel_defect_.bin_limit_dp2_ ;\n 3338                  res_singe_dp.grade = manage.param_single_pixel_defect_.grade_limit_dp2_;\n 3339                  res_singe_dp.is_passed = false;\n 3340              }\n 3341              else if (cnt_dark_pix>=manage.param_single_pixel_defect_.limit_dp3_ )\n 3342              {\n 3343                  res_singe_dp.bin = manage.param_single_pixel_defect_.bin_limit_dp3_ ;\n 3344                  res_singe_dp.grade = manage.param_single_pixel_defect_.grade_limit_dp3_;\n 3345                  res_singe_dp.is_passed = false;\n 3346              }\n 3347  \n 3348              if(res_singe_dp.grade > res_singe_wp.grade)\n 3349              {\n 3350                  res.bin = res_singe_dp.bin;\n 3351                  res.grade = res_singe_dp.grade;\n 3352                  res.is_passed = res_singe_dp.is_passed;\n 3353              }\n 3354              else\n 3355              {\n 3356                  res.bin = res_singe_wp.bin;\n 3357                  res.grade = res_singe_wp.grade;\n 3358                  res.is_passed = res_singe_wp.is_passed;\n 3359              }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3362, "last": 3386, "note": "仅以假设输入和参数模拟最终覆盖。", "code": " 3362              //通过外配来卡黑点、白点还是白点+黑点\n 3363              int pixel_count_to_check = 0;\n 3364              if(manage.param_single_pixel_defect_.single_pix_type_ == 0)          // cnt_dark_pix\n 3365              {\n 3366                  pixel_count_to_check = cnt_dark_pix;\n 3367                  g_str_msg_all[site_]+=boost::str(boost::format(\"cnt_dark_pix check\\n\"));\n 3368              }\n 3369              else if(manage.param_single_pixel_defect_.single_pix_type_ == 1)     // cnt_white_pix\n 3370              {\n 3371                  pixel_count_to_check = cnt_white_pix;\n 3372                  g_str_msg_all[site_]+=boost::str(boost::format(\"cnt_white_pix check\\n\"));\n 3373              }\n 3374              else if(manage.param_single_pixel_defect_.single_pix_type_ == 2)     // cnt_white_pix + cnt_dark_pix\n 3375              {\n 3376                  pixel_count_to_check = cnt_white_pix + cnt_dark_pix;\n 3377                  g_str_msg_all[site_]+=boost::str(boost::format(\"cnt_white_pix + cnt_dark_pix check\\n\"));\n 3378              }\n 3379  \n 3380  \n 3381              if ((pixel_count_to_check) > manage.param_single_pixel_defect_.single_pix_limit_)\n 3382              {\n 3383                  res.bin = manage.param_single_pixel_defect_.bin_single_pix_;\n 3384                  res.grade = manage.param_single_pixel_defect_.grade10_;\n 3385                  res.is_passed = false;\n 3386              }"}]];
+</script><script>
+const state=AlgoAnim.state;state.wp=3;state.dp=3;
+// 独立的教学假设，非 PD.data：亮/暗分段、bin、grade 与总数上限。
+const HYP={limits:[1,3,6],wpBins:[101,102,103],wpGrades:[1,3,5],dpBins:[201,202,203],dpGrades:[1,3,4],totalLimit:8,totalBin:999,totalGrade:2};
+function tier(n,bins,grades){let k=n>=HYP.limits[2]?2:n>=HYP.limits[1]?1:n>=HYP.limits[0]?0:-1;return k<0?{pass:true,bin:1,grade:0,tier:0}:{pass:false,bin:bins[k],grade:grades[k],tier:k+1};}
+function judge(wp,dp,type=2){const w=tier(wp,HYP.wpBins,HYP.wpGrades),d=tier(dp,HYP.dpBins,HYP.dpGrades);const chosen=d.grade>w.grade?d:w;const count=type===0?dp:type===1?wp:type===2?wp+dp:0;const overridden=count>HYP.totalLimit;return {w,d,chosen,count,overridden,result:overridden?{pass:false,bin:HYP.totalBin,grade:HYP.totalGrade}:chosen};}
+function point(v){const means=[180,190,200,210],diff=means.map(m=>Math.abs(v-m)/m),delta=v-195;return {means,diff,delta,primary:diff.some(d=>d>.30)};}
+function panel(x,y,w,h){card(x,y,w,h,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});}
+function chip(x,y,w,h,title,sub,color){card(x,y,w,h,{r:8,fill:withA(color,.13),stroke:withA(color,.6)});txt(title,x+14,y+25,{size:15,weight:700,color});if(sub)txt(sub,x+14,y+49,{size:12,color:C.ink});}
+function flow(x,y,x2,y2,p){if(p>0)arrow(x,y,x+(x2-x)*ease(clamp01(p)),y+(y2-y)*ease(clamp01(p)),C.accent2,2);}
+function note(s){txt(s,55,535,{size:12,color:C.dim});}
+function patch(x,y){const cols=['#6ea8fe','#6ad9c4','#b79aff','#ffb078'];for(let j=0;j<11;j++)for(let i=0;i<11;i++){const center=i===5&&j===5,q=i===5||j===5?-1:(j>5?2:0)+(i>5?1:0),c=center?C.accent2:q<0?C.dim:cols[q];card(x+i*25,y+j*25,23,23,{r:2,fill:withA(c,center?.55:q<0?.06:.22),stroke:withA(c,.38)});}txt('目标 + 四块 5×5（假设）',x,y+305,{size:13,color:C.accent2});}
+function bars(x,y,w,n,color){card(x,y,w,12,{r:5,fill:'rgba(125,155,195,.22)',stroke:false});card(x,y,Math.max(1,w*Math.min(n,10)/10),12,{r:5,fill:color,stroke:false});[1,3,6].forEach(v=>card(x+w*v/10-2,y-5,4,22,{r:2,fill:C.accent2,stroke:false}));}
+function intro(p){header(0,'一眼看懂','先找像素标记，再按亮点和暗点数量分档');patch(55,165);if(p>.2){flow(350,290,400,290,seg(p,.2,.4));chip(415,195,225,75,'亮点 / 暗点','经二值与团簇统计',C.accent);}if(p>.45){flow(650,232,690,232,seg(p,.45,.6));chip(700,195,225,75,'分别分档','比较各自 grade',C.accent2);}if(p>.7)chip(415,345,510,70,'总数限制可能覆盖分档结果','最后返回一个子项，追加到 items_results',CH.Gr);note('本页像素、计数与所有 PD 专用参数均为教学假设。');}
+function config(p){header(1,'配置与版本','PD.data 缺失：不能推断本目录的版本、开关或阈值');panel(55,155,880,315);chip(80,190,370,70,'真实：Basic.data','RAW 3840×2160，RG Bayer',C.accent);chip(500,190,405,70,'PD.data：仓库未找到','不是 PixelDefect.data',C.fail);if(p>.3)txt('加载器打开成功后赋 PD_V1.0，解析仍可能失败',80,325,{size:15});if(p>.65)txt('下面演示假设 open_mode=1、type=1；参数不代表实测',80,400,{size:15,color:C.accent2,weight:700});note('配置原文和源码摘录在页面中；示例并不等于真实设备配置。');}
+function mode(p){header(2,'模式选择','type 配置决定亮帧比例或暗帧 DN 比较');chip(80,190,370,100,'type = 1 → bright','|目标 − 邻域均值| ÷ 邻域均值',C.accent);if(p>.25)chip(525,190,370,100,'type = 0 → dark','|目标 − 邻域均值|，单位 DN',C.accent2);if(p>.55){panel(80,345,815,85);txt('其他 type：保留传入参数；本页假设 type=1',100,395,{size:16,weight:700});}note('External_Configuration 是调用参数；type 为 0 或 1 时被配置覆盖。');}
+function channels(p){header(3,'分通道','RG Bayer 拆成 R、Gr、Gb、B 四张图');chip(55,220,220,100,'RAW 3840×2160','Basic.data 的示例尺寸',C.accent2);['R','Gr','Gb','B'].forEach((v,i)=>{if(p>=i*.15){flow(285,270,340,270,seg(p,.05,.28));chip(360+(i%2)*280,155+Math.floor(i/2)*145,250,90,v+' 通道','1920×1080；分别比较',CH[v]);}});note('图像尺寸来自 Basic.data；本页只模拟一个内部 Gr 点。');}
+function neighborhood(p){header(4,'四块邻域','目标不参与四个对角邻域的均值');patch(55,160);panel(415,155,520,315);txt('假设 radius=5：四块各 5×5',435,205,{size:16,weight:700,color:C.accent2});if(p>.25)txt('四块均值：180 / 190 / 200 / 210 DN',435,275,{size:15});if(p>.5)txt('目标值 245 DN；目标行与列不属于四块',435,335,{size:14});if(p>.7)txt('直接显示均值，不播放逐像素累加',435,405,{size:14,color:C.dim});note('图示为内部点；真实边缘处理和 skip 需结合源码核查。');}
+function compare(p){header(5,'比例比较','分别比较四块，任何一块超过主阈值就标记');const q=point(245);panel(55,155,880,315);['左上','右上','左下','右下'].forEach((v,i)=>{if(p>=i*.14){let y=205+i*53;txt(v+'：|245 − '+q.means[i]+'| ÷ '+q.means[i],80,y,{size:14});card(370,y-11,300*q.diff[i]/.45,12,{r:5,fill:q.diff[i]>.30?C.fail:C.accent,stroke:false});txt((q.diff[i]*100).toFixed(2)+'%',700,y,{size:14,color:q.diff[i]>.30?C.fail:C.ink});}});card(370+300*.30/.45-2,178,4,206,{r:2,fill:C.accent2,stroke:false});if(p>.7)txt('假设主阈值 30%：左上 36.11% > 30%，写入主缺陷图',80,440,{size:15,color:C.fail,weight:700});note('邻域均值均非零是假设；源码比例除法未单独保护零分母。');}
+function masks(p){header(6,'标记与方向','主图标记和方向差用途不同');chip(65,190,250,95,'主图：标记 255','任一比例严格大于阈值',C.fail);if(p>.28){flow(325,238,365,238,seg(p,.28,.45));chip(380,190,250,95,'方向差','245 − 195 = +50 DN',C.accent2);}if(p>.55)chip(650,190,275,95,'亮方向','差 > 0 才记亮，否则记暗',CH.Gr);if(p>.72)txt('未进主图才检查 blemish；此专用加载器未读其阈值',65,390,{size:15,color:C.dim});note('本页不模拟 blemish 图；缺失字段初始化与实际调用需检查。');}
+function count(p){header(7,'合图与计数','通道标记合回 Bayer；源码再进行团簇处理和计数');panel(55,155,880,315);chip(80,190,215,70,'四张主标记图','各通道检测',C.accent);if(p>.2){flow(300,225,350,225,seg(p,.2,.4));chip(365,190,210,70,'Bayer 合图','合并方向差',C.accent2);}if(p>.45){flow(580,225,630,225,seg(p,.45,.6));chip(645,190,250,70,'统计亮 / 暗','先识别团簇',CH.Gr);}if(p>.68){txt('源码分别减去两类团簇计数，然后各自下限归零。',80,360,{size:15});txt('这不是通用的“删除所有团簇后计算孤立点”。',80,410,{size:14,color:C.fail});}note('互动从已有 WP、DP 计数开始；不模拟整图与团簇。');}
+function levels(p){header(8,'亮点分档','假设亮点数 WP=3，按三个边界依次进入分段');panel(55,155,880,315);bars(100,245,600,3,C.accent);txt('1',160,295,{size:13,align:'center'});txt('3',280,295,{size:13,align:'center'});txt('6',460,295,{size:13,align:'center'});txt('假设边界：1 / 3 / 6',100,205,{size:16,color:C.accent2,weight:700});if(p>.3)txt('WP = 3：满足 ≥3 且 <6 → 第 2 档',100,355,{size:17});if(p>.65)txt('假设亮点结果：bin 102 / grade 3 / 失败',100,415,{size:15,color:C.fail,weight:700});note('所有边界、bin、grade 都是假设；分段下限包含等号。');}
+function compareGrades(p){header(9,'亮暗竞争','先分别分档，只有暗点 grade 严格更高才选暗点');const r=judge(3,3);chip(70,190,340,105,'假设 WP=3 → bin '+r.w.bin,'grade '+r.w.grade+'；第 2 档',C.accent);if(p>.2)chip(550,190,340,105,'假设 DP=3 → bin '+r.d.bin,'grade '+r.d.grade+'；第 2 档',C.accent2);if(p>.55){flow(415,240,525,240,seg(p,.55,.72));panel(70,345,820,95);txt('同为 grade 3 → 选亮点 bin 102（不是选暗点）',90,400,{size:16,color:C.accent2,weight:700});}note('数值与等级是假设；源码等于时走 else，即选择亮点结果。');}
+function total(p){header(10,'总数覆盖','选择暗点、亮点或两者之和，与总数上限比较');const r=judge(6,3);chip(60,190,250,90,'假设 WP=6','亮点 grade 5',C.accent);chip(365,190,250,90,'假设 DP=3','暗点 grade 3',C.accent2);if(p>.3)chip(670,190,250,90,'假设检查两者','6 + 3 = 9',CH.Gr);if(p>.6){txt('9 > 假设上限 8 → 直接覆盖为 bin 999 / grade 2',80,390,{size:17,color:C.fail,weight:700});txt('即使 grade 2 低于前面选出的 grade 5，也会覆盖。',80,425,{size:14});}note('0=暗、1=亮、2=亮+暗；不等于这些值时源码计数保持 0。');}
+function resultScene(p){header(11,'返回与追加','该函数返回一个子项，再由调用方 push_back');chip(55,205,260,95,'函数内结果','分档 → grade 竞争 → 总数覆盖',C.accent);if(p>.25){flow(325,250,385,250,seg(p,.25,.45));chip(400,205,240,95,'items_results','追加一个子项',C.accent2);}if(p>.5){flow(650,250,710,250,seg(p,.5,.7));chip(725,205,210,95,'最终汇总','与其他子项竞争',CH.Gr);}if(p>.75)txt('最终 bin 还取决于其他子项，不能直接等同于本项。',55,405,{size:15});note('开关关闭：初始通过但 g_msg=false；未知版本返回 false 且 g_msg=false。');}
+function risks(p){header(12,'风险与边界','模拟图只展示结构；生产运行需要核查配置及初始化');panel(55,155,880,315);const lines=['① 仓库未找到 PD.data，不能断言该配置开启或实际分档','② PD.data 加载器没有读取此路径使用的 blemish 阈值及尺寸字段','③ 比例模式的邻域均值若为零，源码未单独保护分母','④ 边缘、skip、输入缓冲与尺寸需核查；本页只画内部点','⑤ 分档依赖上下限设置；总数覆盖没有 grade 比较'];lines.forEach((v,i)=>{if(p>=i*.12)txt(v,80,215+i*52,{size:14,color:i===1?C.fail:C.ink});});note('字段的初始化与其他可能赋值路径需在实际运行环境核实。');}
+function interactive(p){header(13,'互动分档','调整假设亮 / 暗点数，查看分档、竞争和覆盖');const r=judge(state.wp,state.dp);panel(55,155,880,315);txt('亮点 WP = '+state.wp,80,205,{size:15,weight:700});bars(240,190,300,state.wp,C.accent);txt('bin '+r.w.bin+' / grade '+r.w.grade,600,205,{size:14});txt('暗点 DP = '+state.dp,80,275,{size:15,weight:700});bars(240,260,300,state.dp,C.accent2);txt('bin '+r.d.bin+' / grade '+r.d.grade,600,275,{size:14});txt('grade 竞争选 '+(r.chosen===r.d?'暗':'亮')+'：'+r.chosen.bin+' / '+r.chosen.grade,80,335,{size:15});txt('假设亮+暗 = '+r.count+'；上限 8：'+(r.overridden?'覆盖':'不覆盖'),80,385,{size:15,color:r.overridden?C.fail:C.ink});txt('最终子项：'+(r.result.pass?'PASS':'FAIL')+'   bin '+r.result.bin+' / grade '+r.result.grade,80,440,{size:16,color:r.result.pass?C.pass:C.fail,weight:700});note('互动从已统计数量开始，不计算整图；所有分档及 bin 均为假设。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:20,draw:intro,caption:p=>'① 找标记、统计亮暗点，再分档和检查总数',html:'<h3>先抓主线</h3><p>函数重新调用像素缺陷检测，取得亮点和暗点计数，分别进行三档判断，按 grade 选择，然后检查指定计数是否超过总数限制。最终返回一个子项。</p><p>所有专用参数与数字为教学假设，不代表产线配置。</p>'},
+ {kicker:'配置与版本',dur:20,draw:config,caption:p=>'② 仓库无 PD.data；下面所有专用参数都是假设',html:'<h3>配置缺失</h3><p>加载器读取 PD.data，成功打开后才赋 PD_V1.0，后续解析失败也可能已赋版本；源码要求 37 个字段。仓库未找到 PD.data，无法断言实际版本、开关、阈值、bin 或 grade。</p><p>Basic.data 的 3840×2160 和 RG Bayer 为示例配置；不是 PD 的专用配置。</p>'},
+ {kicker:'模式选择',dur:20,draw:mode,caption:p=>'③ type=1 使用比例，type=0 使用 DN；其他值保留传参',html:'<h3>输入模式</h3><p>配置 type=0 覆盖为 dark，采用各通道 DN 阈值；type=1 覆盖为 bright，采用各通道 ratio 阈值。其他值保持传入参数，后续逻辑取决于实际枚举值。</p><p>本页只用假设 type=1 的内部点展示比例，不能将假设当作实际配置。</p>'},
+ {kicker:'分通道',dur:20,draw:channels,caption:p=>'④ 四通道分别生成标记，后续合回 Bayer 图',html:'<h3>从 RAW 到四张图</h3><p>Basic.data 中 RAW 3840×2160，RG Bayer 的每个位置拆入 R、Gr、Gb、B；各 1920×1080。此函数传入各通道缓冲并启动四个检测线程。</p>'},
+ {kicker:'四块邻域',dur:22,draw:neighborhood,caption:p=>'⑤ 假设 radius=5，内部点周围有四块各 25 个像素',html:'<h3>邻域均值</h3><p>内部目标点四个对角象限各取 radius×radius 个同通道像素，不含目标所在行列。假设 radius=5，四块均值依次为 180、190、200、210 DN，目标 245 DN。像素与阈值非实测。</p>'},
+ {kicker:'比例比较',dur:24,draw:compare,caption:p=>'⑥ 四个相对差分别与假设 30% 比较；任一严格大于即标记',html:'<h3>四次比较</h3><p>假设 bright 模式下 Gr 主阈值为 0.30，四块分别为约 36.11%、28.95%、22.50%、16.67%。左上严格大于 30%，主图标记为 255；等于阈值不触发。比例分母是对应邻域均值，不是目标像素。</p>'},
+ {kicker:'标记与方向',dur:20,draw:masks,caption:p=>'⑦ 主标记与亮暗方向分别计算',html:'<h3>主图与方向</h3><p>四个邻域均值再取平均为 195，方向差 245−195=+50；主标记点差大于零计亮，其余计暗。主标记与 blemish 图互斥；只在主阈值没有命中时才测试 blemish 阈值。</p><p>本专用加载器没有读取该路径所使用的 blemish 阈值和尺寸字段，需核查初始化及其他赋值，不能套用 PixelDefect.data。</p>'},
+ {kicker:'合图与计数',dur:23,draw:count,caption:p=>'⑧ 合回 Bayer，识别团簇后按源码处理亮暗计数',html:'<h3>从标记到计数</h3><p>四通道标记和有符号差合回 Bayer。源码识别团簇后遍历主标记，根据方向差分别累加亮/暗，然后对两者都减去 cnt_1x2_2x1_pix 和 cnt_2x2_diagonal_pix，并将负数归零。</p><p>不可简单声称所有团簇都会被排除。教程互动直接输入处理后的 WP 和 DP，不运行整图。</p>'},
+ {kicker:'亮点分档',dur:22,draw:levels,caption:p=>'⑨ 假设边界 1、3、6；恰为 3 落入第二档',html:'<h3>亮点分档</h3><p>假设分档下限是 1、3、6，亮点对应 bin 101/102/103、grade 1/3/5；暗点 bin 201/202/203、grade 1/3/4。每档下限包含等号，上限不包含；最高档无上限。WP=3 为第二档。</p><p>这些值都是为了说明分支而虚构，实际参数来自缺失的 PD.data。</p>'},
+ {kicker:'亮暗竞争',dur:22,draw:compareGrades,caption:p=>'⑩ 暗点 grade 严格更高才选暗；同级选亮',html:'<h3>不是同时返回两项</h3><p>WP 和 DP 各产生内部临时结果。仅当暗点 grade 严格大于亮点时选暗点，否则选亮点；同 grade 选亮。假设 WP=3、DP=3，都是 grade 3，选亮点 bin 102。</p>'},
+ {kicker:'总数覆盖',dur:23,draw:total,caption:p=>'⑪ 指定计数严格大于上限时直接覆盖前面的结果',html:'<h3>覆盖先前分档</h3><p>single_pix_type=0 检查暗点，1 检查亮点，2 检查两者之和。假设 WP=6、DP=3，类型为 2、上限为 8，则 9&gt;8，直接写假设 bin 999、grade 2、失败，即便此前选中 grade 5 也覆盖。</p><p>等于上限不覆盖，代码没有比较新旧 grade；无效类型保持初始计数 0。</p>'},
+ {kicker:'返回与追加',dur:20,draw:resultScene,caption:p=>'⑫ 返回一个子项，调用方追加；最终 bin 需汇总所有子项',html:'<h3>与最终结果区分</h3><p>V1.0 初始子项通过、bin 1、grade 0；开关关闭设置 g_msg=false。未知版本返回 false 且 g_msg=false。该调用 push_back 一个子项，最终汇总还考虑其他子项及 grade。</p>'},
+ {kicker:'风险与边界',dur:22,draw:risks,caption:p=>'⑬ 参数缺失、初始化、除零和边缘都需要核查',html:'<h3>不能把假设当成实测</h3><p>PD.data 加载器没有读取此路径所使用的 blemish 阈值、尺寸限制，必须核查对象初始化及其他赋值路径；无 PD.data 时更不能假设这些值。比例模式邻域均值为零时，源码没有单独的除零保护。</p><p>还需核查缓冲区、尺寸、skip 和参数的分档顺序。本页不修改生产算法，不模拟完整检测。</p>'},
+ {kicker:'互动分档',dur:24,draw:interactive,caption:p=>'⑭ 拖动亮暗计数，观察假设分档、grade 竞争和总数覆盖',html:'<h3>直接调整计数</h3><p>假设 WP/DP 的边界是 1、3、6，总数类型为 2、上限为 8。3/3 同级选亮；6/3 原先选亮 grade 5，但总数 9 超限后直接覆盖为假设 grade 2。</p><p>滑杆只修改分档输入，不运行像素检测、团簇或最终 bin 汇总；实际配置未知。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+function setCounts(w,d){state.wp=Number(w);state.dp=Number(d);for(const k of ['wp','dp']){document.getElementById(k).value=String(state[k]);document.getElementById(k+'out').textContent=String(state[k]);}AlgoAnim.render();}
+for(const k of ['wp','dp'])document.getElementById(k).addEventListener('input',()=>setCounts(document.getElementById('wp').value,document.getElementById('dp').value));
+document.getElementById('tie').addEventListener('click',()=>setCounts(3,3));document.getElementById('override').addEventListener('click',()=>setCounts(6,3));document.getElementById('normal').addEventListener('click',()=>setCounts(0,0));
+</script>
+<script>
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
+setTimeout(function () {
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
+  }
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
+</script>
+</body></html>

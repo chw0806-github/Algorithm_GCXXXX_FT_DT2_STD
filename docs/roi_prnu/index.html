@@ -1,0 +1,789 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ROI_PRNU 动画讲解</title><style>
+:root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 目录页 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px}
+.card-link{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(110,168,254,.10),rgba(255,255,255,.02));padding:18px 20px;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.card-link:hover{transform:translateY(-2px);border-color:rgba(110,168,254,.5);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.card-link h3{margin:0 0 8px;font-size:15px;color:#eaf2ff}
+.card-link p{margin:0;font-size:12.5px;line-height:1.75;color:var(--dim)}
+.card-link .tag{display:inline-block;font-size:10.5px;color:#ffd166;border:1px solid rgba(255,209,102,.35);
+  background:rgba(255,209,102,.08);border-radius:999px;padding:2px 8px;margin-bottom:10px}
+.sliders.two{grid-template-columns:repeat(2,1fr)}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+</style></head>
+<body><div class="app"><header class="top"><div class="brand"><div class="logo">◉</div><div><h1>图像传感器 FT 测试 · ROI_PRNU</h1><p class="sub"><code>items_results.push_back(Algorithm_all[site_].ROI_PRNU(test_manage));</code></p></div></div><div class="badges"><span class="badge">GC8613T · ROI_PRNU.data</span><a class="badge link" href="storyboard.html">静态分镜 →</a></div></header>
+<section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+<div class="config-keys"><span class="config-key">区域左坐标：<code>[X_ROI]=768</code></span><span class="config-key">区域上坐标：<code>[Y_ROI]=432</code></span><span class="config-key">区域宽：<code>[W_ROI]=384</code></span><span class="config-key">区域高：<code>[H_ROI]=216</code></span><span class="config-key">R 上限：<code>[SpecR]=3</code></span><span class="config-key">Gr 上限：<code>[SpecG1]=3</code></span><span class="config-key">Gb 上限：<code>[SpecG2]=3</code></span><span class="config-key">B 上限：<code>[SpecB]=3</code></span><span class="config-key">失败 bin：<code>[bin]=2238</code></span><span class="config-key">失败 grade：<code>[grade]=3</code></span><span class="config-key">开关：<code>[open_mode]=1</code></span></div><div class="config-layout"><section class="config-file"><h3>ROI_PRNU.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/ROI_PRNU.data</div><pre tabindex="0" aria-label="ROI_PRNU.data 文件原文，可滚动"><code>[X_ROI]=768
+[Y_ROI]=432
+[W_ROI]=384
+[H_ROI]=216
+
+[SpecR]=3
+[SpecG1]=3
+[SpecG2]=3
+[SpecB]=3
+
+[bin]=2238
+[grade]=3
+
+[open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section><section class="config-file"><h3>PixelDefect.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/PixelDefect.data</div><pre tabindex="0" aria-label="PixelDefect.data 文件原文，可滚动"><code>[type]=1
+[single_pix_type]=0
+[skip]=0
+[DN_diff_r]=30
+[DN_diff_gr]=30
+[DN_diff_gb]=30
+[DN_diff_b]=30
+[ratio_diff_r]=0.30
+[ratio_diff_gr]=0.30
+[ratio_diff_gb]=0.30
+[ratio_diff_b]=0.30
+[limit_size]=2
+[radius]=5
+[bin1]=2229
+[grade1]=4
+[limit_cnt1]=1
+[bin2]=2229
+[grade2]=4
+[limit_cnt2]=6
+[bin3]=2229
+[grade3]=4
+[bin_1x2_2x1_ch]=2235
+[grade7]=4
+[bin_2x2_diagonal_ch]=2234
+[grade8]=4
+[bin_2x4]=2230
+[grade4]=4
+[bin_1x2_2x1]=2233
+[grade5]=4
+[bin_2x2_diagonal]=2232
+[grade6]=4
+[bin_2x2_global]=2231
+[grade9]=4
+[bin_single_pix]=2236
+[grade10]=4
+[single_pix_limit]=500
+[limit_wp1]=1
+[limit_wp2]=3
+[limit_wp3]=10
+[limit_dp1]=1
+[limit_dp2]=3
+[limit_dp3]=10
+
+[all_1x2_2x1_spec]=1
+
+[blemish_SpecR]=0.50
+[blemish_SpecGr]=0.12
+[blemish_SpecGb]=0.12
+[blemish_SpecB]=0.30
+
+[blemish_DN_Spec]=15
+
+[blemish_global_size_limit]=3
+[blemish_bychannel_size_limit]=5
+
+[bin_blemish]=2237
+[grade_blemish]=3
+
+[blemish_limit_wp1]=100
+[blemish_limit_wp2]=300
+[blemish_limit_wp3]=1000
+[blemish_limit_dp1]=100
+[blemish_limit_dp2]=300
+[blemish_limit_dp3]=1000
+
+[save_image]=0
+
+[open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>LightResponse.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/LightResponse.data</div><pre tabindex="0" aria-label="LightResponse.data 文件原文，可滚动"><code>[MinMeanR]=80
+[MaxMeanR]=220
+[MinMeanGr]=144
+[MaxMeanGr]=216
+[MinMeanGb]=144
+[MaxMeanGb]=216
+[MinMeanB]=80
+[MaxMeanB]=220
+
+
+[ROI_X]=768
+[ROI_Y]=432
+[ROI_W]=384
+[ROI_H]=216
+
+
+[bin_response]=2201
+[grade_response]=9
+
+
+[response_open_mode]=1
+
+[log_align]=1
+
+[error_MIN]=50
+[error_MAX]=241</code></pre></section></div>
+</section>
+  <main>
+<section class="stage-col"><div class="stage-card"><canvas id="stage" aria-label="ROI PRNU 算法动画"></canvas><div class="caption"><span class="dot"></span><span id="caption">ROI 内 Delta 平方、原始均值与 PRNU</span></div></div><div class="controls"><button id="prev">◀ 上一节</button><button id="play" class="primary">⏸ 暂停</button><button id="next">下一节 ▶</button><button id="replay">↺ 重播</button><div class="progress"><div id="bar"></div></div><div class="speed"><button data-speed="0.5">0.5×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div></div>
+<div class="tuner"><div class="tuner-head"><h2>互动：改变假设 R 通道的明暗振幅</h2><span>模拟棋盘图案；其他通道假设均匀，不修改配置或实测图像</span></div><div class="sliders two"><label class="slider"><span>振幅 A（DN）</span><input id="amp" type="range" min="0" max="20" step="1" value="10"><output id="ampout">10</output></label></div><div class="presets"><button id="normal">未超限：5</button><button id="example">超限示例：10</button><button id="zero">无波动：0</button></div></div></section>
+<aside class="side"><nav class="chapters" id="chapters" aria-label="章节"></nav><section class="code-guide" id="code-guide"><h3>本幕对应源码</h3><p>打开生成后的 index.html 查看源码。</p></section><div class="explain" id="explain"><h3>ROI 内算什么？</h3><p>本教程用模拟图像展示上游 Delta、ROI 内原始均值、平方均值和阈值。</p></div></aside></main><footer class="foot">参数来自 GC8613T 白帧示例 ROI_PRNU.data、PixelDefect.data、LightResponse.data 和 Basic.data；画面中的像素与 Delta 均为模拟，不代表产线实测。</footer></div>
+<script>
+/* ==========================================================================
+   AlgoAnim · 算法动画共用播放器
+   --------------------------------------------------------------------------
+   页面里只需要写「场景」，播放器负责：画布自适应、章节、控制条、字幕、快捷键。
+
+   用法：
+     <link rel="stylesheet" href="../shared/player.css">
+     <script src="../shared/player.js"><\/script>
+     <script>
+       const state = AlgoAnim.state;          // 共用状态（scene/t/speed + 自定义字段）
+       state.xxx = ...;
+       function drawStep1(p){ ... }           // p = 0..1，用全局 ctx / txt / card 画
+       const SCENES = [{ kicker, dur, draw:drawStep1, caption:p=>'...', html:'...' }];
+       AlgoAnim.start({ scenes: SCENES });
+     <\/script>
+
+   绘图工具箱（全部是全局函数）：txt card arrow rr para wrapLines withA
+   常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
+   ========================================================================== */
+'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / ' + String(scenes.length).padStart(2,'0') + ' · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+
+
+/* ==========================================================================
+   播放器
+   ========================================================================== */
+const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
+let scenes = [];
+let elCaption = null, elBar = null;
+
+function resize(){
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  if(!ctx || !scenes.length) return;
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = scenes[PState.scene];
+  const p = clamp01(PState.t / sc.dur);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
+  if(elCaption){
+    const cap = sc.caption(p);
+    if(elCaption.textContent !== cap) elCaption.textContent = cap;
+  }
+}
+
+let lastTime = performance.now();
+
+function tick(now){
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  const sc = scenes[PState.scene];
+  if(sc && PState.playing){
+    PState.t += dt * PState.speed;
+    if(PState.t >= sc.dur){
+      if(PState.scene < scenes.length - 1){
+        gotoScene(PState.scene + 1, true);
+      } else {
+        PState.t = sc.dur;
+        PState.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  if(!elBar || !scenes.length) return;
+  const sc = scenes[PState.scene];
+  const overall = (PState.scene + clamp01(PState.t/sc.dur)) / scenes.length;
+  elBar.style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
+function gotoScene(i, autoplay){
+  if(!scenes.length) return;
+  PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
+  PState.t = 0;
+  PState.playing = autoplay !== false;
+  syncPlayButton();
+  const ex = document.getElementById('explain');
+  if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === PState.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+  render();
+}
+
+function buildChapters(){
+  const box = document.getElementById('chapters');
+  if(!box) return;
+  box.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'chapter';
+    b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') +
+                  '</span><span class="name">' + s.kicker + '</span>';
+    b.addEventListener('click', ()=> gotoScene(i, true));
+    box.appendChild(b);
+  });
+}
+
+function bindControls(){
+  const play = document.getElementById('play');
+  if(play) play.addEventListener('click', ()=>{
+    if(!PState.playing && PState.t >= scenes[PState.scene].dur - 0.01) PState.t = 0;
+    PState.playing = !PState.playing;
+    syncPlayButton();
+  });
+  const prev = document.getElementById('prev');
+  if(prev) prev.addEventListener('click', ()=> gotoScene(PState.scene-1, true));
+  const next = document.getElementById('next');
+  if(next) next.addEventListener('click', ()=> gotoScene(PState.scene+1, true));
+  const replay = document.getElementById('replay');
+  if(replay) replay.addEventListener('click', ()=> gotoScene(0, true));
+
+  document.querySelectorAll('.speed button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      PState.speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(play) play.click(); }
+    if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(PState.scene+1, true); }
+    if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(PState.scene-1, true); }
+  });
+}
+
+const AlgoAnim = {
+  get state(){ return PState; },
+  get ctx(){ return ctx; },
+  get canvas(){ return canvas; },
+  get scenes(){ return scenes; },
+  gotoScene: gotoScene,
+  render: render,
+  start: function(opts){
+    opts = opts || {};
+    canvas = document.getElementById(opts.canvas || 'stage');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
+    scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    Object.assign(PState, opts.state || {});
+    elCaption = document.getElementById('caption');
+    elBar = document.getElementById('bar');
+    buildChapters();
+    bindControls();
+    if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize);
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
+  }
+};
+window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 154, "last": 162, "note": "调用方将单个子项追加，然后继续汇总。", "code": "  154      items_results.push_back(Algorithm_all[site_].PKG_Test(test_manage));\n  155      items_results.push_back(Algorithm_all[site_].Blemish_Test(test_manage));\n  156      items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage,External_Configuration));\n  157      items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));//只想卡单点，且可以分梯度\n  158      items_results.push_back(Algorithm_all[site_].ROI_PRNU( test_manage));\n  159      items_results.push_back(Optical_Center(test_manage));\n  160      Algorithm_all[site_].Free_PRNU();\n  161  \n  162      Subitem_Result bright_result=Algorithm_all[site_].Calculate_The_Final_Bin(items_results);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 8320, "last": 8351, "note": "同一 ROI 的 Delta 平方量除以原始均值。", "code": " 8320  double AlgorithmFuncs::Get_Real_ROI_PRNU (float *Delta, uchar *raw_data, int width, int height, int col,\n 8321                                            int line,  int win_w, int win_h)\n 8322  {\n 8323      int cnt = 0;\n 8324      double mean_t = 0;\n 8325      if(line+win_h>=height || col+win_w>=width)\n 8326          return -1;\n 8327      for (int i=line; i<line+win_h; ++i)\n 8328      {\n 8329          for (int j=col; j<col+win_w; ++j)\n 8330          {\n 8331              mean_t+=Delta[width*i+j] * Delta[width*i+j];\n 8332              cnt+=1;\n 8333          }\n 8334      }\n 8335      double sigma =std::sqrt(mean_t/(cnt-1));\n 8336  \n 8337  \n 8338      cnt = 0;\n 8339      mean_t = 0;\n 8340      for (int i=line; i<line+win_h; ++i)\n 8341      {\n 8342          for (int j=col; j<col+win_w; ++j)\n 8343          {\n 8344              mean_t+=raw_data[width*i+j];\n 8345              cnt+=1;\n 8346          }\n 8347      }\n 8348  \n 8349      double mean = mean_t/cnt;\n 8350  \n 8351      return sigma/mean*100;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp", "first": 16994, "last": 17011, "note": "打开文件后赋版本；后续解析未必成功。", "code": "16994  bool ParamManage::load_Real_ROI_PRNU_Param(const std::string &dir)\n16995  {\n16996      std::string path_file = dir;\n16997      path_file.append(\"/ROI_PRNU.data\");\n16998      QFile file(QString::fromStdString(path_file));\n16999      if(!file.open(QFile::Text | QFile::ReadOnly))\n17000          return false;\n17001  \n17002      QTextStream rd(&file);\n17003      bool ok = true;\n17004      int cnt_param = 0;\n17005  \n17006      roi_prnu_version = \"ROI_PRNU_V1.0\";\n17007  \n17008      while(ok && !rd.atEnd())\n17009      {\n17010          QString line = rd.readLine();\n17011          if(line.startsWith(\"[X_ROI]=\"))"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5789, "last": 5796, "note": "四通道分别比较各自上限，失败使用配置 bin 和 grade。", "code": " 5789          if (roi_prnu_r>manage.param_real_roi_prnu_.spec_prnu_r_ ||\n 5790                  roi_prnu_gr>manage.param_real_roi_prnu_.spec_prnu_gr_ ||\n 5791                  roi_prnu_gb>manage.param_real_roi_prnu_.spec_prnu_gb_ ||\n 5792                  roi_prnu_b>manage.param_real_roi_prnu_.spec_prnu_b_)\n 5793          {\n 5794              result_real_roi_prnu.is_passed = false;\n 5795              result_real_roi_prnu.bin = manage.param_real_roi_prnu_.bin_;\n 5796              result_real_roi_prnu.grade = manage.param_real_roi_prnu_.grade_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5741, "last": 5762, "note": "ROI 开关与像素缺陷开关共同控制，Gr 大于 1 才计算。", "code": " 5741      if( (manage.param_pixel_defect_.open_mode_ == 1 && manage.param_real_roi_prnu_.open_mode_ == 1) ||\n 5742              (manage.param_single_pixel_defect_.open_mode_ == 1 && manage.param_real_roi_prnu_.open_mode_ == 1) )\n 5743      {\n 5744  \n 5745          time_begin=clock();\n 5746  \n 5747          g_str_msg_all[site_]+=boost::str(boost::format(\"--------------------------ROI PRNU V1.0-----------------------------\\n\"));\n 5748  \n 5749          double roi_prnu_r = -1;\n 5750          double roi_prnu_gr = -1;\n 5751          double roi_prnu_gb = -1;\n 5752          double roi_prnu_b = -1;\n 5753  \n 5754          if(mean_gr_roi>1 )\n 5755              TestItem::test_real_roi_prnu(w,h,\n 5756                                           manage.param_real_roi_prnu_.X_ROI,\n 5757                                           manage.param_real_roi_prnu_.Y_ROI,\n 5758                                           manage.param_real_roi_prnu_.W_ROI,\n 5759                                           manage.param_real_roi_prnu_.H_ROI,\n 5760                                           roi_prnu_r,roi_prnu_gr,roi_prnu_gb,roi_prnu_b,\n 5761                                           g_buf_delta_r_,g_buf_delta_gr_,g_buf_delta_gb_,g_buf_delta_b_,\n 5762                                           g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 897, "last": 915, "note": "Light_Response V1.0 初始化并计算此前的 Gr 均值。", "code": "  897      mean_gr_roi = -1;\n  898      mean_gb_roi = -1;\n  899      double mean_r_roi = -1;\n  900      double mean_b_roi = -1;\n  901  \n  902      if(manage.param_light_response_.response_open_mode_ == 1)\n  903      {\n  904          time_begin=clock();\n  905  \n  906          g_str_msg_all[site_]+=boost::str(boost::format(\"------------------------ROI Light Response V1.0-----------------------------\\n\"));\n  907  \n  908          //---------------------Whole Region Light Response------------------\n  909          TestItem::test_roi_channel_mean( w,h,\n  910                                           manage.param_light_response_.roi_x_,\n  911                                           manage.param_light_response_.roi_y_,\n  912                                           manage.param_light_response_.roi_w_,\n  913                                           manage.param_light_response_.roi_h_,\n  914                                           mean_r_roi,mean_gr_roi,mean_gb_roi,mean_b_roi,\n  915                                           g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);"}], [{"path": "STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data", "first": 1, "last": 3, "note": "这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。", "code": "    1  [width]=3840\n    2  [height]=2160\n    3  [bayer]=RG"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 64, "last": 78, "note": "循环每次跨两行、两列，把 2×2 各位置写入对应通道。", "code": "   64      distribute_pointer_by_RGB_BAYER(bayer,&pb1,&pb2,&pb3,&pb4,\n   65                                      g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);\n   66  \n   67      for (int i=0; i<h; i=i+2)\n   68      {\n   69          for (int j=0; j<w; j=j+2)\n   70          {\n   71              *pb1++ = g_buf_raw_[w*i+ j];\n   72              *pb2++ = g_buf_raw_[w*i+ j+1];\n   73          }\n   74          for (int j=0; j<w; j=j+2)\n   75          {\n   76              *pb3++ = g_buf_raw_[w*(i+1)+ j];\n   77              *pb4++ = g_buf_raw_[w*(i+1)+ j+1];\n   78          }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1221, "last": 1234, "note": "通道宽高减半，ROI 配置参数原样传入。", "code": " 1221  void TestItem::test_real_roi_prnu(int width, int height, int win_x, int win_y, int win_w, int win_h,\n 1222                                    double &prnu_r, double &prnu_gr, double &prnu_gb, double &prnu_b,\n 1223                                    float *g_delta_r_, float *g_delta_gr_, float *g_delta_gb_, float *g_delta_b_,\n 1224                                   uchar *g_buf_r_, uchar *g_buf_gr_, uchar *g_buf_gb_, uchar *g_buf_b_)\n 1225  {\n 1226      MultiThread::get_real_roi_prnu *p_roi_prnu[Channel_Num];\n 1227      for (int i=0; i < Channel_Num; i++)\n 1228      {\n 1229          p_roi_prnu[i] = new MultiThread::get_real_roi_prnu();\n 1230      }\n 1231      p_roi_prnu[R]->setparam(g_delta_r_,g_buf_r_,width/2,height/2,win_x,win_y,win_w,win_h);\n 1232      p_roi_prnu[Gr]->setparam(g_delta_gr_,g_buf_gr_,width/2,height/2,win_x,win_y,win_w,win_h);\n 1233      p_roi_prnu[Gb]->setparam(g_delta_gb_,g_buf_gb_,width/2,height/2,win_x,win_y,win_w,win_h);\n 1234      p_roi_prnu[B]->setparam(g_delta_b_,g_buf_b_,width/2,height/2,win_x,win_y,win_w,win_h);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3518, "last": 3524, "note": "Pixel_Defect V1.0 将 Delta 缓冲交给缺陷检测。", "code": " 3518          TestItem::find_pixel_defect(g_buf_r_, g_buf_gr_, g_buf_gb_, g_buf_b_,\n 3519                                      g_buf_delta_r_, g_buf_delta_gr_, g_buf_delta_gb_, g_buf_delta_b_, g_buf_delta_raw_,\n 3520                                      g_binary_r_, g_binary_gr_, g_binary_gb_, g_binary_b_, g_binary_,\n 3521                                      g_buf_blemish_r_, g_buf_blemish_gr_, g_buf_blemish_gb_, g_buf_blemish_b_, g_buf_blemish_raw_,\n 3522                                      w, h, manage.param_pixel_defect_.cnt_skip_, manage.param_pixel_defect_.r_area_,\n 3523                                      diff_spec_r_,diff_spec_gr_,diff_spec_gb_,diff_spec_b_,\n 3524                                      diff_blemish_spec_r_,diff_blemish_spec_gr_,diff_blemish_spec_gb_,diff_blemish_spec_b_,"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9175, "last": 9193, "note": "Delta 为像素减四块邻域均值的平均。", "code": " 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];\n 9185              }\n 9186              else if(mode==DN)\n 9187              {\n 9188                  for(int n=0; n<4; n++)\n 9189                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n]);\n 9190              }\n 9191  \n 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9155, "last": 9178, "note": "四块邻域按 radius 的平方求均值；画面棋盘为假设。", "code": " 9155          vector<double> sum_t(4,0.0);\n 9156          for(int x=0; x<r; x++)\n 9157          {\n 9158              sum_t[0]+=vec_up[x];\n 9159              sum_t[1]+=vec_done[x];\n 9160              sum_t[2]+=vec_up[x+r+1];\n 9161              sum_t[3]+=vec_done[x+r+1];\n 9162          }\n 9163  \n 9164          for (int j=skipCnt; j<w-skipCnt; ++j)\n 9165          {\n 9166  \n 9167              if( j>r && j< w-r)\n 9168              {\n 9169                  sum_t[0] = sum_t[0] - vec_up[j-r-1]   + vec_up[j-1] ;\n 9170                  sum_t[1] = sum_t[1] - vec_done[j-r-1] + vec_done[j-1] ;\n 9171                  sum_t[2] = sum_t[2] - vec_up[j]       + vec_up[j+r] ;\n 9172                  sum_t[3] = sum_t[3] - vec_done[j]     + vec_done[j+r] ;\n 9173              }\n 9174  \n 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9192, "last": 9193, "note": "本页的模拟 Delta 取自该定义。", "code": " 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 8338, "last": 8349, "note": "在同一 ROI 内计算原始通道像素均值。", "code": " 8338      cnt = 0;\n 8339      mean_t = 0;\n 8340      for (int i=line; i<line+win_h; ++i)\n 8341      {\n 8342          for (int j=col; j<col+win_w; ++j)\n 8343          {\n 8344              mean_t+=raw_data[width*i+j];\n 8345              cnt+=1;\n 8346          }\n 8347      }\n 8348  \n 8349      double mean = mean_t/cnt;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 8323, "last": 8335, "note": "对 Delta 平方求和，除以 N−1 后开平方，没有对 Delta 做均值中心化。", "code": " 8323      int cnt = 0;\n 8324      double mean_t = 0;\n 8325      if(line+win_h>=height || col+win_w>=width)\n 8326          return -1;\n 8327      for (int i=line; i<line+win_h; ++i)\n 8328      {\n 8329          for (int j=col; j<col+win_w; ++j)\n 8330          {\n 8331              mean_t+=Delta[width*i+j] * Delta[width*i+j];\n 8332              cnt+=1;\n 8333          }\n 8334      }\n 8335      double sigma =std::sqrt(mean_t/(cnt-1));"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 8335, "last": 8351, "note": "零参考平方量除以原始均值并转百分数。", "code": " 8335      double sigma =std::sqrt(mean_t/(cnt-1));\n 8336  \n 8337  \n 8338      cnt = 0;\n 8339      mean_t = 0;\n 8340      for (int i=line; i<line+win_h; ++i)\n 8341      {\n 8342          for (int j=col; j<col+win_w; ++j)\n 8343          {\n 8344              mean_t+=raw_data[width*i+j];\n 8345              cnt+=1;\n 8346          }\n 8347      }\n 8348  \n 8349      double mean = mean_t/cnt;\n 8350  \n 8351      return sigma/mean*100;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5789, "last": 5796, "note": "四通道任一严格超过各自阈值时失败。", "code": " 5789          if (roi_prnu_r>manage.param_real_roi_prnu_.spec_prnu_r_ ||\n 5790                  roi_prnu_gr>manage.param_real_roi_prnu_.spec_prnu_gr_ ||\n 5791                  roi_prnu_gb>manage.param_real_roi_prnu_.spec_prnu_gb_ ||\n 5792                  roi_prnu_b>manage.param_real_roi_prnu_.spec_prnu_b_)\n 5793          {\n 5794              result_real_roi_prnu.is_passed = false;\n 5795              result_real_roi_prnu.bin = manage.param_real_roi_prnu_.bin_;\n 5796              result_real_roi_prnu.grade = manage.param_real_roi_prnu_.grade_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 149, "last": 160, "note": "缓冲分配后多个步骤可依序写入共享区域；ROI_PRNU 读取后才释放。", "code": "  149      if(!Algorithm_all[site_].New_PRNU(test_manage.width_,test_manage.height_))\n  150      {\n  151          g_str_msg_all[site_].append (\"New_PRNU failed!\\n\");\n  152          return -1;\n  153      }\n  154      items_results.push_back(Algorithm_all[site_].PKG_Test(test_manage));\n  155      items_results.push_back(Algorithm_all[site_].Blemish_Test(test_manage));\n  156      items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage,External_Configuration));\n  157      items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));//只想卡单点，且可以分梯度\n  158      items_results.push_back(Algorithm_all[site_].ROI_PRNU( test_manage));\n  159      items_results.push_back(Optical_Center(test_manage));\n  160      Algorithm_all[site_].Free_PRNU();"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 3285, "last": 3292, "note": "Single 像素检测也可能写入同一组 Delta。", "code": " 3285          TestItem::find_pixel_defect(g_buf_r_, g_buf_gr_, g_buf_gb_, g_buf_b_,\n 3286                                      g_buf_delta_r_, g_buf_delta_gr_, g_buf_delta_gb_, g_buf_delta_b_, g_buf_delta_raw_,\n 3287                                      g_binary_r_, g_binary_gr_, g_binary_gb_, g_binary_b_, g_binary_,\n 3288                                      g_buf_blemish_r_, g_buf_blemish_gr_, g_buf_blemish_gb_, g_buf_blemish_b_, g_buf_blemish_raw_,\n 3289                                      w, h, manage.param_single_pixel_defect_.cnt_skip_, manage.param_single_pixel_defect_.r_area_,\n 3290                                      diff_spec_r_,diff_spec_gr_,diff_spec_gb_,diff_spec_b_,\n 3291                                      diff_blemish_spec_r_,diff_blemish_spec_gr_,diff_blemish_spec_gb_,diff_blemish_spec_b_,\n 3292                                      spec_mode_, manage.bayer_,cnts_cluster, cnt_2x4_pix, cnt_2x2_pix,"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5754, "last": 5762, "note": "本函数读取现有通道 Delta 缓冲。", "code": " 5754          if(mean_gr_roi>1 )\n 5755              TestItem::test_real_roi_prnu(w,h,\n 5756                                           manage.param_real_roi_prnu_.X_ROI,\n 5757                                           manage.param_real_roi_prnu_.Y_ROI,\n 5758                                           manage.param_real_roi_prnu_.W_ROI,\n 5759                                           manage.param_real_roi_prnu_.H_ROI,\n 5760                                           roi_prnu_r,roi_prnu_gr,roi_prnu_gb,roi_prnu_b,\n 5761                                           g_buf_delta_r_,g_buf_delta_gr_,g_buf_delta_gb_,g_buf_delta_b_,\n 5762                                           g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 8323, "last": 8351, "note": "贴边返回 −1，分母及输入边界缺乏完整防护。", "code": " 8323      int cnt = 0;\n 8324      double mean_t = 0;\n 8325      if(line+win_h>=height || col+win_w>=width)\n 8326          return -1;\n 8327      for (int i=line; i<line+win_h; ++i)\n 8328      {\n 8329          for (int j=col; j<col+win_w; ++j)\n 8330          {\n 8331              mean_t+=Delta[width*i+j] * Delta[width*i+j];\n 8332              cnt+=1;\n 8333          }\n 8334      }\n 8335      double sigma =std::sqrt(mean_t/(cnt-1));\n 8336  \n 8337  \n 8338      cnt = 0;\n 8339      mean_t = 0;\n 8340      for (int i=line; i<line+win_h; ++i)\n 8341      {\n 8342          for (int j=col; j<col+win_w; ++j)\n 8343          {\n 8344              mean_t+=raw_data[width*i+j];\n 8345              cnt+=1;\n 8346          }\n 8347      }\n 8348  \n 8349      double mean = mean_t/cnt;\n 8350  \n 8351      return sigma/mean*100;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5749, "last": 5755, "note": "Gr 不满足时保留 −1，之后仍比较阈值。", "code": " 5749          double roi_prnu_r = -1;\n 5750          double roi_prnu_gr = -1;\n 5751          double roi_prnu_gb = -1;\n 5752          double roi_prnu_b = -1;\n 5753  \n 5754          if(mean_gr_roi>1 )\n 5755              TestItem::test_real_roi_prnu(w,h,"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5789, "last": 5796, "note": "普通浮点大于比较不是有效性检查。", "code": " 5789          if (roi_prnu_r>manage.param_real_roi_prnu_.spec_prnu_r_ ||\n 5790                  roi_prnu_gr>manage.param_real_roi_prnu_.spec_prnu_gr_ ||\n 5791                  roi_prnu_gb>manage.param_real_roi_prnu_.spec_prnu_gb_ ||\n 5792                  roi_prnu_b>manage.param_real_roi_prnu_.spec_prnu_b_)\n 5793          {\n 5794              result_real_roi_prnu.is_passed = false;\n 5795              result_real_roi_prnu.bin = manage.param_real_roi_prnu_.bin_;\n 5796              result_real_roi_prnu.grade = manage.param_real_roi_prnu_.grade_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5723, "last": 5737, "note": "未知版本和 V1.0 初始化。", "code": " 5723  Subitem_Result AlgorithmItems::ROI_PRNU(const ParamManage& manage)\n 5724  {\n 5725      if(manage.roi_prnu_version == \"ROI_PRNU_V1.0\")\n 5726          return ROI_PRNU_V1_0(manage);\n 5727  \n 5728      Subitem_Result res(\"ROI_PRNU\", false);\n 5729      res.g_msg = false;\n 5730      return res;\n 5731  \n 5732  }\n 5733  \n 5734  Subitem_Result AlgorithmItems::ROI_PRNU_V1_0(const ParamManage& manage)\n 5735  {\n 5736  \n 5737      Subitem_Result  result_real_roi_prnu(\"ROI_PRNU\",true);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5789, "last": 5809, "note": "超限设失败；关闭条件时不参与汇总。", "code": " 5789          if (roi_prnu_r>manage.param_real_roi_prnu_.spec_prnu_r_ ||\n 5790                  roi_prnu_gr>manage.param_real_roi_prnu_.spec_prnu_gr_ ||\n 5791                  roi_prnu_gb>manage.param_real_roi_prnu_.spec_prnu_gb_ ||\n 5792                  roi_prnu_b>manage.param_real_roi_prnu_.spec_prnu_b_)\n 5793          {\n 5794              result_real_roi_prnu.is_passed = false;\n 5795              result_real_roi_prnu.bin = manage.param_real_roi_prnu_.bin_;\n 5796              result_real_roi_prnu.grade = manage.param_real_roi_prnu_.grade_;\n 5797          }\n 5798  \n 5799          time_end=clock();\n 5800          g_str_msg_all[site_]+=\"\\n cost_time:\"+QString::number(time_end-time_begin).toStdString()+\"\\n\";\n 5801  \n 5802      }\n 5803      else\n 5804      {\n 5805          result_real_roi_prnu.g_msg = false;\n 5806      }\n 5807  \n 5808  \n 5809      return result_real_roi_prnu;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 156, "last": 162, "note": "调用方 push_back 后汇总。", "code": "  156      items_results.push_back(Algorithm_all[site_].Pixel_Defect_Test(test_manage,External_Configuration));\n  157      items_results.push_back(Algorithm_all[site_].Single_Pixel_Defect_Test(test_manage,External_Configuration));//只想卡单点，且可以分梯度\n  158      items_results.push_back(Algorithm_all[site_].ROI_PRNU( test_manage));\n  159      items_results.push_back(Optical_Center(test_manage));\n  160      Algorithm_all[site_].Free_PRNU();\n  161  \n  162      Subitem_Result bright_result=Algorithm_all[site_].Calculate_The_Final_Bin(items_results);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5903, "last": 5926, "note": "遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。", "code": " 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector<Subitem_Result>& items_results)\n 5904  {\n 5905      Subitem_Result final_result(\"The initial value\",true,1,0,true);\n 5906  \n 5907      for(int i=0;i!=items_results.size();++i)\n 5908      {\n 5909          const Subitem_Result& item=items_results[i];\n 5910  \n 5911          if(item.g_msg == false)\n 5912              continue;\n 5913  \n 5914          std::string item_log =item.name;\n 5915          QString log_;\n 5916          if(item.is_passed)\n 5917              log_+=\" is Pass. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5918          else\n 5919              log_+=\" is Failed. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5920  \n 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();\n 5922  \n 5923          if(!item.is_passed && item.grade>final_result.grade)\n 5924              final_result=item;\n 5925      }\n 5926      return final_result;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9175, "last": 9193, "note": "假设棋盘在 radius=5 下产生局部 Delta。", "code": " 9175              int cnt = r*r;\n 9176              double mean_t[4] = {0.0};\n 9177              for(int n=0; n<4; n++)\n 9178                  mean_t[n]= sum_t[n]/cnt;\n 9179  \n 9180              double compareValue[4] = {0.0};\n 9181              if(mode==Ratio)\n 9182              {\n 9183                  for(int n=0; n<4; n++)\n 9184                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n])/mean_t[n];\n 9185              }\n 9186              else if(mode==DN)\n 9187              {\n 9188                  for(int n=0; n<4; n++)\n 9189                      compareValue[n] = std::fabs ((double)in_raw8[w*i+j]-mean_t[n]);\n 9190              }\n 9191  \n 9192              double mean_ref = (mean_t[0]+mean_t[1]+mean_t[2]+mean_t[3])/4;\n 9193              delta_data[w*i+j] = (float)in_raw8[w*i+j] -(float)(mean_ref);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 8323, "last": 8351, "note": "对假设 ROI 数据计算；互动不运行完整 C++ 检测。", "code": " 8323      int cnt = 0;\n 8324      double mean_t = 0;\n 8325      if(line+win_h>=height || col+win_w>=width)\n 8326          return -1;\n 8327      for (int i=line; i<line+win_h; ++i)\n 8328      {\n 8329          for (int j=col; j<col+win_w; ++j)\n 8330          {\n 8331              mean_t+=Delta[width*i+j] * Delta[width*i+j];\n 8332              cnt+=1;\n 8333          }\n 8334      }\n 8335      double sigma =std::sqrt(mean_t/(cnt-1));\n 8336  \n 8337  \n 8338      cnt = 0;\n 8339      mean_t = 0;\n 8340      for (int i=line; i<line+win_h; ++i)\n 8341      {\n 8342          for (int j=col; j<col+win_w; ++j)\n 8343          {\n 8344              mean_t+=raw_data[width*i+j];\n 8345              cnt+=1;\n 8346          }\n 8347      }\n 8348  \n 8349      double mean = mean_t/cnt;\n 8350  \n 8351      return sigma/mean*100;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5789, "last": 5796, "note": "使用真实示例上限 3 比较模拟值。", "code": " 5789          if (roi_prnu_r>manage.param_real_roi_prnu_.spec_prnu_r_ ||\n 5790                  roi_prnu_gr>manage.param_real_roi_prnu_.spec_prnu_gr_ ||\n 5791                  roi_prnu_gb>manage.param_real_roi_prnu_.spec_prnu_gb_ ||\n 5792                  roi_prnu_b>manage.param_real_roi_prnu_.spec_prnu_b_)\n 5793          {\n 5794              result_real_roi_prnu.is_passed = false;\n 5795              result_real_roi_prnu.bin = manage.param_real_roi_prnu_.bin_;\n 5796              result_real_roi_prnu.grade = manage.param_real_roi_prnu_.grade_;"}]];
+</script><script>
+const state=AlgoAnim.state;state.amp=10;
+const W=1920,H=1080,X=768,Y=432,RW=384,RH=216,N=RW*RH,SPEC=3;
+// 教学假设：整张 R 通道为交替 200±A；像素缺陷半径 5 且 Delta 在本 ROI 最后由该路径写入。
+function sample(a){let lo=200-a,hi=200+a;let refLo=(13*lo+12*hi)/25,refHi=(13*hi+12*lo)/25;let dl=Math.fround(lo-Math.fround(refLo)),dh=Math.fround(hi-Math.fround(refHi));let squares=(N/2)*(Math.fround(dl*dl)+Math.fround(dh*dh));let sigma=Math.sqrt(squares/(N-1));return {lo,hi,refLo,refHi,dl,dh,squares,sigma,mean:200,prnu:sigma/200*100};}
+function classify(r,gr,gb,b){return [r,gr,gb,b].some(v=>v>SPEC);}
+function panel(x,y,w,h){card(x,y,w,h,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});}
+function chip(x,y,w,h,title,sub,color){card(x,y,w,h,{r:8,fill:withA(color,.12),stroke:withA(color,.6)});txt(title,x+14,y+25,{size:15,color,weight:700});if(sub)txt(sub,x+14,y+49,{size:12,color:C.ink});}
+function flow(x,y,x2,y2,p){if(p>0)arrow(x,y,x+(x2-x)*ease(clamp01(p)),y+(y2-y)*ease(clamp01(p)),C.accent2,2);}
+function note(s){txt(s,55,535,{size:12,color:C.dim});}
+function image(x,y,active){panel(x,y,350,230);for(let row=0;row<8;row++)for(let col=0;col<14;col++){let c=(row+col)%2?C.accent:C.dim;card(x+12+col*23,y+12+row*25,21,23,{r:2,fill:withA(c,.1),stroke:withA(C.accent,.12)});}card(x+12+14*23*.4,y+12+8*25*.4,14*23*.2,8*25*.2,{r:3,fill:withA(C.accent2,active?.4:.09),stroke:C.accent2});}
+function squares(x,y,a){for(let row=0;row<6;row++)for(let col=0;col<10;col++){const hi=(row+col)%2===1;let v=hi?200+a:200-a;const color=hi?C.accent2:C.accent;card(x+col*32,y+row*32,29,29,{r:3,fill:withA(color,.2),stroke:withA(color,.55)});txt(v,x+col*32+14,y+row*32+20,{size:10,align:'center'});}}
+function bar(x,y,w,v,p){let max=Math.max(6,v*1.12);card(x,y,w,12,{r:5,fill:'rgba(125,155,195,.25)',stroke:false});card(x,y,Math.max(1,w*v/max*ease(clamp01(p))),12,{r:5,fill:v>3?C.fail:C.pass,stroke:false});card(x+w*3/max-2,y-6,4,24,{r:2,fill:C.accent2,stroke:false});}
+function intro(p){header(0,'一眼看懂','选通道 ROI：Delta 衡量局部差，再除以原始均值');image(55,170,p>.15);txt('黄色：通道 ROI（示意）',55,440,{size:13,color:C.accent2});if(p>.25){flow(415,285,455,285,seg(p,.25,.45));chip(470,190,200,80,'Delta 平方','求平方和与 sigma',C.accent);}if(p>.5){chip(700,190,210,80,'原始像素均值','同一 ROI 内计算',CH.Gr);chip(470,345,440,75,'sigma ÷ 均值 × 100','四通道分别比较对应上限',C.accent2);}note('区域参数来自示例配置；图像和数值均为模拟。');}
+function config(p){header(1,'真实示例配置','先确认 ROI、四通道阈值及结果设置');image(55,170,true);panel(440,155,495,315);txt('X=768，Y=432',460,205,{size:15,weight:700});txt('W=384，H=216（通道坐标）',460,245,{size:15});if(p>.25)txt('R / Gr / Gb / B 上限均为 3',460,305,{size:15,color:C.accent2});if(p>.5)txt('open_mode=1；失败 bin 2238 / grade 3',460,355,{size:14});if(p>.7)txt('PixelDefect.data 的 open_mode 也为 1',460,410,{size:14,color:C.dim});note('实际加载成功、缓冲内容和其他开关仍需运行环境确认。');}
+function gate(p){header(2,'前置与开关','ROI 开关及像素缺陷开关都影响是否运行');chip(55,185,265,90,'ROI_PRNU 开关','示例值 = 1',C.accent2);chip(370,185,265,90,'Pixel 或 Single 开关','至少一个为 1',C.accent);if(p>.3){flow(640,230,685,230,seg(p,.3,.5));chip(700,185,230,90,'检查 Gr 均值','必须 > 1',CH.Gr);}if(p>.6)txt('Gr ≤ 1：四个结果保持 −1，仍参与后续上限比较',55,395,{size:15,color:C.fail,weight:700});note('Gr 均值由 Light_Response 提供；开关满足不等于 Delta 已有效更新。');}
+function region(p){header(3,'通道与区域','四通道分别读取相同坐标，不再把 ROI 尺寸除以二');image(55,170,true);panel(440,155,495,315);txt('每通道 1920 × 1080',460,205,{size:16,weight:700});if(p>.2)txt('X：768～1151；Y：432～647',460,265,{size:15});if(p>.45)txt('ROI：384 × 216 = 82944 个像素',460,325,{size:15,color:C.accent2});if(p>.7)txt('四通道各自使用自己的 RAW 与 Delta',460,395,{size:14});note('图中框是比例示意；X/Y 已是通道图坐标。');}
+function delta(p){header(4,'Delta 从哪里来','上游像素缺陷检测写入：目标 − 四块邻域均值的平均');squares(55,180,10);txt('局部棋盘为虚构示意',55,410,{size:13,color:C.dim});panel(425,155,510,315);chip(445,185,210,70,'目标像素','例如 190 DN',C.accent);chip(690,185,215,70,'四块均值的平均','本假设约 199.6 DN',C.accent2);if(p>.3){flow(660,220,685,220,seg(p,.3,.5));txt('Delta = 190 − 199.6 ≈ −9.6',445,335,{size:16,weight:700});}if(p>.65)txt('相邻 210 像素对应 Delta ≈ +9.6',445,405,{size:14,color:C.accent2});note('示例假设整个 R 通道棋盘、radius=5，且该 Delta 最后未被覆盖。');}
+function pixels(p){const d=sample(10);header(5,'模拟 ROI','R 通道使用明暗棋盘；其他通道假设均匀');squares(55,180,10);txt('只画局部，整块含 82944 像素',55,410,{size:13,color:C.dim});panel(425,155,510,315);txt('假设 R：190 / 210 交替',445,205,{size:16,color:C.accent2,weight:700});if(p>.2)txt('各 41472 个；像素均值 200 DN',445,265,{size:15});if(p>.45)txt('Delta 约 −9.6 / +9.6 DN',445,325,{size:15});if(p>.7)txt('假设 Gr、Gb、B 均为 200，Delta 均为 0',445,405,{size:13});note('只是可复算的输入假设；实际 Delta 由此前检测及调用顺序决定。');}
+function rawmean(p){header(6,'原始像素均值','先看同一 ROI 内原始 R 像素的平均');squares(55,180,10);panel(425,155,510,315);chip(445,195,210,70,'190 DN','假设 41472 个',C.accent);chip(690,195,210,70,'210 DN','假设 41472 个',C.accent2);if(p>.35){flow(670,230,685,230,seg(p,.35,.55));txt('均值 = (190 + 210) ÷ 2 = 200 DN',445,360,{size:15,weight:700,color:CH.Gr});}note('这里是原始通道图的均值，不是 Delta 的均值；不播放逐像素求和。');}
+function sigma(p){const d=sample(10);header(7,'Delta 平方','每个 Delta 平方，汇总后除以 N−1 并开平方');panel(55,155,880,315);chip(80,195,235,70,'Delta ≈ −9.6','约一半像素',C.accent);chip(350,195,235,70,'Delta ≈ +9.6','约一半像素',C.accent2);if(p>.3){txt('平方和 ≈ '+d.squares.toFixed(2),80,325,{size:16});txt('N − 1 = 82943',470,325,{size:16});}if(p>.65)txt('sigma = √(平方和 ÷ 82943) ≈ '+d.sigma.toFixed(5)+' DN',80,410,{size:17,color:C.accent2,weight:700});note('源码没有先减去 Delta 平均值；这是零参考的平方量，不是普通中心化标准差。');}
+function ratio(p){const d=sample(10);header(8,'计算 PRNU','同一个 ROI 内的 sigma 除原始像素均值，再乘 100');chip(55,200,240,100,'sigma ≈ '+d.sigma.toFixed(5),'单位 DN（模拟）',C.accent);if(p>.25){flow(300,250,345,250,seg(p,.25,.45));chip(360,200,240,100,'原始均值 = 200','单位 DN（模拟）',CH.Gr);}if(p>.55){flow(605,250,650,250,seg(p,.55,.7));chip(665,200,260,100,'PRNU ≈ '+d.prnu.toFixed(5)+'%','R 通道模拟结果',C.fail);}if(p>.7)txt('公式：sigma ÷ mean × 100',55,410,{size:18,color:C.accent2,weight:700});note('显示值已舍入；后续判定使用未舍入值。');}
+function thresholds(p){const d=sample(10);header(9,'四通道判定','任一通道 PRNU 严格超过各自上限，子项失败');panel(55,155,880,315);[['R',d.prnu],['Gr',0],['Gb',0],['B',0]].forEach(([name,v],i)=>{if(p>=i*.12){let y=205+i*52;txt(name,80,y,{size:15,color:CH[name],weight:700});bar(160,y-10,380,v,seg(p,i*.12,i*.12+.2));txt(v.toFixed(5)+'%   / 上限 3',580,y,{size:14,color:v>3?C.fail:C.ink});}});if(p>.7)txt('R 超限 → 子项失败 bin 2238 / grade 3',80,445,{size:15,color:C.fail,weight:700});note('四个 3 和 bin 来自真实配置；像素与其他通道 0 均为假设。');}
+function dependency(p){header(10,'共享缓冲','ROI_PRNU 使用此前写入的 Delta；调用顺序会影响输入');chip(55,200,210,85,'New_PRNU','分配 Delta 缓冲',C.accent);if(p>.18){flow(270,242,315,242,seg(p,.18,.35));chip(330,200,245,85,'Pixel_Defect','可能写入 Delta',CH.Gr);}if(p>.38){flow(580,242,625,242,seg(p,.38,.55));chip(640,200,285,85,'Single_Pixel_Defect','若运行，可能再次写入',C.accent2);}if(p>.68)txt('之后 ROI_PRNU 读取当时的缓冲；开关不验证其新鲜度。',55,405,{size:15,color:C.fail,weight:700});note('不同版本 / skip / 开关可能改变有效范围；此处不模拟完整调用。');}
+function exceptions(p){header(11,'边界与无效值','源码的提前返回与数值边界应单独核查');panel(55,155,880,315);const lines=['① line+H ≥ 高 或 col+W ≥ 宽 → 返回 −1（贴边也返回）','② 负坐标、非正尺寸没有完整检查；N ≤ 1 时分母有风险','③ 原始均值为 0 时没有单独保护：可能为 Inf 或 NaN','④ Gr 前置不满足时四个值为 −1，正上限下不触发超限','⑤ NaN 的普通大于比较为 false；不能据此认定有效通过'];lines.forEach((v,i)=>{if(p>=i*.12)txt(v,80,215+i*52,{size:14,color:i===4?C.fail:C.ink});});note('调用方需要保证有效数据、前置均值与 Delta；这些不是修复措施。');}
+function returns(p){header(12,'返回与追加','函数返回一个子项，调用方把它放入 items_results');chip(55,210,260,90,'ROI_PRNU','超限：2238 / 3',C.accent);if(p>.3){flow(320,255,380,255,seg(p,.3,.5));chip(395,210,235,90,'push_back','追加一个结果',C.accent2);}if(p>.55){flow(635,255,690,255,seg(p,.55,.7));chip(705,210,230,90,'最终汇总','与其他子项竞争',CH.Gr);}if(p>.75)txt('未知版本或开关条件不满足时 g_msg=false，不表示完成有效测量。',55,405,{size:14});note('最终 bin 还取决于其他测试子项和 grade。');}
+function interactive(p){const d=sample(state.amp);header(13,'互动模拟','改变 R 通道棋盘振幅，观察 PRNU 与 3% 上限');squares(55,180,state.amp);txt('200 ± '+state.amp+' DN（局部示意）',55,410,{size:13,color:C.accent2});panel(425,155,510,315);txt('Delta ≈ '+d.dl.toFixed(3)+' / +'+d.dh.toFixed(3)+' DN',445,205,{size:14});txt('原始均值 = 200；sigma ≈ '+d.sigma.toFixed(5),445,260,{size:14});txt('R PRNU ≈ '+d.prnu.toFixed(5)+'%',445,320,{size:16,weight:700});bar(445,345,365,d.prnu,1);txt('黄色刻线：上限 3%',445,395,{size:13,color:C.accent2});txt(classify(d.prnu,0,0,0)?'子项失败：2238 / grade 3':'四通道未超限（假设）',445,445,{size:15,weight:700,color:classify(d.prnu,0,0,0)?C.fail:C.pass});note('假设 ROI 内 Delta 最后由 radius=5 的棋盘计算写入；其他通道均匀。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:20,draw:intro,caption:p=>'① 在每通道 ROI 内计算 Delta 平方量，再除原始均值',html:'<h3>先看整体</h3><p>ROI_PRNU 不直接对原始像素求标准差。它读取此前像素缺陷步骤写入的 Delta，算平方和、除 N−1 后开平方，再除以同一区域的原始均值并乘 100。四通道分别比较上限。</p>'},
+ {kicker:'真实示例配置',dur:20,draw:config,caption:p=>'② ROI 与阈值来自示例文件，像素数值仍为模拟',html:'<h3>配置和运行条件</h3><p>示例 ROI_PRNU.data：X=768、Y=432、W=384、H=216，四通道 Spec 均为 3，open_mode=1，bin=2238、grade=3。PixelDefect.data 中 open_mode=1、radius=5；Basic.data 为 RG Bayer 3840×2160。</p><p>配置文件成功打开后才赋 ROI_PRNU_V1.0，后续解析失败仍可能已赋版本，实际载入状态需核查。</p>'},
+ {kicker:'前置与开关',dur:20,draw:gate,caption:p=>'③ ROI 开关开启且 Pixel 或 Single 开关开启，再检查此前 Gr 均值',html:'<h3>进入条件</h3><p>要求 ROI_PRNU 的 open_mode=1 且（Pixel_Defect 的 open_mode=1 或 Single_Pixel_Defect 的 open_mode=1）。随后只有此前 Light_Response 的 mean_gr_roi 严格大于 1 才调用计算；否则四个结果保留 −1，仍参与后续与上限比较。</p><p>示例 PixelDefect.data 为开启，仓库没有 PD.data；实际版本、加载、缓冲是否有效仍需核查。</p>'},
+ {kicker:'通道与区域',dur:20,draw:region,caption:p=>'④ 四张 1920×1080 通道图直接使用同一 ROI 坐标',html:'<h3>区域坐标</h3><p>RAW 3840×2160 拆为四张 1920×1080 通道图。线程传入半尺寸的通道宽高，但不缩放配置的 ROI 参数。故每通道 ROI 坐标 X=768～1151、Y=432～647，共 384×216=82944 个像素；范围上界为循环的排除边界。</p>'},
+ {kicker:'Delta 来源',dur:22,draw:delta,caption:p=>'⑤ Delta 来自此前检测：目标像素减四块邻域均值的平均',html:'<h3>Delta 不等于 ROI 均值偏差</h3><p>本页假设像素缺陷 V1.0 的 radius=5 检测最后写入该区域，未被后续检测覆盖。目标是 190，四块 5×5 邻域的均值均为 199.6，Delta≈−9.6；目标 210 时对应约 +9.6。</p><p>示例为延伸到 ROI 之外的交替棋盘，真实输入及上游参数不一定如此。</p>'},
+ {kicker:'模拟 ROI',dur:22,draw:pixels,caption:p=>'⑥ 模拟 R 交替为 190 和 210；其他通道假设均匀',html:'<h3>可复算的虚构图像</h3><p>假设整个 R 通道为棋盘交替 190/210，ROI 各 41472 个；半径 5 的四块邻域每块各有 13 个同色、12 个反色。对应 Delta 约 −9.6/+9.6。假设其他三个通道均为 200，Delta 为零。局部显示并非实测。</p>'},
+ {kicker:'原始像素均值',dur:20,draw:rawmean,caption:p=>'⑦ 同一 ROI 的原始 R 均值为 200 DN',html:'<h3>分母</h3><p>源码对该通道的原始像素求均值；本例两种数值数量相等，所以均值 200。这里不播放逐个累加。区域中的原始值与 Delta 是不同输入。</p>'},
+ {kicker:'Delta 平方',dur:22,draw:sigma,caption:p=>'⑧ Delta 平方和除 N−1 后开方；没有先减 Delta 均值',html:'<h3>分子</h3><p>源码 sigma=√(Σ Delta²/(N−1))，N=82944。这里并没有计算 Delta 的均值，更没有从每个 Delta 减该均值，因此不能笼统称为 Delta 的中心化样本标准差。画面显示近似值，模拟也考虑 float 运算。</p>'},
+ {kicker:'计算 PRNU',dur:20,draw:ratio,caption:p=>'⑨ sigma 除以原始均值再乘 100，得到百分数',html:'<h3>组合结果</h3><p>假设 R sigma≈9.60006 DN、均值=200 DN，结果约 4.80003%。该值基于虚构棋盘，不是传感器实测。显示四舍五入，判断使用未舍入的数字。</p>'},
+ {kicker:'四通道判定',dur:22,draw:thresholds,caption:p=>'⑩ R 约 4.8% 超过示例上限 3%，模拟子项失败',html:'<h3>任一通道超限</h3><p>四通道分别与 SpecR、SpecG1、SpecG2、SpecB 比较。配置都是 3，严格大于才失败；等于不失败。本假设 R 超限，其他通道为 0，子项失败 bin 2238 / grade 3。</p><p>最后的设备 bin 仍依赖全部子项汇总。</p>'},
+ {kicker:'共享缓冲',dur:20,draw:dependency,caption:p=>'⑪ Pixel 和 Single 检测可能写同一组 Delta；ROI_PRNU 使用当时的值',html:'<h3>上游数据依赖</h3><p>在此白帧分支中，New_PRNU 分配缓冲，后续 PKG、Blemish、Pixel_Defect、Single_Pixel_Defect 先于 ROI_PRNU。不同已启用路径可能写入共享 Delta；最后一次有效写入与范围取决于版本、开关和执行路径。条件表达式只检查开关，并不验证数据是否已更新。</p>'},
+ {kicker:'边界与无效值',dur:22,draw:exceptions,caption:p=>'⑫ ROI 贴边、零均值、无效前置和 NaN 不应被当成有效通过',html:'<h3>特殊情况</h3><p>源码当 line+win_h≥height 或 col+win_w≥width 即返回 −1，所以恰好贴右边或下边也返回 −1。负坐标、非正尺寸及 N≤1 没有完整防护；原始均值为零时未单独保护分母，可能得到 Inf 或 NaN。</p><p>正阈值下 −1 不触发大于；NaN 的普通大于比较为 false。Gr 前置不满足时也保留 −1，这些都不能证明测量有效。</p>'},
+ {kicker:'返回与追加',dur:20,draw:returns,caption:p=>'⑬ 返回单个子项；最终 bin 还要汇总其他项目',html:'<h3>返回结果</h3><p>V1.0 初始化通过；任一通道大于阈值时设失败及配置 bin/grade。开关条件不满足时 g_msg=false；未知版本返回 false 且 g_msg=false。调用方将单个结果 push_back，再与其他子项汇总。</p>'},
+ {kicker:'互动模拟',dur:22,draw:interactive,caption:p=>'⑭ 调整模拟 R 棋盘振幅，看结果与上限的变化',html:'<h3>互动只是假设</h3><p>假设 R 为 200±A 的棋盘、radius=5，且上游该计算最后写入 ROI 中的 Delta；其他三通道恒为 200、Delta 为 0。A=5 时约 2.4%，A=10 时约 4.8%。滑杆不会修改真实配置，不运行完整检测。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+function setAmp(v){state.amp=Number(v);document.getElementById('amp').value=String(state.amp);document.getElementById('ampout').textContent=String(state.amp);AlgoAnim.render();}
+document.getElementById('amp').addEventListener('input',()=>setAmp(document.getElementById('amp').value));document.getElementById('normal').addEventListener('click',()=>setAmp(5));document.getElementById('example').addEventListener('click',()=>setAmp(10));document.getElementById('zero').addEventListener('click',()=>setAmp(0));
+</script>
+<script>
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
+setTimeout(function () {
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
+  }
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
+</script>
+</body></html>

@@ -1,0 +1,114 @@
+[
+  {
+    "i": 1,
+    "file": "s01.png",
+    "kicker": "一眼看懂",
+    "caption": "① 在每通道 ROI 内计算 Delta 平方量，再除原始均值",
+    "dur": 20,
+    "html": "<h3>先看整体</h3><p>ROI_PRNU 不直接对原始像素求标准差。它读取此前像素缺陷步骤写入的 Delta，算平方和、除 N−1 后开平方，再除以同一区域的原始均值并乘 100。四通道分别比较上限。</p>"
+  },
+  {
+    "i": 2,
+    "file": "s02.png",
+    "kicker": "真实示例配置",
+    "caption": "② ROI 与阈值来自示例文件，像素数值仍为模拟",
+    "dur": 20,
+    "html": "<h3>配置和运行条件</h3><p>示例 ROI_PRNU.data：X=768、Y=432、W=384、H=216，四通道 Spec 均为 3，open_mode=1，bin=2238、grade=3。PixelDefect.data 中 open_mode=1、radius=5；Basic.data 为 RG Bayer 3840×2160。</p><p>配置文件成功打开后才赋 ROI_PRNU_V1.0，后续解析失败仍可能已赋版本，实际载入状态需核查。</p>"
+  },
+  {
+    "i": 3,
+    "file": "s03.png",
+    "kicker": "前置与开关",
+    "caption": "③ ROI 开关开启且 Pixel 或 Single 开关开启，再检查此前 Gr 均值",
+    "dur": 20,
+    "html": "<h3>进入条件</h3><p>要求 ROI_PRNU 的 open_mode=1 且（Pixel_Defect 的 open_mode=1 或 Single_Pixel_Defect 的 open_mode=1）。随后只有此前 Light_Response 的 mean_gr_roi 严格大于 1 才调用计算；否则四个结果保留 −1，仍参与后续与上限比较。</p><p>示例 PixelDefect.data 为开启，仓库没有 PD.data；实际版本、加载、缓冲是否有效仍需核查。</p>"
+  },
+  {
+    "i": 4,
+    "file": "s04.png",
+    "kicker": "通道与区域",
+    "caption": "④ 四张 1920×1080 通道图直接使用同一 ROI 坐标",
+    "dur": 20,
+    "html": "<h3>区域坐标</h3><p>RAW 3840×2160 拆为四张 1920×1080 通道图。线程传入半尺寸的通道宽高，但不缩放配置的 ROI 参数。故每通道 ROI 坐标 X=768～1151、Y=432～647，共 384×216=82944 个像素；范围上界为循环的排除边界。</p>"
+  },
+  {
+    "i": 5,
+    "file": "s05.png",
+    "kicker": "Delta 来源",
+    "caption": "⑤ Delta 来自此前检测：目标像素减四块邻域均值的平均",
+    "dur": 22,
+    "html": "<h3>Delta 不等于 ROI 均值偏差</h3><p>本页假设像素缺陷 V1.0 的 radius=5 检测最后写入该区域，未被后续检测覆盖。目标是 190，四块 5×5 邻域的均值均为 199.6，Delta≈−9.6；目标 210 时对应约 +9.6。</p><p>示例为延伸到 ROI 之外的交替棋盘，真实输入及上游参数不一定如此。</p>"
+  },
+  {
+    "i": 6,
+    "file": "s06.png",
+    "kicker": "模拟 ROI",
+    "caption": "⑥ 模拟 R 交替为 190 和 210；其他通道假设均匀",
+    "dur": 22,
+    "html": "<h3>可复算的虚构图像</h3><p>假设整个 R 通道为棋盘交替 190/210，ROI 各 41472 个；半径 5 的四块邻域每块各有 13 个同色、12 个反色。对应 Delta 约 −9.6/+9.6。假设其他三个通道均为 200，Delta 为零。局部显示并非实测。</p>"
+  },
+  {
+    "i": 7,
+    "file": "s07.png",
+    "kicker": "原始像素均值",
+    "caption": "⑦ 同一 ROI 的原始 R 均值为 200 DN",
+    "dur": 20,
+    "html": "<h3>分母</h3><p>源码对该通道的原始像素求均值；本例两种数值数量相等，所以均值 200。这里不播放逐个累加。区域中的原始值与 Delta 是不同输入。</p>"
+  },
+  {
+    "i": 8,
+    "file": "s08.png",
+    "kicker": "Delta 平方",
+    "caption": "⑧ Delta 平方和除 N−1 后开方；没有先减 Delta 均值",
+    "dur": 22,
+    "html": "<h3>分子</h3><p>源码 sigma=√(Σ Delta²/(N−1))，N=82944。这里并没有计算 Delta 的均值，更没有从每个 Delta 减该均值，因此不能笼统称为 Delta 的中心化样本标准差。画面显示近似值，模拟也考虑 float 运算。</p>"
+  },
+  {
+    "i": 9,
+    "file": "s09.png",
+    "kicker": "计算 PRNU",
+    "caption": "⑨ sigma 除以原始均值再乘 100，得到百分数",
+    "dur": 20,
+    "html": "<h3>组合结果</h3><p>假设 R sigma≈9.60006 DN、均值=200 DN，结果约 4.80003%。该值基于虚构棋盘，不是传感器实测。显示四舍五入，判断使用未舍入的数字。</p>"
+  },
+  {
+    "i": 10,
+    "file": "s10.png",
+    "kicker": "四通道判定",
+    "caption": "⑩ R 约 4.8% 超过示例上限 3%，模拟子项失败",
+    "dur": 22,
+    "html": "<h3>任一通道超限</h3><p>四通道分别与 SpecR、SpecG1、SpecG2、SpecB 比较。配置都是 3，严格大于才失败；等于不失败。本假设 R 超限，其他通道为 0，子项失败 bin 2238 / grade 3。</p><p>最后的设备 bin 仍依赖全部子项汇总。</p>"
+  },
+  {
+    "i": 11,
+    "file": "s11.png",
+    "kicker": "共享缓冲",
+    "caption": "⑪ Pixel 和 Single 检测可能写同一组 Delta；ROI_PRNU 使用当时的值",
+    "dur": 20,
+    "html": "<h3>上游数据依赖</h3><p>在此白帧分支中，New_PRNU 分配缓冲，后续 PKG、Blemish、Pixel_Defect、Single_Pixel_Defect 先于 ROI_PRNU。不同已启用路径可能写入共享 Delta；最后一次有效写入与范围取决于版本、开关和执行路径。条件表达式只检查开关，并不验证数据是否已更新。</p>"
+  },
+  {
+    "i": 12,
+    "file": "s12.png",
+    "kicker": "边界与无效值",
+    "caption": "⑫ ROI 贴边、零均值、无效前置和 NaN 不应被当成有效通过",
+    "dur": 22,
+    "html": "<h3>特殊情况</h3><p>源码当 line+win_h≥height 或 col+win_w≥width 即返回 −1，所以恰好贴右边或下边也返回 −1。负坐标、非正尺寸及 N≤1 没有完整防护；原始均值为零时未单独保护分母，可能得到 Inf 或 NaN。</p><p>正阈值下 −1 不触发大于；NaN 的普通大于比较为 false。Gr 前置不满足时也保留 −1，这些都不能证明测量有效。</p>"
+  },
+  {
+    "i": 13,
+    "file": "s13.png",
+    "kicker": "返回与追加",
+    "caption": "⑬ 返回单个子项；最终 bin 还要汇总其他项目",
+    "dur": 20,
+    "html": "<h3>返回结果</h3><p>V1.0 初始化通过；任一通道大于阈值时设失败及配置 bin/grade。开关条件不满足时 g_msg=false；未知版本返回 false 且 g_msg=false。调用方将单个结果 push_back，再与其他子项汇总。</p>"
+  },
+  {
+    "i": 14,
+    "file": "s14.png",
+    "kicker": "互动模拟",
+    "caption": "⑭ 调整模拟 R 棋盘振幅，看结果与上限的变化",
+    "dur": 22,
+    "html": "<h3>互动只是假设</h3><p>假设 R 为 200±A 的棋盘、radius=5，且上游该计算最后写入 ROI 中的 Delta；其他三通道恒为 200、Delta 为 0。A=5 时约 2.4%，A=10 时约 4.8%。滑杆不会修改真实配置，不运行完整检测。</p>"
+  }
+]
