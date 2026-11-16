@@ -31,7 +31,7 @@ PAGES = [
         "dir": "color_shading", "title": "Color_Shading",
         "sub": "色彩阴影：221 个 ROI 与中心比例的最大偏离",
         "crumb": "图像传感器 FT 测试 · 白帧测试子项",
-        "lead": "18 幕定格图、逐幕源码和配置原文；全部像素为模拟。",
+        "lead": "14 幕定格图、逐幕源码和配置原文；全部像素为模拟。",
     },
     {
         "dir": "color_ratio",

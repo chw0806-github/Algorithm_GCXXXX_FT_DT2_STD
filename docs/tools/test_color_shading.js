@@ -1,4 +1,4 @@
-/* 对真实配置、完整模拟数据、逐像素前缀、阈值、场景及互动做无浏览器回归。 */
+/* 对真实配置、完整模拟数据、动画阶段、阈值、场景及互动做无浏览器回归。 */
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../color_shading/index.html'),'utf8');
 const scripts=Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi),m=>m[1]);
@@ -42,24 +42,32 @@ assert.ok(Math.abs(d.R.shade-.3)<1e-6);assert.ok(Math.abs(d.B.shade-1/6)<1e-6);a
 for(const [r,b,c1,c2,cs,ma] of [[.2,.2,.2,.2,false,false],[.200001,0,.2,.2,true,false],[0,.200001,.2,.2,true,false],[.15,0,.1,.2,false,true],[.21,.15,.1,.2,true,false]]){
  const v=run(`decide(${r},${b},${c1},${c2})`);assert.strictEqual(v.csFail,cs);assert.strictEqual(v.maFail,ma);
 }
-assert.strictEqual(run('countAt(0)'),0);assert.strictEqual(run('countAt(.06)'),1);assert.strictEqual(run('countAt(.10)'),2);assert.strictEqual(run('countAt(.14)'),3);assert.strictEqual(run('countAt(.18)'),4);assert.strictEqual(run('countAt(.44)'),9296);
-const scenes=sandbox.__ANIM.scenes;assert.strictEqual(scenes.length,18);assert.strictEqual(sandbox.__CODE_GUIDE.length,18);
-for(let i=0;i<18;i++){
+const scenes=sandbox.__ANIM.scenes;assert.strictEqual(scenes.length,14);assert.strictEqual(sandbox.__CODE_GUIDE.length,14);
+function renderAt(i,p){sandbox.__ANIM.gotoScene(i,true);drawn=[];sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();return drawn.slice();}
+for(let i=0;i<14;i++){
  sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'));
- for(const p of [0,.06,.10,.14,.18,.3,.44,.57,.7,.78,1]){drawn=[];sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();
-  if(i>=5&&i<=10){
-   if(p===0)assert.ok(drawn.includes('等待第一个模拟像素'));
-   if(p===.06)assert.ok(drawn.includes('刚累加：第 1 行，第 1 列'));
-   if(p===.44)assert.ok(drawn.includes('刚累加：第 83 行，第 112 列'));
-   if(p<.44)assert.ok(!drawn.some(x=>x.startsWith('绿色参考和 =')));
-   if(p>=.7)assert.ok(drawn.some(x=>x.startsWith('BG = ')));
-  }
- }
+ for(const p of [0,.18,.3,.42,.55,.6,.76,.82,1]){sandbox.__ANIM.state.t=p*scenes[i].dur;sandbox.__ANIM.render();}
 }
-inspect.value='37';inspectHandler();assert.strictEqual(inspectOut.textContent,'37');assert.strictEqual(sandbox.__ANIM.state.scene,10);drawn=[];sandbox.__ANIM.state.t=.7*scenes[10].dur;sandbox.__ANIM.render();assert.ok(drawn.includes('ROI 37 · 普通模拟区域'));
+let text=renderAt(4,0);assert.ok(text.includes('① 四通道模拟值'));assert.ok(!text.some(x=>x.startsWith('④ RG =')));
+text=renderAt(4,.61);assert.ok(text.some(x=>x.startsWith('③ G 参考和')));assert.ok(text.some(x=>x.startsWith('④ RG =')));assert.ok(!text.some(x=>x.startsWith('⑤ BG =')));
+text=renderAt(4,.8);assert.ok(text.some(x=>x.startsWith('⑤ BG =')));assert.ok(!text.some(x=>x.includes('刚累加')));
+text=renderAt(5,0);assert.ok(text.includes('正在看 ROI 0：1 / 221'));assert.ok(!text.includes('完成：全部 221 块都已算过'));
+text=renderAt(5,1);assert.ok(text.includes('正在看 ROI 220：221 / 221'));assert.ok(text.includes('完成：全部 221 块都已算过'));
+for(const [idx,min,max] of [[6,0,220],[7,16,204]]){
+ text=renderAt(idx,0);assert.ok(!text.includes('最小　ROI '+min));assert.ok(!text.includes('最大　ROI '+max));
+ text=renderAt(idx,.4);assert.ok(text.includes('最小　ROI '+min));assert.ok(!text.includes('最大　ROI '+max));
+ text=renderAt(idx,.8);assert.ok(text.includes('最小　ROI '+min));assert.ok(text.includes('最大　ROI '+max));
+}
+for(const i of [8,9]){
+ text=renderAt(i,0);assert.ok(!text.some(x=>x.includes('÷')));assert.ok(!text.some(x=>x.includes('shading =')));
+ text=renderAt(i,.3);assert.strictEqual(text.filter(x=>x.includes('÷')).length,1);
+ text=renderAt(i,.5);assert.strictEqual(text.filter(x=>x.includes('÷')).length,2);
+ text=renderAt(i,.8);assert.ok(text.some(x=>x.includes('shading =')));
+}
+inspect.value='37';inspectHandler();assert.strictEqual(inspectOut.textContent,'37');assert.strictEqual(sandbox.__ANIM.state.scene,4);drawn=[];sandbox.__ANIM.state.t=.8*scenes[4].dur;sandbox.__ANIM.render();assert.ok(drawn.includes('选中 ROI 37（模拟）'));
 buttons.pass();assert.strictEqual(out.textContent,'100');assert.strictEqual(leftOut.textContent,'100');assert.ok(!run('calc(state.r,state.l).csFail'));
 input.value='160';handler();assert.strictEqual(out.textContent,'160');assert.strictEqual(run('calc(state.r,state.l).R.maxIndex'),220);assert.ok(run('calc(state.r,state.l).csFail'));
 left.value='70';leftHandler();assert.strictEqual(leftOut.textContent,'70');assert.strictEqual(run('calc(state.r,state.l).R.minIndex'),0);
 buttons.sample();assert.strictEqual(out.textContent,'130');assert.strictEqual(leftOut.textContent,'70');assert.strictEqual(typeof frame,'function');frame(100);
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
-console.log('OK：18 幕、221 ROI、9296 像素、逐像素累加、极值、阈值与互动');
+console.log('OK：14 幕、221 ROI、9296 像素、分阶段动画、极值、阈值与互动');

@@ -51,7 +51,7 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
-    'color_shading': ['调用与返回','版本与开关','前置与低亮度','区域尺寸','221 块与样例','中心逐像素','RG 最小区域','RG 最大区域','BG 最小区域','BG 最大区域','任选区域计算','遍历与找极值','RG 偏离中心','BG 偏离中心','阈值与结果','特殊值与风险','返回两个子项','互动模拟'],
+    'color_shading': ['一眼看懂','版本与开关','前置与低亮度','把画面分区','每块算颜色比例','逐块计算','RG 找中心与极值','BG 找中心与极值','RG 和中心比较','BG 和中心比较','对照阈值','特殊情况','返回并追加结果','互动模拟'],
     'light_response': ['总览','拆解代码','多工位','分通道','取 ROI','算均值','判 Spec','归档汇总'],
     'relative_illumination': ['定位','取窗口','求均值','算 ratio','防呆','判 Spec','归档'],
     'non_uniformity': ['定位','认识 RAW','拆四通道','一格从哪来','逐行铺格','放大像素','求均值','求标准差','格内百分比','平均与最大','左右镜像','上下镜像','判定与互动'],
@@ -63,19 +63,20 @@ EXPECTED_KICKERS = {
 
 GUIDES = {
  'color_shading': [
-  [S(BRIGHT,51,52,'cs_shading_res_17x13','调用 Color_Shading，并把返回向量追加到汇总列表。'),S(BRIGHT,660,672,'Color_Shading_V1_0','选择版本；未知版本返回一个不参与汇总的 false 子项。')],
-  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',329,345,'ColorShading.data','按顺序尝试载入颜色比例和颜色阴影的版本配置。'),S(BRIGHT,680,698,'ratio_open_mode_','两个开关均为 1 才进入，并以 shading 配置重新计算 ROI。')],
+  [S(BRIGHT,51,52,'cs_shading_res_17x13','调用 Color_Shading，并把返回向量追加到汇总列表。'),S(BRIGHT,695,710,'test_roi_colorratio','计算每块比例，随后取极值并与中心比较。'),S(BRIGHT,734,740,'rg_shading','计算 RG 与 BG 相对中心的最大偏离。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',329,345,'ColorShading.data','按顺序尝试载入颜色比例和颜色阴影的版本配置。'),S(BRIGHT,660,665,'Color_Shading_V1_0','按已加载版本分派。'),S(BRIGHT,680,698,'ratio_open_mode_','两个开关均为 1 才进入，并以 shading 配置重新计算 ROI。')],
   [S(TEST,1780,1785,'mean_gr>0','先检查两个 Light_Response 均值。'),S(TEST,1863,1869,'append(-1)','任一均值不大于零，比例向量填 −1。'),S(BRIGHT,720,725,'mean_gr_roi>10','计算极值后，仅检查 Gr 均值是否大于 10。'),S(BRIGHT,785,790,'not test color shading','低 Gr 时只记录 −1，不更新两个初始结果。')],
   [basic,S(TEST,1780,1794,'roi_x_pitch','按配置的列数、行数及整数 pitch 构造 ROI。')],
-  [S(TEST,1786,1809,'roi_rg_ratio.push_back','逐行构造 ROI 并保存各块原始比值。')],
-  *[[S(TEST,1797,1809,'get_roi_colorratio','逐块调用计算；中心与极值位置都是本例模拟。'),S(RAW,7829,7866,'sum_g_average','四通道逐像素相加后，分别算 RG、BG、GG。')] for _ in range(6)],
-  [S(BRIGHT,712,722,'max_element','从原始向量取极值，中心从映射读取；GG 也取了极值但不用于后续判定。')],
+  [S(RAW,7829,7866,'sum_g_average','源码逐像素求四通道和，再算 RG、BG、GG；画面不播放累加。')],
+  [S(TEST,1786,1809,'roi_rg_ratio.push_back','逐行构造 ROI，依次计算每块并保存原始比值。')],
+  [S(BRIGHT,712,722,'max_element','RG 极值从向量读取；中心从五点映射读取。')],
+  [S(BRIGHT,712,722,'roi_bg_ratio_for_cs_min','BG 极值从向量读取；中心从五点映射读取。')],
   [S(BRIGHT,734,736,'rg_shading =','最大和最小各自除中心、减一、取绝对值后选较大者。')],
   [S(BRIGHT,738,740,'bg_shading =','BG 使用同一套归一化公式。')],
   [S(BRIGHT,762,775,'else if','先判 Class2，再以 else if 判 Class1，严格大于才失败。')],
   [S(TEST,1845,1854,'>10','中心五点映射中大于 10 的比值变为 −1，而原始向量没有此转换。'),S(BRIGHT,712,725,'mean_gr_roi>10','先取向量极值和映射中心，再检查 Gr > 10；未验证 Gb。'),S(BRIGHT,734,740,'/rg_center_for_cs','中心作为分母，此处没有显式的除零保护。')],
-  [S(BRIGHT,797,810,'push_back','开关关闭时 g_msg=false；V1.0 依次返回两个子项。'),S(BRIGHT,51,52,'insert','返回向量整体追加；最终汇总发生在后面。'),finalbin],
-  [S(BRIGHT,712,722,'max_element','互动模拟改变一个 ROI 后重新查极值。'),S(BRIGHT,734,740,'rg_shading','分别计算 RG、BG 的最大偏离。'),S(BRIGHT,762,775,'else if','使用示例真实配置阈值判断。')]],
+  [S(BRIGHT,797,810,'push_back','开关关闭时 g_msg=false；V1.0 依次返回两个子项。'),S(BRIGHT,660,672,'g_msg = false','未知版本返回一个 false 且 g_msg=false 的子项。'),S(BRIGHT,51,52,'insert','返回向量整体追加；最终汇总发生在后面。'),finalbin],
+  [S(BRIGHT,712,722,'max_element','互动模拟改变 ROI 后重新查极值。'),S(BRIGHT,734,740,'rg_shading','分别计算 RG、BG 的最大偏离。'),S(BRIGHT,762,775,'else if','使用示例真实配置阈值判断。')]],
  'light_response': [
   [calllight], [calllight], [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',25,29,'Algorithm_all','全局数组用工位索引选择对应算法对象。')], [bayer,splitraw],
   [roi], [roimean], [S(ITEM,933,942,'limit_r_max_','四通道均值与各自上下限比较；超出任一范围则失败。')],
