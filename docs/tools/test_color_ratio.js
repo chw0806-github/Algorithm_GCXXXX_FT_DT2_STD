@@ -1,19 +1,31 @@
-/* 测试真实 ROI 尺寸、模拟值、源码公式与 16 幕播放。 */
+/* 测试真实 ROI 尺寸、模拟值、源码公式与 27 幕播放。 */
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../color_ratio/index.html'),'utf8');
 const scripts=Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi),m=>m[1]);assert.strictEqual(scripts.length,3);
 const gradient={addColorStop(){}};
-const ctx=new Proxy({}, {get(t,k){if(k in t)return t[k];if(k==='createLinearGradient'||k==='createRadialGradient')return ()=>gradient;return ()=>{};}});
+let drawn=[];
+const ctx=new Proxy({fillText(s){drawn.push(String(s));}}, {get(t,k){if(k in t)return t[k];if(k==='createLinearGradient'||k==='createRadialGradient')return ()=>gradient;return ()=>{};}});
 const canvas={style:{},getContext:()=>ctx,getBoundingClientRect:()=>({width:1000,height:620})};
 let handler,frame;const buttons={};
 const input={value:'90.5',addEventListener:(event,fn)=>{handler=fn;}},out={textContent:''};
 const elements={stage:canvas,caption:{textContent:''},explain:{innerHTML:''},'code-guide':{innerHTML:''},bar:{style:{}},rmean:input,rout:out};
 for(const id of ['sample','notgolden','fail'])elements[id]={addEventListener:(event,fn)=>{buttons[id]=fn;}};
-const document={getElementById:id=>elements[id]||null,querySelectorAll:()=>[],querySelector:()=>null,addEventListener(){}};
+// 从实际生成的页面读取倍速按钮，模拟点击和选中状态。
+const speedButtons=Array.from(html.matchAll(/<button data-speed="([\d.]+)"(?: class="([^"]+)")?>([^<]+)<\/button>/g),m=>{
+ const classes=new Set((m[2]||'').split(/\s+/).filter(Boolean));
+ return {dataset:{speed:m[1]},label:m[3],classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);},contains:name=>classes.has(name)},addEventListener(event,fn){if(event==='click')this.click=fn;}};
+});
+const document={getElementById:id=>elements[id]||null,querySelectorAll:selector=>selector==='.speed button'?speedButtons:[],querySelector:()=>null,addEventListener(){}};
 const sandbox={document,performance:{now:()=>0},requestAnimationFrame:fn=>{frame=fn;},setTimeout(){},addEventListener(){},devicePixelRatio:1};sandbox.window=sandbox;vm.createContext(sandbox);
 scripts.forEach((s,i)=>new vm.Script(s,{filename:'color:script'+i}).runInContext(sandbox));
 const run=s=>vm.runInContext(s,sandbox);
-assert.strictEqual(sandbox.__ANIM.scenes.length,22);assert.strictEqual(sandbox.__CODE_GUIDE.length,22);
+assert.strictEqual(sandbox.__ANIM.scenes.length,27);assert.strictEqual(sandbox.__CODE_GUIDE.length,27);
+assert.deepStrictEqual(speedButtons.map(b=>b.label),['0.5×','1×','2×','3×']);
+const triple=speedButtons.find(b=>b.dataset.speed==='3'),normal=speedButtons.find(b=>b.dataset.speed==='1');
+triple.click();assert.strictEqual(sandbox.__ANIM.state.speed,3);assert.ok(triple.classList.contains('on'));assert.ok(!normal.classList.contains('on'));
+frame(50);assert.ok(Math.abs(sandbox.__ANIM.state.t-.15)<1e-10,'3× 播放应在 50ms 内推进 150ms');
+normal.click();assert.strictEqual(sandbox.__ANIM.state.speed,1);assert.ok(normal.classList.contains('on'));assert.ok(!triple.classList.contains('on'));
+frame(100);assert.ok(Math.abs(sandbox.__ANIM.state.t-.2)<1e-10,'切回 1× 后应正常推进');
 assert.strictEqual(run('N'),25560);
 for(const [ch,min,avg] of [['R',81,90.5],['Gr',180,189.5],['Gb',182,191.5],['B',108,117.5]]){
  const a=Array.from(run(`sample('${ch}')`));assert.strictEqual(a.length,25560);assert.strictEqual(new Set(a).size,20);
@@ -62,6 +74,34 @@ for(let i=0;i<5;i++){
 close(run("regionCompare(FIVE[2],'RG').raw"),run('ratios(90.5).rg'));
 close(run("regionCompare(FIVE[2],'BG').raw"),run('ratios(90.5).bg'));
 close(run("regionCompare(FIVE[2],'GG').raw"),run('ratios(90.5).gg'));
+// 五个 ROI 的四个通道，均有 20 个不同模拟值，每个出现 1278 次。
+for(let i=0;i<5;i++)for(const ch of ['r','gr','gb','b']){
+ const groups=Array.from(run(`regionGroups(FIVE[${i}],'${ch}')`));
+ assert.strictEqual(groups.length,20);assert.strictEqual(new Set(groups).size,20);
+ assert.ok(groups.every(x=>Number.isInteger(x)&&x>=0&&x<=255));
+ close(groups.reduce((a,b)=>a+b,0)/20,points[i][ch]);
+ close(run(`groupSum(FIVE[${i}],'${ch}',0)`),.1);
+ close(run(`groupSum(FIVE[${i}],'${ch}',20)`),points[i][ch]*25560+.1);
+ close(run(`groupSum(FIVE[${i}],'${ch}',10)`),groups.slice(0,10).reduce((a,b)=>a+b,0)*1278+.1);
+ if(i===2)assert.deepStrictEqual(groups,Array.from(run(`sample('${{r:'R',gr:'Gr',gb:'Gb',b:'B'}[ch]}').slice(0,20)`)));
+}
+// 逐幕核验文字确实随进度依次出现，而不是只列出结果。
+for(let i=0;i<5;i++){
+ const index=12+i;
+ assert.strictEqual(sandbox.__ANIM.scenes[index].kicker,`${points[i].name}逐步计算`);
+ assert.ok(sandbox.__ANIM.scenes[index].dur>=60);
+ sandbox.__ANIM.gotoScene(index,true);
+ function renderAt(p){drawn=[];sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[index].dur;sandbox.__ANIM.render();return drawn.slice();}
+ let text=renderAt(0);assert.ok(text.includes('当前第 0 / 20 组，每组 1278 个'));
+ assert.ok(!text.some(x=>x.startsWith('加偏移 ')));
+ text=renderAt(.2);assert.ok(text.some(x=>x.includes(' / 20 组')));assert.ok(!text.includes('当前第 20 / 20 组，每组 1278 个'));
+ text=renderAt(.38);assert.ok(text.includes('当前第 20 / 20 组，每组 1278 个'));assert.ok(text.some(x=>x.startsWith('= (')));
+ for(const [progress,offsets,ranges] of [[.43,0,0],[.47,1,0],[.52,1,1],[.56,1,1],[.60,2,1],[.65,2,2],[.69,2,2],[.73,3,2],[.78,3,3]]){
+  text=renderAt(progress);
+  assert.strictEqual(text.filter(x=>x.startsWith('加偏移 ')).length,offsets,`${points[i].name} ${progress} offset`);
+  assert.strictEqual(text.filter(x=>x.startsWith('目标 ')).length,ranges,`${points[i].name} ${progress} range`);
+ }
+}
 // 右下 BG 通过与失败区间的邻近边界；仅在本演示的比例非截断范围内。
 const edgeRaw=.62*1.5+.007;
 const boundaryB=(edgeRaw*((200*25560+.1+192*25560+.1)/2)-.1)/25560;
@@ -70,7 +110,7 @@ assert.strictEqual(run("regionCompare({...FIVE[4],b:boundaryB-0.001},'BG').pass"
 assert.strictEqual(run("regionCompare({...FIVE[4],b:boundaryB+0.001},'BG').pass"),false);
 // V1.0 的绿色差先替换再比较，当前阈值 50；包括边界 10。
 for(const value of [0,2,10,10.001,50,51,100])assert.strictEqual((value>10?-1:value)>50,false);
-for(let i=0;i<22;i++){
+for(let i=0;i<27;i++){
  sandbox.__ANIM.gotoScene(i,true);assert.ok(elements['code-guide'].innerHTML.includes('code-block'),`第 ${i+1} 幕缺源码`);
  for(const p of [0,.3,.78,1]){sandbox.__ANIM.state.t=p*sandbox.__ANIM.scenes[i].dur;sandbox.__ANIM.render();}
 }
@@ -78,4 +118,4 @@ buttons.fail();assert.strictEqual(out.textContent,'125');assert.strictEqual(run(
 buttons.notgolden();assert.strictEqual(run('ratios(state.r).goldenRG'),false);buttons.sample();assert.strictEqual(out.textContent,'90.5');
 input.value='100';handler();assert.strictEqual(out.textContent,'100');assert.strictEqual(typeof frame,'function');frame(100);
 assert.deepStrictEqual(Array.from(sandbox.__ERR),[]);
-console.log('OK：22 幕、81 ROI、25560 像素、四通道比例、偏移、特殊绿色差、互动');
+console.log('OK：27 幕、81 ROI、25560 像素、四通道比例、偏移、特殊绿色差、互动');
