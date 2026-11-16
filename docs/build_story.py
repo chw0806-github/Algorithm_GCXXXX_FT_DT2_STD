@@ -28,6 +28,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
     {
+        "dir": "color_shading", "title": "Color_Shading",
+        "sub": "色彩阴影：221 个 ROI 与中心比例的最大偏离",
+        "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+        "lead": "18 幕定格图、逐幕源码和配置原文；全部像素为模拟。",
+    },
+    {
         "dir": "color_ratio",
         "title": "Color_Ratio",
         "sub": "颜色比例：81 个区域、五点判定和多个子项",

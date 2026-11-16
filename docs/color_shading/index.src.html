@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color_Shading 动画讲解 · 图像传感器 FT 测试</title>
+<link rel="stylesheet" href="../shared/player.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 色彩阴影（Color_Shading）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>vector&lt;Subitem_Result&gt; cs_shading_res_17x13 = Color_Shading(test_manage);</code><br><code>items_results.insert(items_results.end(), cs_shading_res_17x13.begin(), cs_shading_res_17x13.end());</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>ColorShading.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">① 色彩阴影：每个区域的颜色比例相对于中心有多大变化</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+          <button data-speed="3">3×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head"><h2>任选一个 ROI 看完整计算</h2><span>选择 0～220；使用固定模拟例子，不受下方滑杆影响</span></div>
+        <div class="sliders two"><label class="slider"><span>ROI 索引</span><input id="inspect" type="range" min="0" max="220" step="1" value="110"><output id="inspectout">110</output></label></div>
+      </div>
+      <div class="tuner">
+        <div class="tuner-head"><h2>互动：改变左右两角 ROI 的模拟 R 像素</h2><span>只修改本页虚构样本，不改变配置或真实图像</span></div>
+        <div class="sliders two"><label class="slider" style="--c:#ff7a7a"><span>左上 R</span><input id="lval" type="range" min="50" max="100" step="1" value="70"><output id="lout">70</output></label><label class="slider" style="--c:#ff7a7a"><span>右下 R</span><input id="rval" type="range" min="70" max="160" step="1" value="130"><output id="rout">130</output></label></div>
+        <div class="presets"><button id="sample">恢复示例 70 / 130</button><button id="pass">两角均改为 100</button></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
+      <div class="explain" id="explain"><h3>本页在讲什么</h3><p>从 17×13 区域、通道求和、中心归一化，逐步讲到两个子项结果。画面使用模拟数据。</p></div>
+    </aside>
+  </main>
+
+  <footer class="foot">基于 GC8613T 白帧 ColorShading.data V1.0；221 块像素均为虚构示例，不代表产线实测或最终 bin。
+  </footer>
+</div>
+
+<script src="../shared/player.js"></script>
+<script>
+/* 完整构造 221 块简单模拟像素；并非实测，互动数据独立于固定分镜。 */
+const state=AlgoAnim.state; state.r=130; state.l=70; state.inspect=110;
+const W=112,H=83,N=W*H,COUNT=17*13;
+function values(i,r,l=70){return {r:i===0?l:i===220?r:100,gr:200,gb:200,b:i===16?100:i===204?140:120};}
+function roiRatios(i,r,l=70){
+  const v=values(i,r,l), R=v.r*N+.1,Gr=v.gr*N+.1,Gb=v.gb*N+.1,B=v.b*N+.1, G=(Gr+Gb)/2;
+  return {R,Gr,Gb,B,G,rg:R/G,bg:B/G,gg:Gr/Gb};
+}
+function decide(rg,bg,class1,class2){
+  if(rg>class2||bg>class2)return {csFail:true,maFail:false};
+  if(rg>class1||bg>class1)return {csFail:false,maFail:true};
+  return {csFail:false,maFail:false};
+}
+function calc(r,l=70){
+  const all=Array.from({length:COUNT},(_,i)=>roiRatios(i,r,l));
+  const rg=all.map(x=>x.rg),bg=all.map(x=>x.bg), center=all[110];
+  function extrema(a,c){let max=Math.max(...a),min=Math.min(...a),hi=Math.abs(max/c-1),lo=Math.abs(min/c-1);return {max,min,hi,lo,shade:Math.max(hi,lo),maxIndex:a.indexOf(max),minIndex:a.indexOf(min)};}
+  const R=extrema(rg,center.rg),B=extrema(bg,center.bg);
+  return Object.assign({R,B,center},decide(R.shade,B.shade,.2,.2));
+}
+function note(s){txt(s,55,520,{size:12,color:C.dim});}
+function box(x,y,w,h,title,lines,p,color){
+  card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+  txt(title,x+16,y+30,{size:15,color:color||C.accent,weight:700});
+  let n=Math.min(lines.length,1+Math.floor(clamp01(p/.75)*lines.length));
+  lines.forEach((line,i)=>{if(i<n)txt(line,x+16,y+62+i*31,{size:13,color:C.ink});});
+}
+function grid(x,y,selected,progress){
+ for(let i=0;i<COUNT;i++){
+  const special=[0,16,110,204,220].includes(i), active=i===selected, seen=i<Math.floor(clamp01(progress)*COUNT);
+  card(x+(i%17)*19,y+Math.floor(i/17)*19,17,17,{r:2,fill:active?withA(C.accent2,.5):seen?withA(C.accent,.22):special?withA(C.accent2,.16):withA(C.accent,.035),stroke:active?C.accent2:withA(C.accent,.28)});
+ }
+}
+function intro(p){header(0,'调用与返回','函数返回向量，insert 将子项逐个追加到汇总列表');
+ box(55,155,880,315,'代码做了什么',['① Color_Shading(test_manage) 选择实现版本','② V1.0 对 17×13 ROI 的颜色比例做中心归一化','③ 返回 Color_Shading 和 Color_Shading_MA 两个子项','④ insert 将返回向量追加到 items_results','⑤ 最终 bin 由整个列表另行汇总'],p,C.accent2);note('这里不讨论后面独立调用的 5×5、15×15 版本。');}
+function config(p){header(1,'版本与开关','实际配置：ColorShading.data 选择 V1.0');
+ box(55,155,430,315,'本例读取的配置',['Skip=0；ROI_X_Cnt=17','ROI_Y_Cnt=13；open_mode=1','Class1=0.2，Class2=0.2','失败：2227 / grade 5','MA：2228 / grade 2'],p,C.accent2);
+ box(515,155,420,315,'还依赖 Color_Ratio',['ratio_open_mode=1 才与 shading 同时开启','两个开关都为 1 才进入计算','不是复用 Color_Ratio 的 9×9 结果','而是用 17×13 参数重新计算 ROI','V1.1 使用不同的 RG/BG 独立系数'],p);note('配置文件原文在页面顶部；不同目录或版本不一定相同。');}
+function gate(p){header(2,'前置与低亮度','前置均值来自 Light_Response，并非本 ROI 的绿色分母');
+ box(55,155,430,315,'第一道：两个均值 > 0',['mean_gr_roi > 0 且 mean_gb_roi > 0','满足才对每个 ROI 求三种比例','否则比值向量及五点映射填 −1','例如 Gr>10 但 Gb≤0：映射也为 −1','示例假设两者都为 200'],p,C.accent2);
+ box(515,155,420,315,'第二道：仅检查 Gr > 10',['源码先计算比例和极值，再检查','Gr≤10：不做 shading 判定','日志写六个 −1；结果保持初始状态','Gr>10 且 Gb≤0 时会用 −1 继续','这不是有效测量；请核查设计'],p);note('结果初始化为通过；“跳过判定”不等于测量通过。');}
+function dimensions(p){header(3,'区域尺寸','分通道后 1920×1080，按配置的 17×13 划分');
+ box(55,155,430,315,'每个通道的 ROI',['宽：1920 ÷ 17 = 112（整数除法）','高：1080 ÷ 13 = 83','每块每通道 112 × 83 = 9296 像素','一共 17 × 13 = 221 块','索引从 0 开始，按行排列'],p,C.accent2);
+ box(515,155,420,315,'没有覆盖的边缘',['17 × 112 = 1904 列，右侧余 16 列','13 × 83 = 1079 行，底部余 1 行','中心索引 221 ÷ 2 = 110','中心起点（896, 498），通道坐标','其他尺寸 / Skip 会得到不同结果'],p);note('宽高来自示例 Basic.data；忽略余数是源码整数除法结果。');}
+function layout(p){header(4,'221 块与样例','所有区域参与极值；不是仅看四角');
+ grid(55,155,110,p/.75);
+ box(435,155,500,315,'完整虚构的 221 块像素',['全部 Gr=Gb=200；普通块 R=100、B=120','左上 0：R=70（RG 最小）','右下 220：R=130（RG 最大）','右上 16：B=100（BG 最小）','左下 204：B=140（BG 最大）','中心 110 与普通块相同；每块固定值'],p,C.accent2);note('全 221 块均已构造；极值位置只是这个模拟例子，并非算法规定。');}
+function countAt(p){if(p<.05)return 0;if(p<.19)return Math.min(4,Math.ceil((p-.05)/.14*4));if(p>=.44)return N;return 4+Math.floor(clamp01((p-.19)/.25)*(N-4));}
+function roiStep(i,scene,p){
+ const labels={0:'左上 RG 最小',16:'右上 BG 最小',110:'中心参考',204:'左下 BG 最大',220:'右下 RG 最大'}, v=values(i,130), o=roiRatios(i,130), count=countAt(p);
+ header(scene,labels[i]||'普通模拟区域','一块 ROI：按位置累加四个通道，再算 RG / BG');
+ grid(55,155,i,0);txt('ROI '+i+' · '+(labels[i]||'普通模拟区域'),55,425,{size:13,color:C.accent2,weight:700});
+ card(410,155,525,335,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+ txt(count?'刚累加：第 '+(Math.floor((count-1)/W)+1)+' 行，第 '+((count-1)%W+1)+' 列':'等待第一个模拟像素',425,185,{size:13,color:C.accent,weight:700});
+ txt('已累加 '+count+' / '+N+' 个 / 通道',425,210,{size:12,color:C.dim});
+ ['r','gr','gb','b'].forEach((ch,j)=>{
+  const val=v[ch],old=.1+val*Math.max(0,count-1),now=.1+val*count;
+  txt(['R','Gr','Gb','B'][j],425,242+j*26,{size:13,color:[CH.R,CH.Gr,CH.Gb,CH.B][j],weight:700});
+  txt(count?old.toFixed(1)+' + '+val+' = '+now.toFixed(1):'0.1（初始值）',475,242+j*26,{size:13});
+ });
+ if(p>=.44)txt('绿色参考和 = ('+o.Gr.toFixed(1)+' + '+o.Gb.toFixed(1)+') ÷ 2 = '+o.G.toFixed(1),425,365,{size:12,color:C.accent});
+ if(p>=.57)txt('RG = '+o.R.toFixed(1)+' ÷ '+o.G.toFixed(1)+' ≈ '+o.rg.toFixed(5),425,391,{size:13,color:CH.R});
+ if(p>=.70)txt('BG = '+o.B.toFixed(1)+' ÷ '+o.G.toFixed(1)+' ≈ '+o.bg.toFixed(5),425,417,{size:13,color:CH.B});
+ txt('当前 ROI 四通道均为固定模拟值',425,458,{size:12,color:C.dim});
+ note('前 4 个位置慢放，其余加速；显示的累加和包含之前所有位置。');
+}
+function center(p){roiStep(110,5,p)}function rgMin(p){roiStep(0,6,p)}function rgMax(p){roiStep(220,7,p)}function bgMin(p){roiStep(16,8,p)}function bgMax(p){roiStep(204,9,p)}
+function inspectRegion(p){roiStep(state.inspect,10,p)}
+function scan(p){header(11,'遍历与找极值','遍历全部 221 个 ROI，分别找 RG 和 BG 的最大值 / 最小值');
+ const d=calc(130);grid(55,155,-1,p/.75);
+ box(435,155,500,315,'模拟的完整结果',['RG 最小 ROI '+d.R.minIndex+' ≈ '+d.R.min.toFixed(5),'RG 最大 ROI '+d.R.maxIndex+' ≈ '+d.R.max.toFixed(5),'BG 最小 ROI '+d.B.minIndex+' ≈ '+d.B.min.toFixed(5),'BG 最大 ROI '+d.B.maxIndex+' ≈ '+d.B.max.toFixed(5),'中心 ROI 110：RG ≈ '+d.center.rg.toFixed(5),'中心 ROI 110：BG ≈ '+d.center.bg.toFixed(5)],p,C.accent2);note('高亮扫描是示意；这里只列出极值，全部 221 块均包含在模拟里。');}
+function deviation(kind,p,scene){
+ const d=calc(130),x=kind==='RG'?d.R:d.B,c=kind==='RG'?d.center.rg:d.center.bg;
+ header(scene,kind+' 偏离中心','最大和最小分别除以中心，减 1 后取绝对值，再取较大值');
+ box(55,155,880,315,kind+' 的两侧偏离',['中心 ≈ '+c.toFixed(6),'最大值 ≈ '+x.max.toFixed(6)+'；最小值 ≈ '+x.min.toFixed(6),'|'+x.max.toFixed(6)+' ÷ '+c.toFixed(6)+' − 1| ≈ '+x.hi.toFixed(6),'|'+x.min.toFixed(6)+' ÷ '+c.toFixed(6)+' − 1| ≈ '+x.lo.toFixed(6),'shading = max('+x.hi.toFixed(6)+', '+x.lo.toFixed(6)+') ≈ '+x.shade.toFixed(6),'不是简单相减，也不乘 100'],p,C.accent2);note('显示有舍入；比较使用未舍入值。这里直接使用比例，没有 Color_Ratio 的 offset。');
+}
+function rgDev(p){deviation('RG',p,12)}function bgDev(p){deviation('BG',p,13)}
+function decision(p){const d=calc(130);header(14,'阈值与结果','先判断 Class2；未超 Class2 才检查 Class1');
+ box(55,155,430,315,'当前模拟值',['RG shading ≈ '+d.R.shade.toFixed(5),'BG shading ≈ '+d.B.shade.toFixed(5),'Class2 = 0.2；任一严格大于即失败','RG 大于 0.2 → Color_Shading 失败','设置 bin 2227 / grade 5'],p,C.accent2);
+ box(515,155,420,315,'Class1 与 MA',['Class1 = 0.2，且使用 else if','已超 Class2 时不进入 Class1','本例 MA 保持初始通过状态','两级同为 0.2：正常有限值下','MA 分支不可单独命中'],p);note('等于阈值不失败；判断用未舍入值。本例不是最终整机 bin。');}
+function exceptions(p){header(15,'特殊值与风险','先理解数据路径，再理解“没判失败”的含义');
+ box(55,155,430,315,'向量与中心映射不同',['极值来自所有 ROI 原始比例向量','中心来自五点映射','映射比例 > 10 时置 −1','但原始向量不做此转换','中心异常时不能按普通比例理解'],p,C.accent2);
+ box(515,155,420,315,'其他边界',['Gr≤10：不进入 shading 判定','Gr>10 但 Gb≤0：可能以 −1 继续','中心比例若为 0：源码未显式防除零','ROI 数量不合法会影响极值访问','开关关闭：两个子项 g_msg=false'],p);note('异常路径需核查，不应把初始通过直接解释为有效测量。');}
+function returns(p){header(16,'返回两个子项','先返回 Color_Shading，再返回 Color_Shading_MA');
+ box(55,155,430,315,'V1.0 的向量',['初始两个子项均为 true','开关关闭时均设置 g_msg=false','本模拟：shading 失败 2227 / 5','MA 保持初始值','其他测试仍会参与最终汇总'],p,C.accent2);
+ box(515,155,420,315,'调用方 insert',['begin() 到 end() 是整个向量','追加到 items_results 的末尾','不会重新计算 shading','未知版本返回单个 false 子项','未知版本的 g_msg 也为 false'],p);note('不要把模拟子项的 bin 当作最终 bin；汇总还受其他子项影响。');}
+function interactive(p){let d=calc(state.r,state.l);header(17,'互动模拟','改变左上和右下的 R，观察所有区域极值与判定');
+ box(55,155,430,315,'RG 扫描 221 块',['左上 R = '+state.l+'；右下 R = '+state.r,'RG 最大 ≈ '+d.R.max.toFixed(5)+'（ROI '+d.R.maxIndex+'）','RG 最小 ≈ '+d.R.min.toFixed(5)+'（ROI '+d.R.minIndex+'）','中心 ≈ '+d.center.rg.toFixed(5),'RG shading ≈ '+d.R.shade.toFixed(5)],1,C.accent2);
+ box(515,155,420,315,'结果',['BG shading ≈ '+d.B.shade.toFixed(5),'Class2 = 0.2','Color_Shading：'+(d.csFail?'失败 2227 / 5':'未超限'),'Color_Shading_MA：'+(d.maFail?'失败 2228 / 2':'保持初始状态'),'画面显示值舍入，判断用原值'],1);note('互动只改变两角的 R；其他通道和其余 219 块不变。');}
+const SCENES=[
+ {kicker:'调用与返回',dur:20,draw:intro,caption:p=>'① 理解调用、返回向量与追加',html:'<h3>函数调用与追加</h3><p>Color_Shading 返回子项向量，insert 追加全部元素；不同版本有不同实现。这里讲示例配置选择的 V1.0，不等同后面独立调用的 5×5 或 15×15。</p>'},
+ {kicker:'版本与开关',dur:22,draw:config,caption:p=>'② 加载 V1.0，并检查两个开关',html:'<h3>版本与两个开关</h3><p>示例目录有 ColorShading.data，未见 ColorShading_V1.1.data，加载器选择 V1.0。Color_Ratio 的 ratio_open_mode 和 Color_Shading 的 open_mode 均为 1 时才运行；即使前面已经计算过 Color_Ratio，这里也用自己的 17×13 ROI 重新计算。</p>'},
+ {kicker:'前置与低亮度',dur:24,draw:gate,caption:p=>'③ 区分两个正值前置条件与 Gr 大于 10 的判定门槛',html:'<h3>两层条件</h3><p>test_roi_colorratio 要求之前的 mean_gr_roi 与 mean_gb_roi 均大于零，否则填 −1；随后 Color_Shading 仅检查 mean_gr_roi &gt; 10。Gr ≤ 10 时日志为 −1，两个子项保持初始值。Gr &gt; 10 但 Gb ≤ 0 时仍可能将 −1 用于后续计算，不能当作有效测量。</p>'},
+ {kicker:'区域尺寸',dur:22,draw:dimensions,caption:p=>'④ 计算每块 112×83 与未覆盖边缘',html:'<h3>配置决定 17×13</h3><p>示例 RAW 3840×2160，拆分后每通道 1920×1080；Skip=0。整数除法得到 112×83，221 块；右侧剩 16 列、底部剩 1 行。每个通道每块有 9296 像素。</p>'},
+ {kicker:'221 块与样例',dur:24,draw:layout,caption:p=>'⑤ 模拟所有区域，标出中心及极值候选',html:'<h3>完整虚构数据</h3><p>221 块每个通道的像素在各自 ROI 内取同一个模拟值。所有 Gr、Gb=200；普通块 R=100、B=120；ROI 0 的 R=70、220 的 R=130、16 的 B=100、204 的 B=140。位置和数值均非实测。算法扫描全部区域，不要求极值在四角。</p>'},
+ {kicker:'中心逐像素',dur:65,draw:center,caption:p=>'⑥ 逐位置累加中心 ROI，再求中心 RG、BG',html:'<h3>中心 ROI 110</h3><p>R=100、Gr=Gb=200、B=120 是本例虚构的固定像素值。每个和从 0.1 开始；按行列累加，前四个位置慢放，其余加速。四个和完成后，计算 G 参考和及 RG、BG。</p>'},
+ {kicker:'RG 最小区域',dur:65,draw:rgMin,caption:p=>'⑦ 左上模拟 ROI 的逐像素累加与 RG / BG',html:'<h3>ROI 0 的计算</h3><p>本例 R=70、Gr=Gb=200、B=120，均为模拟值。先逐位置求四通道和，再求绿色参考和与 RG、BG；这块恰好产生本例 RG 最小值，不是算法要求左上一定最小。</p>'},
+ {kicker:'RG 最大区域',dur:65,draw:rgMax,caption:p=>'⑧ 右下模拟 ROI 的逐像素累加与 RG / BG',html:'<h3>ROI 220 的计算</h3><p>本例 R=130、Gr=Gb=200、B=120。逐位置求和后计算 RG、BG，此块恰好是本例 RG 最大值；不表示实测极值一定在右下。</p>'},
+ {kicker:'BG 最小区域',dur:65,draw:bgMin,caption:p=>'⑨ 右上模拟 ROI 的逐像素累加与 RG / BG',html:'<h3>ROI 16 的计算</h3><p>本例 R=100、Gr=Gb=200、B=100。逐位置求和后计算 RG、BG，此块恰好是本例 BG 最小值；位置与像素为模拟。</p>'},
+ {kicker:'BG 最大区域',dur:65,draw:bgMax,caption:p=>'⑩ 左下模拟 ROI 的逐像素累加与 RG / BG',html:'<h3>ROI 204 的计算</h3><p>本例 R=100、Gr=Gb=200、B=140。逐位置求和后计算 RG、BG，此块恰好是本例 BG 最大值；位置与像素为模拟。</p>'},
+ {kicker:'任选区域计算',dur:65,draw:inspectRegion,caption:p=>'⑪ 用滑杆选择任意 ROI，逐位置计算',html:'<h3>选择 0～220 任意区域</h3><p>通过动画下方的 ROI 索引滑杆选择任意一块，即可从头观看该块四通道累加、绿色参考和及 RG / BG 计算。这个章节始终使用固定模拟例子；下方两角 R 互动滑杆只影响最后的互动章节。</p>'},
+ {kicker:'遍历与找极值',dur:24,draw:scan,caption:p=>'⑫ 从 221 个 ROI 的向量找 RG / BG 极值',html:'<h3>所有块参与极值</h3><p>源码对 ROI 原始比例向量分别取 max、min，中心值从五点映射读取。GG 极值也被取出，但 V1.0 shading 判定只用 RG 和 BG。此例全 221 块均明确构造，极值可以复算。</p>'},
+ {kicker:'RG 偏离中心',dur:26,draw:rgDev,caption:p=>'⑬ RG 最大与最小分别归一化，再取较大偏离',html:'<h3>RG shading</h3><p>分别计算 |RG最大 / RG中心 − 1| 和 |RG最小 / RG中心 − 1|，再取较大值。此例约 0.3。不是直接把最大值与最小值相减，也没有加 Color_Ratio 的 offset。</p>'},
+ {kicker:'BG 偏离中心',dur:26,draw:bgDev,caption:p=>'⑭ BG 同样计算两侧偏离',html:'<h3>BG shading</h3><p>分别计算 |BG最大 / BG中心 − 1| 和 |BG最小 / BG中心 − 1|，取较大值，此例约 0.16667。显示数字经过舍入；比较使用未舍入的值。</p>'},
+ {kicker:'阈值与结果',dur:24,draw:decision,caption:p=>'⑮ RG 超 Class2，设置 shading 失败',html:'<h3>两级判断</h3><p>本配置 Class1 与 Class2 均为 0.2。源码先检查 RG 或 BG 是否严格大于 Class2；只有否则才检查 Class1。因此本例主项失败为 2227 / grade 5，MA 保持初始通过；同阈值下正常有限值路径不会单独触发 MA。</p>'},
+ {kicker:'特殊值与风险',dur:24,draw:exceptions,caption:p=>'⑯ 区分原始向量、五点映射和低亮度',html:'<h3>异常路径</h3><p>五点映射的中心比值大于 10 时被替换为 −1，而极值仍来自未替换向量；Gr&gt;10、Gb≤0 也会让 −1 进入计算。源码对中心比例除零没有显式保护；这些情况都不能套用正常例子，应联系开发人员确认。</p>'},
+ {kicker:'返回两个子项',dur:22,draw:returns,caption:p=>'⑰ 追加两个子项，最终 bin 还需要全局汇总',html:'<h3>结果向量</h3><p>V1.0 依次返回 Color_Shading、Color_Shading_MA；开关关闭时二者 g_msg=false。未识别版本返回一个 false 且 g_msg=false 的子项。本例仅说明子项，不推断整机最终 bin。</p>'},
+ {kicker:'互动模拟',dur:28,draw:interactive,caption:p=>'⑱ 修改左右两角 R，观察极值和阈值结果',html:'<h3>改变两个区域</h3><p>两个滑杆分别修改左上、右下 ROI 的 R，保持其他通道和其余 219 块不变，重新扫描所有 RG、BG 并按真实 Class2/else if Class1 比较。将两角都改成 100 可观察未超限；这是互动模拟，不会修改配置。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+const inspect=document.getElementById('inspect'),inspectOut=document.getElementById('inspectout');
+inspect.addEventListener('input',()=>{state.inspect=Number(inspect.value);inspectOut.textContent=inspect.value;AlgoAnim.gotoScene(10,true);});
+const input=document.getElementById('rval'),out=document.getElementById('rout'),left=document.getElementById('lval'),leftOut=document.getElementById('lout');
+function setValues(l,r){state.l=Number(l);state.r=Number(r);left.value=String(l);input.value=String(r);leftOut.textContent=String(l);out.textContent=String(r);AlgoAnim.render();}
+input.addEventListener('input',()=>setValues(left.value,input.value));
+left.addEventListener('input',()=>setValues(left.value,input.value));
+document.getElementById('sample').addEventListener('click',()=>setValues(70,130));
+document.getElementById('pass').addEventListener('click',()=>setValues(100,100));
+</script>
+</body>
+</html>
