@@ -7,6 +7,12 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = Path('STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps')
 # 字段解释只是阅读提示；数值始终从原文件读取，不写死在讲解里。
 CONFIGS = {
+    'color_shading_5x5': ('ColorShading_5x5.data', [
+        ('Skip', 'ROI 跳过边缘'), ('ROI_X_Cnt', '横向区域数'), ('ROI_Y_Cnt', '纵向区域数'),
+        ('RG1_min', 'RG1 下限'), ('RG1_max', 'RG1 上限'), ('RG2_min', 'RG2 下限'), ('RG2_max', 'RG2 上限'),
+        ('RG3_min', 'RG3 下限'), ('RG3_max', 'RG3 上限'), ('BG1_min', 'BG1 下限'), ('BG1_max', 'BG1 上限'),
+        ('BG2_min', 'BG2 下限'), ('BG2_max', 'BG2 上限'), ('BG3_min', 'BG3 下限'), ('BG3_max', 'BG3 上限'),
+        ('bin_shading', '失败 bin'), ('grade_shading', '失败 grade'), ('open_mode', '开关')]),
     'color_shading': ('ColorShading.data', [
         ('Skip', 'ROI 跳过边缘'), ('ROI_X_Cnt', '横向区域数'), ('ROI_Y_Cnt', '纵向区域数'),
         ('Factor_Center_Class1', 'Class1 阈值'), ('Factor_Center_Class2', 'Class2 阈值'),
@@ -64,7 +70,7 @@ CSS = '''
 def get_config(page):
     filename, fields = CONFIGS[page]
     files = []
-    names = [filename, 'Basic.data'] + (['LightResponse.data'] if page == 'color_ratio' else ['ColorRatio.data', 'LightResponse.data'] if page == 'color_shading' else [])
+    names = [filename, 'Basic.data'] + (['LightResponse.data'] if page == 'color_ratio' else ['ColorRatio.data', 'LightResponse.data'] if page in ('color_shading', 'color_shading_5x5') else [])
     for name in names:
         path = CONFIG_DIR / name
         text = (ROOT / path).read_text(encoding='utf-8')

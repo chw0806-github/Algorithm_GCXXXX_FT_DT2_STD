@@ -8,7 +8,7 @@ const vm = require('vm');
 
 // 所有动画的源文件和构建产物都应提供同一组倍速按钮。
 const pages = ['light_response', 'relative_illumination', 'non_uniformity',
-  'deadrow_deadcol_bright', 'edge_deadrow_deadcol_bright', 'pixel_defect', 'color_ratio', 'color_shading'];
+  'deadrow_deadcol_bright', 'edge_deadrow_deadcol_bright', 'pixel_defect', 'color_ratio', 'color_shading', 'color_shading_5x5'];
 for (const page of pages) for (const file of ['index.src.html', 'index.html']) {
   const html = fs.readFileSync(path.join(__dirname, '..', page, file), 'utf8');
   const buttons = Array.from(html.matchAll(/<button data-speed="([\d.]+)"(?: class="([^"]+)")?>([^<]+)<\/button>/g));

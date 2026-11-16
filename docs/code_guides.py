@@ -51,6 +51,7 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
+    'color_shading_5x5': ['一眼看懂','配置与入口','分区与五点','一块先算 RG / BG','先得到五点比例','RG1 对角比较','RG2 对角比较','RG3 中心与四角','BG1 对角比较','BG2 对角比较','BG3 中心与四角','依次对照六个范围','源码的除法条件','前置均值异常','返回与追加','互动观察'],
     'color_shading': ['一眼看懂','版本与开关','前置与低亮度','把画面分区','每块算颜色比例','逐块计算','RG 找中心与极值','BG 找中心与极值','RG 和中心比较','BG 和中心比较','对照阈值','特殊情况','返回并追加结果','互动模拟'],
     'light_response': ['总览','拆解代码','多工位','分通道','取 ROI','算均值','判 Spec','归档汇总'],
     'relative_illumination': ['定位','取窗口','求均值','算 ratio','防呆','判 Spec','归档'],
@@ -62,6 +63,23 @@ EXPECTED_KICKERS = {
 }
 
 GUIDES = {
+ 'color_shading_5x5': [
+  [S(BRIGHT,54,55,'cs_shading_res_5x5','调用并把向量整体追加到结果列表。'),S(BRIGHT,1061,1075,'RG1 =','六项分别用五点比值作对角或中心比较。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',346,348,'ColorShading_5x5.data','加载器读取本版本配置。'),S(BRIGHT,966,969,'color_shading_5_5_V1.0','按版本选择实现。'),S(BRIGHT,982,1012,'param_color_shading_5x5.open_mode_','只检查 5×5 开关，再用本配置重新求 ROI 比例。')],
+  [basic,S(TEST,1780,1794,'roi_x_pitch','根据行列数及 Skip 按整数 pitch 建立 ROI。'),S(TEST,1813,1835,'ratio_r_g_center','取得中心与四角的索引及比例。')],
+  [S(RAW,7829,7866,'sum_g_average','中心示例展示四通道和、绿色参考和与 RG/BG；画面不逐像素播放。')],
+  [S(RAW,7829,7866,'sum_g_average','四通道按像素求和，RG 与 BG 共用绿色平均和；画面只展示结果。'),S(TEST,1797,1809,'roi_rg_ratio.push_back','逐块计算比例并保存。')],
+  [S(BRIGHT,1061,1075,'RG1 = ratio_value.rg_leftup','RG1 左上除右下；六项共有同一个 if 条件。')],
+  [S(BRIGHT,1061,1075,'RG2 = ratio_value.rg_rightup','RG2 右上除左下。')],
+  [S(BRIGHT,1061,1075,'RG3 = (4*ratio_value.rg_center)','RG3 等价于中心除四角均值，但源码实际先乘 4 再除四角和。')],
+  [S(BRIGHT,1061,1075,'BG1 = ratio_value.bg_leftup','BG1 左上除右下；右下 BG 未在该条件中检查。')],
+  [S(BRIGHT,1061,1075,'BG2 = ratio_value.bg_rightup','BG2 右上除左下。')],
+  [S(BRIGHT,1061,1075,'BG3 = (4*ratio_value.bg_center)','BG3 为中心相对四角平均；四角和未检查为非零。')],
+  [S(BRIGHT,1124,1159,'if(RG3 >','源码依 RG3、RG1、RG2、BG3、BG1、BG2 的 else if 顺序进行严格越界检查。')],
+  [S(BRIGHT,1061,1075,'ratio_value.rg_rightdown !=0','重复检查 RG 左下，未检查 BG 右下及四角和；六项先初始化为 2。')],
+  [S(TEST,1863,1887,'append(-1)','前置 Gr 或 Gb 不大于零时向量和五点均置 −1。'),S(BRIGHT,1061,1075,'RG1 = ratio_value.rg_leftup','−1 非零会进入计算，六项均为 1；需检查数据有效性。'),S(TEST,1845,1854,'>10','五点映射的比值大于 10 会变为 −1。')],
+  [S(BRIGHT,1167,1176,'push_back','关闭时 g_msg=false；V1.0 只返回一个子项。'),S(BRIGHT,966,976,'g_msg = false','未知版本返回一个 false 且 g_msg=false 的子项。'),S(BRIGHT,54,55,'insert','向量追加到 items_results。'),finalbin],
+  [S(BRIGHT,1068,1075,'BG3 =','互动修改右下 BG，重新计算六项。'),S(BRIGHT,1124,1159,'BG1 >','按 else if 顺序严格判断范围。')]],
  'color_shading': [
   [S(BRIGHT,51,52,'cs_shading_res_17x13','调用 Color_Shading，并把返回向量追加到汇总列表。'),S(BRIGHT,695,710,'test_roi_colorratio','计算每块比例，随后取极值并与中心比较。'),S(BRIGHT,734,740,'rg_shading','计算 RG 与 BG 相对中心的最大偏离。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',329,345,'ColorShading.data','按顺序尝试载入颜色比例和颜色阴影的版本配置。'),S(BRIGHT,660,665,'Color_Shading_V1_0','按已加载版本分派。'),S(BRIGHT,680,698,'ratio_open_mode_','两个开关均为 1 才进入，并以 shading 配置重新计算 ROI。')],

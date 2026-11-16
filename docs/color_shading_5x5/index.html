@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color_Shading_5_5 动画讲解 · 图像传感器 FT 测试</title>
+<style>
+:root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 目录页 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px}
+.card-link{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(110,168,254,.10),rgba(255,255,255,.02));padding:18px 20px;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.card-link:hover{transform:translateY(-2px);border-color:rgba(110,168,254,.5);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.card-link h3{margin:0 0 8px;font-size:15px;color:#eaf2ff}
+.card-link p{margin:0;font-size:12.5px;line-height:1.75;color:var(--dim)}
+.card-link .tag{display:inline-block;font-size:10.5px;color:#ffd166;border:1px solid rgba(255,209,102,.35);
+  background:rgba(255,209,102,.08);border-radius:999px;padding:2px 8px;margin-bottom:10px}
+.sliders.two{grid-template-columns:repeat(2,1fr)}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◎</div>
+      <div>
+        <h1>图像传感器 FT 测试 · 色彩阴影（Color_Shading_5_5）动画讲解</h1>
+        <p class="sub">逐行拆解 <code>vector&lt;Subitem_Result&gt; cs_shading_res_5x5 = Color_Shading_5_5(test_manage);</code><br><code>items_results.insert(items_results.end(), cs_shading_res_5x5.begin(), cs_shading_res_5x5.end());</code></p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">C++ / Qt</span>
+      <span class="badge">GC8613T · CP_SPEC</span>
+      <span class="badge">参数取自 <b>ColorShading_5x5.data</b></span>
+      <span class="badge"><a href="../light_response/index.html" style="color:#8fb8ff;text-decoration:none">对照 Light_Response →</a></span>
+      <a class="badge link" href="storyboard.html" title="不执行脚本也能看：每幕一张定格图 + 字幕 + 讲解">看不了动画？→ 静态分镜</a>
+    </div>
+  </header>
+
+<section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+<div class="config-keys"><span class="config-key">ROI 跳过边缘：<code>[Skip]=0</code></span><span class="config-key">横向区域数：<code>[ROI_X_Cnt]=5</code></span><span class="config-key">纵向区域数：<code>[ROI_Y_Cnt]=5</code></span><span class="config-key">RG1 下限：<code>[RG1_min]=0.9</code></span><span class="config-key">RG1 上限：<code>[RG1_max]=1.1</code></span><span class="config-key">RG2 下限：<code>[RG2_min]=0.9</code></span><span class="config-key">RG2 上限：<code>[RG2_max]=1.1</code></span><span class="config-key">RG3 下限：<code>[RG3_min]=0.9</code></span><span class="config-key">RG3 上限：<code>[RG3_max]=1.1</code></span><span class="config-key">BG1 下限：<code>[BG1_min]=0.9</code></span><span class="config-key">BG1 上限：<code>[BG1_max]=1.1</code></span><span class="config-key">BG2 下限：<code>[BG2_min]=0.9</code></span><span class="config-key">BG2 上限：<code>[BG2_max]=1.1</code></span><span class="config-key">BG3 下限：<code>[BG3_min]=0.9</code></span><span class="config-key">BG3 上限：<code>[BG3_max]=1.1</code></span><span class="config-key">失败 bin：<code>[bin_shading]=158</code></span><span class="config-key">失败 grade：<code>[grade_shading]=5</code></span><span class="config-key">开关：<code>[open_mode]=1</code></span></div><div class="config-layout"><section class="config-file"><h3>ColorShading_5x5.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/ColorShading_5x5.data</div><pre tabindex="0" aria-label="ColorShading_5x5.data 文件原文，可滚动"><code>[Skip]=0
+[ROI_X_Cnt]=5
+[ROI_Y_Cnt]=5
+
+[RG1_min]=0.9
+[RG1_max]=1.1
+[RG2_min]=0.9
+[RG2_max]=1.1
+[RG3_min]=0.9
+[RG3_max]=1.1
+[BG1_min]=0.9
+[BG1_max]=1.1
+[BG2_min]=0.9
+[BG2_max]=1.1
+[BG3_min]=0.9
+[BG3_max]=1.1
+
+[bin_shading]=158
+[grade_shading]=5
+
+
+[open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section><section class="config-file"><h3>ColorRatio.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/ColorRatio.data</div><pre tabindex="0" aria-label="ColorRatio.data 文件原文，可滚动"><code>[Skip]=0
+[ROI_X_Cnt]=9
+[ROI_Y_Cnt]=9
+
+[TargetRatioGG_leftup]=1.000
+[TargetRatioRG_leftup]=0.512
+[TargetRatioBG_leftup]=0.62
+[TargetRatioGG_leftup_offset]=0
+[TargetRatioRG_leftup_offset]=0.05
+[TargetRatioBG_leftup_offset]=-0.006
+
+[TargetRatioGG_rightup]=1.000
+[TargetRatioRG_rightup]=0.512
+[TargetRatioBG_rightup]=0.62
+[TargetRatioGG_rightup_offset]=0
+[TargetRatioRG_rightup_offset]=0.05
+[TargetRatioBG_rightup_offset]=-0.007
+
+
+[TargetRatioGG_center]=1.000
+[TargetRatioRG_center]=0.55
+[TargetRatioBG_center]=0.61
+[TargetRatioGG_center_offset]=0
+[TargetRatioRG_center_offset]=0.07
+[TargetRatioBG_center_offset]=-0.008
+
+[TargetRatioGG_leftdown]=1.000
+[TargetRatioRG_leftdown]=0.512
+[TargetRatioBG_leftdown]=0.62
+[TargetRatioGG_leftdown_offset]=0
+[TargetRatioRG_leftdown_offset]=0.05
+[TargetRatioBG_leftdown_offset]=-0.006
+
+[TargetRatioGG_rightdown]=1.000
+[TargetRatioRG_rightdown]=0.512
+[TargetRatioBG_rightdown]=0.62
+[TargetRatioGG_rightdown_offset]=0
+[TargetRatioRG_rightdown_offset]=0.05
+[TargetRatioBG_rightdown_offset]=-0.007
+
+
+[Factor_Center_Gr_Gb_Ratio]=0.08
+
+[Factor_Center_Class1]=0.2
+[Factor_Center_Class2]=0.2
+
+[Factor_Corner_Class1]=0.5
+[Factor_Corner_Class2]=0.5
+
+[Factor_Limit]=0.08
+
+[Factor_Golden]=0.02
+
+
+[bin_ratio]=2220
+[grade_ratio]=5
+
+[bin_ratio_MA]=2221
+[grade_ratio_MA]=2
+
+[bin_ratio_Golden]=2222
+[grade_ratio_Golden]=0
+
+[bin_ratio_Corner_RG_Max]=2223
+[grade_ratio_Corner_RG_Max]=0
+
+[bin_ratio_Corner_RG_Min]=2224
+[grade_ratio_Corner_RG_Min]=0
+
+[bin_ratio_Corner_BG_Max]=2225
+[grade_ratio_Corner_BG_Max]=0
+
+[bin_ratio_Corner_BG_Min]=2226
+[grade_ratio_Corner_BG_Min]=0
+
+[Gr_Gb_Diff]=50
+
+[bin_GI]=2219
+[grade_GI]=3
+
+[ratio_open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>LightResponse.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/LightResponse.data</div><pre tabindex="0" aria-label="LightResponse.data 文件原文，可滚动"><code>[MinMeanR]=80
+[MaxMeanR]=220
+[MinMeanGr]=144
+[MaxMeanGr]=216
+[MinMeanGb]=144
+[MaxMeanGb]=216
+[MinMeanB]=80
+[MaxMeanB]=220
+
+
+[ROI_X]=768
+[ROI_Y]=432
+[ROI_W]=384
+[ROI_H]=216
+
+
+[bin_response]=2201
+[grade_response]=9
+
+
+[response_open_mode]=1
+
+[log_align]=1
+
+[error_MIN]=50
+[error_MAX]=241</code></pre></section></div>
+</section>
+  <main>
+    <section class="stage-col">
+      <div class="stage-card">
+        <canvas id="stage" aria-label="算法动画舞台"></canvas>
+        <div class="caption"><span class="dot"></span><span id="caption">① 五点色彩阴影：对角及中心与四角分别比较</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" title="上一节（←）">◀ 上一节</button>
+        <button id="play" class="primary" title="播放 / 暂停（空格）">⏸ 暂停</button>
+        <button id="next" title="下一节（→）">下一节 ▶</button>
+        <button id="replay" title="重播">↺ 重播</button>
+        <div class="progress"><div id="bar"></div></div>
+        <div class="speed">
+          <button data-speed="0.5">0.5×</button>
+          <button data-speed="1" class="on">1×</button>
+          <button data-speed="2">2×</button>
+          <button data-speed="3">3×</button>
+        </div>
+      </div>
+
+      <div class="tuner">
+        <div class="tuner-head"><h2>互动：改变右下 ROI 的模拟 B 像素</h2><span>只改变虚构例子，不修改配置或实测图像</span></div>
+        <div class="sliders two"><label class="slider" style="--c:#6ea8fe"><span>右下 B</span><input id="bval" type="range" min="70" max="150" step="1" value="100"><output id="bout">100</output></label></div>
+        <div class="presets"><button id="sample">恢复失败示例 100</button><button id="pass">改为 120</button></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="chapters" id="chapters" aria-label="章节"></nav>
+      <section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section>
+      <div class="explain" id="explain"><h3>本页在讲什么</h3><p>从 5×5 分区、五点比例、对角及中心比较，逐步讲到一个子项结果。画面使用模拟数据。</p></div>
+    </aside>
+  </main>
+
+  <footer class="foot">基于 GC8613T 白帧 ColorShading_5x5.data V1.0；五点数据为虚构示例，不代表产线实测或最终 bin。
+  </footer>
+</div>
+
+<script>
+/* ==========================================================================
+   AlgoAnim · 算法动画共用播放器
+   --------------------------------------------------------------------------
+   页面里只需要写「场景」，播放器负责：画布自适应、章节、控制条、字幕、快捷键。
+
+   用法：
+     <link rel="stylesheet" href="../shared/player.css">
+     <script src="../shared/player.js"><\/script>
+     <script>
+       const state = AlgoAnim.state;          // 共用状态（scene/t/speed + 自定义字段）
+       state.xxx = ...;
+       function drawStep1(p){ ... }           // p = 0..1，用全局 ctx / txt / card 画
+       const SCENES = [{ kicker, dur, draw:drawStep1, caption:p=>'...', html:'...' }];
+       AlgoAnim.start({ scenes: SCENES });
+     <\/script>
+
+   绘图工具箱（全部是全局函数）：txt card arrow rr para wrapLines withA
+   常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
+   ========================================================================== */
+'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / ' + String(scenes.length).padStart(2,'0') + ' · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+
+
+/* ==========================================================================
+   播放器
+   ========================================================================== */
+const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
+let scenes = [];
+let elCaption = null, elBar = null;
+
+function resize(){
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  if(!ctx || !scenes.length) return;
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = scenes[PState.scene];
+  const p = clamp01(PState.t / sc.dur);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
+  if(elCaption){
+    const cap = sc.caption(p);
+    if(elCaption.textContent !== cap) elCaption.textContent = cap;
+  }
+}
+
+let lastTime = performance.now();
+
+function tick(now){
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  const sc = scenes[PState.scene];
+  if(sc && PState.playing){
+    PState.t += dt * PState.speed;
+    if(PState.t >= sc.dur){
+      if(PState.scene < scenes.length - 1){
+        gotoScene(PState.scene + 1, true);
+      } else {
+        PState.t = sc.dur;
+        PState.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  if(!elBar || !scenes.length) return;
+  const sc = scenes[PState.scene];
+  const overall = (PState.scene + clamp01(PState.t/sc.dur)) / scenes.length;
+  elBar.style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
+function gotoScene(i, autoplay){
+  if(!scenes.length) return;
+  PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
+  PState.t = 0;
+  PState.playing = autoplay !== false;
+  syncPlayButton();
+  const ex = document.getElementById('explain');
+  if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === PState.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+  render();
+}
+
+function buildChapters(){
+  const box = document.getElementById('chapters');
+  if(!box) return;
+  box.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'chapter';
+    b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') +
+                  '</span><span class="name">' + s.kicker + '</span>';
+    b.addEventListener('click', ()=> gotoScene(i, true));
+    box.appendChild(b);
+  });
+}
+
+function bindControls(){
+  const play = document.getElementById('play');
+  if(play) play.addEventListener('click', ()=>{
+    if(!PState.playing && PState.t >= scenes[PState.scene].dur - 0.01) PState.t = 0;
+    PState.playing = !PState.playing;
+    syncPlayButton();
+  });
+  const prev = document.getElementById('prev');
+  if(prev) prev.addEventListener('click', ()=> gotoScene(PState.scene-1, true));
+  const next = document.getElementById('next');
+  if(next) next.addEventListener('click', ()=> gotoScene(PState.scene+1, true));
+  const replay = document.getElementById('replay');
+  if(replay) replay.addEventListener('click', ()=> gotoScene(0, true));
+
+  document.querySelectorAll('.speed button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      PState.speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(play) play.click(); }
+    if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(PState.scene+1, true); }
+    if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(PState.scene-1, true); }
+  });
+}
+
+const AlgoAnim = {
+  get state(){ return PState; },
+  get ctx(){ return ctx; },
+  get canvas(){ return canvas; },
+  get scenes(){ return scenes; },
+  gotoScene: gotoScene,
+  render: render,
+  start: function(opts){
+    opts = opts || {};
+    canvas = document.getElementById(opts.canvas || 'stage');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
+    scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    Object.assign(PState, opts.state || {});
+    elCaption = document.getElementById('caption');
+    elBar = document.getElementById('bar');
+    buildChapters();
+    bindControls();
+    if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize);
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
+  }
+};
+window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 54, "last": 55, "note": "调用并把向量整体追加到结果列表。", "code": "   54      vector<Subitem_Result> cs_shading_res_5x5  = Color_Shading_5_5( test_manage);\n   55      items_results.insert(items_results.end(),cs_shading_res_5x5.begin(),cs_shading_res_5x5.end());"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "六项分别用五点比值作对角或中心比较。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp", "first": 346, "last": 348, "note": "加载器读取本版本配置。", "code": "  346      item =QString(\"ColorShading_5x5.data\");\n  347      ok = tmp->load_Color_Shading_5x5_Param (path_txt.toStdString());\n  348      if (ok) item_actual.append(item);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 966, "last": 969, "note": "按版本选择实现。", "code": "  966  vector<Subitem_Result> BrightTest::Color_Shading_5_5( ParamManage& manage)\n  967  {\n  968      if(manage.color_shading_5x5_version == \"color_shading_5_5_V1.0\")\n  969          return Color_Shading_5_5_V1_0(manage);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 982, "last": 1012, "note": "只检查 5×5 开关，再用本配置重新求 ROI 比例。", "code": "  982      int w=manage.width_;\n  983      int h=manage.height_;\n  984      Subitem_Result result_cs (\"Color_Shading_5*5\",true);\n  985      //Subitem_Result result_cs_MA (\"Color_Shading_MA\",true);\n  986  \n  987      if (manage.param_color_shading_5x5.open_mode_ == 1)\n  988      {\n  989          Algorithm_all[site_].time_begin=clock();\n  990  \n  991          g_str_msg_all[site_]+=boost::str(boost::format(\"-------------------------- ROI Color Shading 5*5 -----------------------------\\n\"));\n  992  \n  993          Param_Color_Ratio  param_color_ratio_=manage.param_color_ratio_;\n  994          Param_Color_Shading_5x5  param_color_shading_ = manage.param_color_shading_5x5;\n  995          Color_Ratio_Value  ratio_value;\n  996  \n  997          TestItem::test_roi_colorratio( Algorithm_all[site_].mean_gr_roi, Algorithm_all[site_].mean_gb_roi, w, h,\n  998                                         manage.param_color_shading_5x5.skip,\n  999                                         manage.param_color_shading_5x5.ROI_X_Cnt,\n 1000                                         manage.param_color_shading_5x5.ROI_Y_Cnt,\n 1001                                         Algorithm_all[site_].g_buf_r_, Algorithm_all[site_].g_buf_gr_,\n 1002                                         Algorithm_all[site_].g_buf_gb_, Algorithm_all[site_].g_buf_b_,\n 1003                                         ratio_value.roi_rg_ratio,\n 1004                                         ratio_value.roi_bg_ratio,\n 1005                                         ratio_value.roi_gg_ratio,\n 1006                                         ratio_value.GG_ratio,\n 1007                                         ratio_value.RG_ratio,\n 1008                                         ratio_value.BG_ratio,\n 1009                                         ratio_value.G_G_diff,\n 1010                                         param_color_ratio_.GG_Ratio_target,\n 1011                                         param_color_ratio_.RG_Ratio_target,\n 1012                                         param_color_ratio_.BG_Ratio_target);"}], [{"path": "STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data", "first": 1, "last": 3, "note": "这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。", "code": "    1  [width]=3840\n    2  [height]=2160\n    3  [bayer]=RG"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1780, "last": 1794, "note": "根据行列数及 Skip 按整数 pitch 建立 ROI。", "code": " 1780      int total_roi_cnt = roi_x_cnt*roi_y_cnt;\n 1781      int roi_x_pitch = (w/2 - 2*skip/2)/roi_x_cnt;\n 1782      int roi_y_pitch = (h/2 - 2*skip/2)/roi_y_cnt;\n 1783  \n 1784      if (mean_gr>0 && mean_gb>0)\n 1785      {\n 1786          QVector<cv::Rect> ROI;\n 1787          for(int i=0; i<roi_y_cnt; i++)\n 1788          {\n 1789              int roi_y = skip/2 + i*roi_y_pitch;\n 1790              for(int j=0; j<roi_x_cnt; j++)\n 1791              {\n 1792                  int roi_x = skip/2 + j*roi_x_pitch;\n 1793                  ROI.append(cv::Rect(roi_x,roi_y,roi_x_pitch,roi_y_pitch));\n 1794              }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1813, "last": 1835, "note": "取得中心与四角的索引及比例。", "code": " 1813          double ratio_g_g_center = roi_gg_ratio[total_roi_cnt/2];\n 1814          double ratio_r_g_center = roi_rg_ratio[total_roi_cnt/2];\n 1815          double ratio_b_g_center = roi_bg_ratio[total_roi_cnt/2];\n 1816          double gr_gb_diff_center = roi_g_g_diff_ratio[total_roi_cnt/2];\n 1817  \n 1818          double ratio_g_g_left_up = roi_gg_ratio[0];\n 1819          double ratio_r_g_left_up = roi_rg_ratio[0];\n 1820          double ratio_b_g_left_up = roi_bg_ratio[0];\n 1821          double gr_gb_diff_left_up = roi_g_g_diff_ratio[0];\n 1822  \n 1823          double ratio_g_g_right_up = roi_gg_ratio[roi_x_cnt-1];\n 1824          double ratio_r_g_right_up = roi_rg_ratio[roi_x_cnt-1];\n 1825          double ratio_b_g_right_up = roi_bg_ratio[roi_x_cnt-1];\n 1826          double gr_gb_diff_right_up = roi_g_g_diff_ratio[roi_x_cnt-1];\n 1827  \n 1828          double ratio_g_g_left_down = roi_gg_ratio[total_roi_cnt-roi_x_cnt];\n 1829          double ratio_r_g_left_down = roi_rg_ratio[total_roi_cnt-roi_x_cnt];\n 1830          double ratio_b_g_left_down = roi_bg_ratio[total_roi_cnt-roi_x_cnt];\n 1831          double gr_gb_diff_left_down = roi_g_g_diff_ratio[total_roi_cnt-roi_x_cnt];\n 1832  \n 1833          double ratio_g_g_right_down = roi_gg_ratio[total_roi_cnt-1];\n 1834          double ratio_r_g_right_down = roi_rg_ratio[total_roi_cnt-1];\n 1835          double ratio_b_g_right_down = roi_bg_ratio[total_roi_cnt-1];"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7829, "last": 7866, "note": "中心示例展示四通道和、绿色参考和与 RG/BG；画面不逐像素播放。", "code": " 7829      double sum_r = 0.1;\n 7830      double sum_g1 = 0.1;\n 7831      double sum_g2 = 0.1;\n 7832      double sum_b = 0.1;\n 7833      int cnt_t = 0;\n 7834      for (int i=y; i<y+h_rect; ++i)\n 7835      {\n 7836          for (int j=x; j<x+w_rect; ++j)\n 7837          {\n 7838              if (i>=0 && i<h && j>=0 && j<w)\n 7839              {\n 7840                  sum_r+=(double)pR[w*i+j];\n 7841                  sum_g1+=(double)pG1[w*i+j];\n 7842                  sum_g2+=(double)pG2[w*i+j];\n 7843                  sum_b+=(double)pB[w*i+j];\n 7844                  cnt_t+=1;\n 7845              }\n 7846          }\n 7847      }\n 7848  \n 7849      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7850  \n 7851      if (sum_g1>0 && sum_g2>0)\n 7852      {\n 7853          if (sum_g1*100<sum_r)\n 7854              r_g = 100;\n 7855          else\n 7856              r_g = sum_r/sum_g_average;\n 7857          if (sum_g2*100<sum_b)\n 7858              b_g = 100;\n 7859          else\n 7860              b_g = sum_b/sum_g_average;\n 7861          if (sum_g2*100<sum_g1)\n 7862              g_g = 100;\n 7863          else\n 7864              g_g = std::abs((sum_g1/sum_g2));\n 7865      }\n 7866  "}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7829, "last": 7866, "note": "四通道按像素求和，RG 与 BG 共用绿色平均和；画面只展示结果。", "code": " 7829      double sum_r = 0.1;\n 7830      double sum_g1 = 0.1;\n 7831      double sum_g2 = 0.1;\n 7832      double sum_b = 0.1;\n 7833      int cnt_t = 0;\n 7834      for (int i=y; i<y+h_rect; ++i)\n 7835      {\n 7836          for (int j=x; j<x+w_rect; ++j)\n 7837          {\n 7838              if (i>=0 && i<h && j>=0 && j<w)\n 7839              {\n 7840                  sum_r+=(double)pR[w*i+j];\n 7841                  sum_g1+=(double)pG1[w*i+j];\n 7842                  sum_g2+=(double)pG2[w*i+j];\n 7843                  sum_b+=(double)pB[w*i+j];\n 7844                  cnt_t+=1;\n 7845              }\n 7846          }\n 7847      }\n 7848  \n 7849      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7850  \n 7851      if (sum_g1>0 && sum_g2>0)\n 7852      {\n 7853          if (sum_g1*100<sum_r)\n 7854              r_g = 100;\n 7855          else\n 7856              r_g = sum_r/sum_g_average;\n 7857          if (sum_g2*100<sum_b)\n 7858              b_g = 100;\n 7859          else\n 7860              b_g = sum_b/sum_g_average;\n 7861          if (sum_g2*100<sum_g1)\n 7862              g_g = 100;\n 7863          else\n 7864              g_g = std::abs((sum_g1/sum_g2));\n 7865      }\n 7866  "}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1797, "last": 1809, "note": "逐块计算比例并保存。", "code": " 1797          QVector<double> roi_g_g_diff_ratio;\n 1798          for(int i=0;i!=ROI.size();++i)\n 1799          {\n 1800              double r_g_ratio;\n 1801              double b_g_ratio;\n 1802              double g_g_ratio;\n 1803              double g_g_diff;\n 1804              AlgorithmFuncs::get_roi_colorratio(g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_,\n 1805                                                 w/2,h/2,ROI.at(i).x,ROI.at(i).y,ROI.at(i).width,ROI.at(i).height,\n 1806                                                 g_g_ratio,r_g_ratio,b_g_ratio,g_g_diff);\n 1807              roi_rg_ratio.push_back(r_g_ratio);\n 1808              roi_bg_ratio.push_back(b_g_ratio);\n 1809              roi_gg_ratio.push_back(g_g_ratio);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "RG1 左上除右下；六项共有同一个 if 条件。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "RG2 右上除左下。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "RG3 等价于中心除四角均值，但源码实际先乘 4 再除四角和。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "BG1 左上除右下；右下 BG 未在该条件中检查。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "BG2 右上除左下。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "BG3 为中心相对四角平均；四角和未检查为非零。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1124, "last": 1159, "note": "源码依 RG3、RG1、RG2、BG3、BG1、BG2 的 else if 顺序进行严格越界检查。", "code": " 1124          if(RG3 > manage.param_color_shading_5x5.rg3_max || RG3 < manage.param_color_shading_5x5.rg3_min)\n 1125          {\n 1126              result_cs.is_passed = false;\n 1127              result_cs.bin = param_color_shading_.bin_shanding;\n 1128              result_cs.grade = param_color_shading_.grade_shanding;\n 1129          }\n 1130          else if(RG1 > manage.param_color_shading_5x5.rg1_max || RG1 < manage.param_color_shading_5x5.rg1_min)\n 1131          {\n 1132              result_cs.is_passed = false;\n 1133              result_cs.bin = param_color_shading_.bin_shanding;\n 1134              result_cs.grade = param_color_shading_.grade_shanding;\n 1135          }\n 1136          else if(RG2 > manage.param_color_shading_5x5.rg2_max || RG2 < manage.param_color_shading_5x5.rg2_min)\n 1137          {\n 1138              result_cs.is_passed = false;\n 1139              result_cs.bin = param_color_shading_.bin_shanding;\n 1140              result_cs.grade = param_color_shading_.grade_shanding;\n 1141          }\n 1142          else if(BG3 > manage.param_color_shading_5x5.bg3_max || BG3 < manage.param_color_shading_5x5.bg3_min)\n 1143          {\n 1144              result_cs.is_passed = false;\n 1145              result_cs.bin = param_color_shading_.bin_shanding;\n 1146              result_cs.grade = param_color_shading_.grade_shanding;\n 1147          }\n 1148          else if(BG1 > manage.param_color_shading_5x5.bg1_max || BG1 < manage.param_color_shading_5x5.bg1_min)\n 1149          {\n 1150              result_cs.is_passed = false;\n 1151              result_cs.bin = param_color_shading_.bin_shanding;\n 1152              result_cs.grade = param_color_shading_.grade_shanding;\n 1153          }\n 1154          else if(BG2 > manage.param_color_shading_5x5.bg2_max || BG2 < manage.param_color_shading_5x5.bg2_min)\n 1155          {\n 1156              result_cs.is_passed = false;\n 1157              result_cs.bin = param_color_shading_.bin_shanding;\n 1158              result_cs.grade = param_color_shading_.grade_shanding;\n 1159          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "重复检查 RG 左下，未检查 BG 右下及四角和；六项先初始化为 2。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1863, "last": 1887, "note": "前置 Gr 或 Gb 不大于零时向量和五点均置 −1。", "code": " 1863      }\n 1864      else\n 1865      {\n 1866          for (int i=0; i<total_roi_cnt; i++)\n 1867          {\n 1868              roi_rg_ratio.append(-1);\n 1869              roi_bg_ratio.append(-1);\n 1870              roi_gg_ratio.append(-1);\n 1871          }\n 1872  \n 1873          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=-1;\n 1874          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=-1;\n 1875          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=-1;\n 1876          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=-1;\n 1877          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=-1;\n 1878  \n 1879          RG_ratio[QPair<QString,double>(\"leftup\",RG_Ratio_target.value(\"leftup\"))]=-1;\n 1880          RG_ratio[QPair<QString,double>(\"rightup\",RG_Ratio_target.value(\"rightup\"))]=-1;\n 1881          RG_ratio[QPair<QString,double>(\"center\",RG_Ratio_target.value(\"center\"))]=-1;\n 1882          RG_ratio[QPair<QString,double>(\"leftdown\",RG_Ratio_target.value(\"leftdown\"))]=-1;\n 1883          RG_ratio[QPair<QString,double>(\"rightdown\",RG_Ratio_target.value(\"rightdown\"))]=-1;\n 1884  \n 1885          BG_ratio[QPair<QString,double>(\"leftup\",BG_Ratio_target.value(\"leftup\"))]=-1;\n 1886          BG_ratio[QPair<QString,double>(\"rightup\",BG_Ratio_target.value(\"rightup\"))]=-1;\n 1887          BG_ratio[QPair<QString,double>(\"center\",BG_Ratio_target.value(\"center\"))]=-1;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1061, "last": 1075, "note": "−1 非零会进入计算，六项均为 1；需检查数据有效性。", "code": " 1061          double RG1 = 2.000;\n 1062          double RG2 = 2.000;\n 1063          double RG3 = 2.000;\n 1064          double BG1 = 2.000;\n 1065          double BG2 = 2.000;\n 1066          double BG3 = 2.000;\n 1067  \n 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1845, "last": 1854, "note": "五点映射的比值大于 10 会变为 −1。", "code": " 1845          RG_ratio[QPair<QString,double>(\"leftup\",RG_Ratio_target.value(\"leftup\"))]=(ratio_r_g_left_up>10)? -1 : ratio_r_g_left_up;\n 1846          RG_ratio[QPair<QString,double>(\"rightup\",RG_Ratio_target.value(\"rightup\"))]=(ratio_r_g_right_up>10)? -1 : ratio_r_g_right_up;\n 1847          RG_ratio[QPair<QString,double>(\"center\",RG_Ratio_target.value(\"center\"))]=(ratio_r_g_center>10)? -1 : ratio_r_g_center;\n 1848          RG_ratio[QPair<QString,double>(\"leftdown\",RG_Ratio_target.value(\"leftdown\"))]=(ratio_r_g_left_down>10)? -1 : ratio_r_g_left_down;\n 1849          RG_ratio[QPair<QString,double>(\"rightdown\",RG_Ratio_target.value(\"rightdown\"))]=(ratio_r_g_right_down>10)? -1 : ratio_r_g_right_down;\n 1850  \n 1851          BG_ratio[QPair<QString,double>(\"leftup\",BG_Ratio_target.value(\"leftup\"))]=(ratio_b_g_left_up>10)? -1 : ratio_b_g_left_up;\n 1852          BG_ratio[QPair<QString,double>(\"rightup\",BG_Ratio_target.value(\"rightup\"))]=(ratio_b_g_right_up>10)? -1 : ratio_b_g_right_up;\n 1853          BG_ratio[QPair<QString,double>(\"center\",BG_Ratio_target.value(\"center\"))]=(ratio_b_g_center>10)? -1 : ratio_b_g_center;\n 1854          BG_ratio[QPair<QString,double>(\"leftdown\",BG_Ratio_target.value(\"leftdown\"))]=(ratio_b_g_left_down>10)? -1 : ratio_b_g_left_down;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1167, "last": 1176, "note": "关闭时 g_msg=false；V1.0 只返回一个子项。", "code": " 1167      }\n 1168      else\n 1169      {\n 1170          result_cs.g_msg = false;\n 1171      }\n 1172  \n 1173      vector<Subitem_Result> Color_Shading_test_result;\n 1174      Color_Shading_test_result.push_back(result_cs);\n 1175  \n 1176      return Color_Shading_test_result;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 966, "last": 976, "note": "未知版本返回一个 false 且 g_msg=false 的子项。", "code": "  966  vector<Subitem_Result> BrightTest::Color_Shading_5_5( ParamManage& manage)\n  967  {\n  968      if(manage.color_shading_5x5_version == \"color_shading_5_5_V1.0\")\n  969          return Color_Shading_5_5_V1_0(manage);\n  970  \n  971  \n  972      Subitem_Result res(\"Color_Shading_5*5\", false);\n  973      res.g_msg = false;\n  974      vector<Subitem_Result> Color_Shading_test_result;\n  975      Color_Shading_test_result.push_back(res);\n  976      return Color_Shading_test_result;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 54, "last": 55, "note": "向量追加到 items_results。", "code": "   54      vector<Subitem_Result> cs_shading_res_5x5  = Color_Shading_5_5( test_manage);\n   55      items_results.insert(items_results.end(),cs_shading_res_5x5.begin(),cs_shading_res_5x5.end());"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5903, "last": 5926, "note": "遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。", "code": " 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector<Subitem_Result>& items_results)\n 5904  {\n 5905      Subitem_Result final_result(\"The initial value\",true,1,0,true);\n 5906  \n 5907      for(int i=0;i!=items_results.size();++i)\n 5908      {\n 5909          const Subitem_Result& item=items_results[i];\n 5910  \n 5911          if(item.g_msg == false)\n 5912              continue;\n 5913  \n 5914          std::string item_log =item.name;\n 5915          QString log_;\n 5916          if(item.is_passed)\n 5917              log_+=\" is Pass. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5918          else\n 5919              log_+=\" is Failed. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5920  \n 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();\n 5922  \n 5923          if(!item.is_passed && item.grade>final_result.grade)\n 5924              final_result=item;\n 5925      }\n 5926      return final_result;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1068, "last": 1075, "note": "互动修改右下 BG，重新计算六项。", "code": " 1068          if(ratio_value.rg_rightdown !=0 && ratio_value.rg_leftdown !=0 && ratio_value.bg_leftdown !=0 && ratio_value.rg_leftdown !=0)\n 1069          {\n 1070              RG1 = ratio_value.rg_leftup/ratio_value.rg_rightdown;\n 1071              RG2 = ratio_value.rg_rightup/ratio_value.rg_leftdown;\n 1072              RG3 = (4*ratio_value.rg_center)/(ratio_value.rg_leftup+ratio_value.rg_rightup+ratio_value.rg_leftdown+ratio_value.rg_rightdown);\n 1073              BG1 = ratio_value.bg_leftup/ratio_value.bg_rightdown;\n 1074              BG2 = ratio_value.bg_rightup/ratio_value.bg_leftdown;\n 1075              BG3 = (4*ratio_value.bg_center)/(ratio_value.bg_leftup+ratio_value.bg_rightup+ratio_value.bg_leftdown+ratio_value.bg_rightdown);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 1124, "last": 1159, "note": "按 else if 顺序严格判断范围。", "code": " 1124          if(RG3 > manage.param_color_shading_5x5.rg3_max || RG3 < manage.param_color_shading_5x5.rg3_min)\n 1125          {\n 1126              result_cs.is_passed = false;\n 1127              result_cs.bin = param_color_shading_.bin_shanding;\n 1128              result_cs.grade = param_color_shading_.grade_shanding;\n 1129          }\n 1130          else if(RG1 > manage.param_color_shading_5x5.rg1_max || RG1 < manage.param_color_shading_5x5.rg1_min)\n 1131          {\n 1132              result_cs.is_passed = false;\n 1133              result_cs.bin = param_color_shading_.bin_shanding;\n 1134              result_cs.grade = param_color_shading_.grade_shanding;\n 1135          }\n 1136          else if(RG2 > manage.param_color_shading_5x5.rg2_max || RG2 < manage.param_color_shading_5x5.rg2_min)\n 1137          {\n 1138              result_cs.is_passed = false;\n 1139              result_cs.bin = param_color_shading_.bin_shanding;\n 1140              result_cs.grade = param_color_shading_.grade_shanding;\n 1141          }\n 1142          else if(BG3 > manage.param_color_shading_5x5.bg3_max || BG3 < manage.param_color_shading_5x5.bg3_min)\n 1143          {\n 1144              result_cs.is_passed = false;\n 1145              result_cs.bin = param_color_shading_.bin_shanding;\n 1146              result_cs.grade = param_color_shading_.grade_shanding;\n 1147          }\n 1148          else if(BG1 > manage.param_color_shading_5x5.bg1_max || BG1 < manage.param_color_shading_5x5.bg1_min)\n 1149          {\n 1150              result_cs.is_passed = false;\n 1151              result_cs.bin = param_color_shading_.bin_shanding;\n 1152              result_cs.grade = param_color_shading_.grade_shanding;\n 1153          }\n 1154          else if(BG2 > manage.param_color_shading_5x5.bg2_max || BG2 < manage.param_color_shading_5x5.bg2_min)\n 1155          {\n 1156              result_cs.is_passed = false;\n 1157              result_cs.bin = param_color_shading_.bin_shanding;\n 1158              result_cs.grade = param_color_shading_.grade_shanding;\n 1159          }"}]];
+</script>
+<script>
+/* 五点像素均为虚构；不模拟另外 20 块。每块各通道取固定值。 */
+const state=AlgoAnim.state;state.b=100;
+const W=384,H=216,N=W*H;
+const ORDER=['RG3','RG1','RG2','BG3','BG1','BG2'];
+const POINTS=[{id:0,name:'左上',r:100,b:120},{id:4,name:'右上',r:108,b:125},{id:12,name:'中心',r:100,b:120},{id:20,name:'左下',r:100,b:120},{id:24,name:'右下',r:100,b:100}];
+function ratios(r,b){const g=200*N+.1;return {rg:(r*N+.1)/g,bg:(b*N+.1)/g};}
+function pointRatios(b){return POINTS.map(p=>ratios(p.r,p.id===24?b:p.b));}
+function calculate(q){
+ const [a,b,c,d,e]=q;let result={RG1:2,RG2:2,RG3:2,BG1:2,BG2:2,BG3:2};
+ const guard=e.rg!==0&&d.rg!==0&&d.bg!==0&&d.rg!==0;
+ if(guard){result={RG1:a.rg/e.rg,RG2:b.rg/d.rg,RG3:4*c.rg/(a.rg+b.rg+d.rg+e.rg),BG1:a.bg/e.bg,BG2:b.bg/d.bg,BG3:4*c.bg/(a.bg+b.bg+d.bg+e.bg)};}
+ return {result,guard};
+}
+function firstFail(result,limits){return ORDER.find(k=>result[k]>limits[k][1]||result[k]<limits[k][0])||null;}
+const LIMITS={RG1:[.9,1.1],RG2:[.9,1.1],RG3:[.9,1.1],BG1:[.9,1.1],BG2:[.9,1.1],BG3:[.9,1.1]};
+function note(s){txt(s,55,520,{size:12,color:C.dim});}
+function cardBox(x,y,w,h,title,lines,p,color){
+ card(x,y,w,h,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+ txt(title,x+16,y+30,{size:15,color:color||C.accent,weight:700});
+ const n=Math.min(lines.length,1+Math.floor(clamp01(p/.75)*lines.length));
+ lines.forEach((s,i)=>{if(i<n)txt(s,x+16,y+62+i*31,{size:13});});
+}
+function grid(x,y,selected){
+ for(let i=0;i<25;i++){
+  const chosen=selected.includes(i),center=i===12,corner=[0,4,20,24].includes(i),color=chosen?C.accent2:center||corner?C.accent:C.dim;
+  card(x+(i%5)*58,y+Math.floor(i/5)*58,52,52,{r:5,fill:withA(color,chosen?.37:center||corner?.12:.035),stroke:withA(color,chosen?1:.4)});
+  txt(String(i),x+(i%5)*58+26,y+Math.floor(i/5)*58+31,{size:13,color:chosen?C.accent2:C.dim,align:'center',weight:chosen?700:400});
+ }
+}
+function start(p){header(0,'一眼看懂','先算五点颜色比例，再看对角和中心相对四角的关系');
+ const steps=[['① 分区','5 × 5'],['② 取五点','四角 + 中心'],['③ 求比例','RG 与 BG'],['④ 六项比较','对角 / 四角'],['⑤ 判阈值','返回子项']];
+ steps.forEach((v,i)=>{const x=48+i*188,show=p>=i*.14;card(x,225,164,140,{fill:show?withA(C.accent,.15):C.panel,stroke:show?C.accent:C.line});txt(v[0],x+82,275,{size:16,align:'center',color:show?C.accent2:C.dim,weight:700});txt(v[1],x+82,310,{size:13,align:'center',color:show?C.ink:C.dim});if(i<4)arrow(x+166,295,x+184,295,show?C.accent:C.line,2);});
+ note('此算法与 17×13 的“全图极值对中心”不同，主要看四角与中心。');}
+function setup(p){header(1,'配置与入口','本示例启用 ColorShading_5x5.data，使用 V1.0');
+ cardBox(55,155,430,315,'这次的真实配置',['Skip = 0；横向 5、纵向 5','open_mode = 1','六项上下限均为 0.9 ～ 1.1','失败：bin 158 / grade 5','配置文件原文在页面顶部'],p,C.accent2);
+ cardBox(515,155,420,315,'与 17×13 不一样',['这里只检查 5×5 的 open_mode','不要求 ratio_open_mode = 1','调用同一底层函数重新求 5×5 比例','ColorRatio 的目标参与五点 map 键','这里的六项公式不加 ratio offset'],p);note('禁用时返回项 g_msg=false；版本未知也有单项回退。');}
+function sections(p){header(2,'分区与五点','把每个通道分成 25 块，再取四角与中心');
+ grid(55,155,p>=.35?[0,4,12,20,24]:[]);
+ cardBox(420,155,515,315,'示例图像尺寸',['RAW 3840×2160 → 每通道 1920×1080','5×5 整数分区，每块 384×216','每块每通道 82944 个像素','左上 0、右上 4、中心 12','左下 20、右下 24','25 块都算比例；下面公式只取五点'],p,C.accent2);note('尺寸来自示例 Basic.data；五点索引从 0 开始，按行排列。');}
+function ratioStep(p){header(3,'一块先算 RG / BG','以中心 ROI 为例：用四个通道的和，算出两种颜色比例');
+ const q=pointRatios(100)[2],g=200*N+.1,r=100*N+.1,b=120*N+.1;
+ grid(55,155,[12]);txt('选中中心 ROI 12',55,475,{size:13,color:C.accent2,weight:700});
+ card(420,155,515,315,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+ txt('① 虚构像素：R=100、Gr=Gb=200、B=120',440,190,{size:13,color:C.accent,weight:700});
+ if(p>=.20){txt('② 四通道求和（初始值各为 0.1）',440,230,{size:13,color:C.accent,weight:700});txt('R和 '+r.toFixed(1)+'　B和 '+b.toFixed(1),440,255,{size:13});txt('Gr和 = Gb和 = '+g.toFixed(1),440,280,{size:13});}
+ if(p>=.42)txt('③ 绿色参考和 = (Gr和 + Gb和) ÷ 2 = '+g.toFixed(1),440,323,{size:12,color:C.accent2});
+ if(p>=.60)txt('④ RG = R和 ÷ 绿色参考和 ≈ '+q.rg.toFixed(5),440,365,{size:14,color:CH.R});
+ if(p>=.76)txt('⑤ BG = B和 ÷ 绿色参考和 ≈ '+q.bg.toFixed(5),440,400,{size:14,color:CH.B});
+ note('每个通道有 82944 个像素；直接展示求和结果，不逐像素播放。');}
+function pointTable(p){header(4,'先得到五点比例','每块算 RG 与 BG；这里只展示结果，不逐像素播放累加');
+ const q=pointRatios(100);grid(55,155,[0,4,12,20,24]);
+ card(420,155,515,315,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+ txt('区域',440,192,{size:13,color:C.accent,weight:700});txt('模拟 R / B',560,192,{size:13,color:C.accent,weight:700});txt('RG',715,192,{size:13,color:CH.R,weight:700});txt('BG',825,192,{size:13,color:CH.B,weight:700});
+ const n=Math.min(5,1+Math.floor(clamp01(p/.75)*5));
+ POINTS.forEach((v,i)=>{if(i>=n)return;let y=230+i*37;txt(v.name+' '+v.id,440,y,{size:13,color:C.accent2});txt(v.r+' / '+v.b,560,y,{size:13});txt(q[i].rg.toFixed(5),715,y,{size:13,color:CH.R});txt(q[i].bg.toFixed(5),825,y,{size:13,color:CH.B});});
+ note('假设各点 Gr=Gb=200，通道内像素为固定值；均为虚构，不是实测。');}
+function metric(kind,num,p,scene){
+ const q=pointRatios(100),k=kind+num,key=kind.toLowerCase(),v=calculate(q).result[k],a=q[0][key],b=q[1][key],c=q[2][key],d=q[3][key],e=q[4][key];
+ const chosen=num===1?[0,24]:num===2?[4,20]:[0,4,12,20,24];
+ header(scene,k+'：'+(num===1?'左上 ÷ 右下':num===2?'右上 ÷ 左下':'中心 ÷ 四角平均'), '用同一种颜色比例作比较，不是两种颜色互相相除');
+ grid(55,155,chosen);
+ if(p>=.18&&num!==3){const x1=num===1?81:313,y1=181,x2=num===1?313:81,y2=413;arrow(x1,y1,x2,y2,kind==='RG'?CH.R:CH.B,3);}
+ card(420,155,515,315,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+ txt('① 取 '+kind+' 比例',440,190,{size:15,color:C.accent,weight:700});
+ if(num===1)txt('左上 ≈ '+a.toFixed(5)+'　右下 ≈ '+e.toFixed(5),440,225,{size:14});
+ else if(num===2)txt('右上 ≈ '+b.toFixed(5)+'　左下 ≈ '+d.toFixed(5),440,225,{size:14});
+ else{txt('四角：'+[a,b,d,e].map(n=>n.toFixed(5)).join('　'),440,220,{size:12});txt('中心 ≈ '+c.toFixed(5),440,248,{size:14,color:C.accent2});}
+ if(p>=.38){txt('② 代入公式',440,290,{size:15,color:C.accent,weight:700});
+  if(num===1)txt(a.toFixed(5)+' ÷ '+e.toFixed(5)+' ≈ '+v.toFixed(5),440,322,{size:15,color:C.ink});
+  else if(num===2)txt(b.toFixed(5)+' ÷ '+d.toFixed(5)+' ≈ '+v.toFixed(5),440,322,{size:15,color:C.ink});
+  else {txt('四角平均 ≈ '+((a+b+d+e)/4).toFixed(5),440,318,{size:14});txt(c.toFixed(5)+' ÷ 四角平均 ≈ '+v.toFixed(5),440,345,{size:14});}
+ }
+ if(p>=.72)txt('③ 范围预览：0.9 ～ 1.1 → '+(v<.9||v>1.1?'超限':'范围内'),440,409,{size:14,color:v<.9||v>1.1?C.fail:C.pass,weight:700});
+ note('公式画面为教学顺序；源码计算完六项后按指定顺序统一判定，使用未舍入值。');
+}
+function rg1(p){metric('RG',1,p,5)}function rg2(p){metric('RG',2,p,6)}function rg3(p){metric('RG',3,p,7)}
+function bg1(p){metric('BG',1,p,8)}function bg2(p){metric('BG',2,p,9)}function bg3(p){metric('BG',3,p,10)}
+function threshold(p){header(11,'依次对照六个范围','源码使用 else if：遇到第一个超限项即停止后续检查');
+ const r=calculate(pointRatios(100)).result,first=firstFail(r,LIMITS),stop=ORDER.indexOf(first),n=Math.min(6,1+Math.floor(clamp01(p/.78)*6));
+ card(55,155,880,325,{fill:'rgba(110,168,254,.045)',stroke:'rgba(110,168,254,.25)'});
+ txt('顺序',75,190,{size:13,color:C.accent});txt('指标',180,190,{size:13,color:C.accent});txt('模拟值',320,190,{size:13,color:C.accent});txt('允许范围',500,190,{size:13,color:C.accent});txt('本次检查',720,190,{size:13,color:C.accent});
+ ORDER.forEach((k,i)=>{if(i>=n)return;const y=228+i*38,check=i>stop?'未执行':i===stop?'超限 → 失败':'范围内';
+  txt(String(i+1),75,y,{size:13});txt(k,180,y,{size:14,weight:700});txt(r[k].toFixed(5),320,y,{size:14});txt('0.9 ～ 1.1',500,y,{size:14});txt(check,720,y,{size:14,color:i>stop?C.dim:i===stop?C.fail:C.pass,weight:700});});
+ note('图中 BG1 是本例首个超限项；相等于边界不失败，判断使用未舍入数。');}
+function guards(p){header(12,'源码的除法条件','先把六项初始化为 2，再检查条件；这里存在未覆盖的分母');
+ cardBox(55,155,430,315,'源码实际检查',['RG 右下 ≠ 0','RG 左下 ≠ 0','BG 左下 ≠ 0','RG 左下再次检查（重复）','条件不满足：六项保持 2'],p,C.accent2);
+ cardBox(515,155,420,315,'需要注意的边界',['BG 右下未检查，却用于 BG1 分母','RG3 / BG3 的四角和未检查','有些分母可能为零，结果非有限','NaN 与上下限比较可能都为 false','请开发人员核实并处理异常路径'],p);note('本页面只解释源码，不修改生产算法；普通模拟值均避开异常。');}
+function low(p){header(13,'前置均值异常','比例函数要求先前 Gr 和 Gb 均大于 0，否则五点映射为 −1');
+ cardBox(55,155,430,315,'假设某一先前均值 ≤ 0',['25 块比例向量填 −1','五点 RG / BG 映射也都为 −1','−1 不等于 0：上述除法条件成立','六项算出 1（例如 −1 ÷ −1）','不代表图像颜色合格'],p,C.accent2);
+ cardBox(515,155,420,315,'当前配置会怎样？',['六项 1 均落在 0.9 ～ 1.1','源码可能保留初始通过的子项','这个 5×5 函数没有额外 Gr>10 判断','点值 >10 时映射也会变为 −1','异常结果需联系开发人员确认'],p);note('此幕是假设异常分支，不是前面的正常模拟，也不是实测结论。');}
+function returns(p){header(14,'返回与追加','V1.0 只返回一个 Color_Shading_5*5 子项');
+ cardBox(55,155,430,315,'示例结果',['本例 BG1 超过 1.1','子项 is_passed=false','bin 158 / grade 5','MA 对象已注释，未返回','其他测试仍会参与最终 bin'],p,C.accent2);
+ cardBox(515,155,420,315,'调用方的 insert',['Color_Shading_5_5 返回向量','insert 将整个向量追加到 items_results','正常 V1.0 向量只有一个子项','open_mode 关闭：g_msg=false','未知版本：false 且 g_msg=false'],p);note('模拟子项结果不能直接等同于整机最终 bin。');}
+function interaction(p){header(15,'互动观察','改变右下 B，观察六项与首个超限项');
+ const q=pointRatios(state.b),r=calculate(q).result,first=firstFail(r,LIMITS);
+ cardBox(55,155,430,315,'固定其他点',['右下模拟 B = '+state.b,'右下 BG ≈ '+q[4].bg.toFixed(5),'BG1 ≈ '+r.BG1.toFixed(5),'BG2 ≈ '+r.BG2.toFixed(5),'BG3 ≈ '+r.BG3.toFixed(5)],1,C.accent2);
+ cardBox(515,155,420,315,'按源码顺序判定',['范围均为 0.9 ～ 1.1','RG3 → RG1 → RG2','→ BG3 → BG1 → BG2','首个超限：'+(first||'无'),'子项：'+(first?'失败，158 / grade 5':'未超限')],1);note('改变右下 B 同时影响 BG1 与 BG3，不影响 RG；只在本页模拟。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:16,draw:start,caption:p=>'① 5×5 色彩阴影：取五点，比较六个指标',html:'<h3>整体流程</h3><p>5×5 算法分别比较五点颜色比例的对角关系、中心与四角平均关系；不同于前一个 17×13 算法的全区域极值对中心。每一步分别展示。</p>'},
+ {kicker:'配置与入口',dur:20,draw:setup,caption:p=>'② 5×5 开关、范围与版本',html:'<h3>真实配置与版本</h3><p>本示例 ColorShading_5x5.data 的 open_mode=1，选择 V1.0，六个范围均为 [0.9,1.1]，失败 bin=158、grade=5。只检查 5×5 自己的开关，不检查 ratio_open_mode；仍会调用共用 ROI 比例函数并以 ColorRatio 目标构造 map 键，这些目标和 offset 不是六项的阈值或修正。</p>'},
+ {kicker:'分区与五点',dur:20,draw:sections,caption:p=>'③ 25 块都算比例，五点进入后续比较',html:'<h3>5×5 区域</h3><p>示例 RAW 3840×2160，拆通道后 1920×1080；Skip=0，整数分区每块 384×216（82944 个通道像素）。按行编号 0～24，选择左上 0、右上 4、中心 12、左下 20、右下 24。25 块都会计算，但六项公式只用五点。</p>'},
+ {kicker:'一块先算 RG / BG',dur:22,draw:ratioStep,caption:p=>'④ 以中心为例，先得到通道和，再算 RG 与 BG',html:'<h3>一块区域怎么得到比例</h3><p>以虚构的中心 ROI 为例：每通道 82944 个像素，R=100、Gr=Gb=200、B=120。源码对四通道逐像素累加，四个和各从 0.1 开始；动画直接展示各和，不逐个播放累加。绿色参考和=(Gr和+Gb和)/2，RG=R和/参考和，BG=B和/参考和。</p>'},
+ {kicker:'先得到五点比例',dur:24,draw:pointTable,caption:p=>'⑤ 查看五点 RG 与 BG 的模拟结果',html:'<h3>计算区域比例</h3><p>每块通道和从 0.1 开始，绿色参考和=(Gr和+Gb和)/2；RG=R和/绿色参考和，BG=B和/绿色参考和。正常像素路径还计算 GG，此处六项只用 RG/BG；这里不播放逐像素累加。</p><p>五点均为虚构固定像素：Gr=Gb=200，R/B 分别为左上 100/120、右上 108/125、中心 100/120、左下 100/120、右下 100/100；其余 20 块没有模拟，不影响本例五点公式。假设 Light_Response 的 Gr、Gb 前置均值均大于 0。</p>'},
+ {kicker:'RG1 对角比较',dur:20,draw:rg1,caption:p=>'⑥ RG1：左上 RG 除以右下 RG',html:'<h3>RG1 的方向</h3><p>取左上 RG 作分子、右下 RG 作分母；黄色格和箭头指出方向。图中范围仅预览，源码稍后按固定顺序判定。</p>'},
+ {kicker:'RG2 对角比较',dur:20,draw:rg2,caption:p=>'⑦ RG2：右上 RG 除以左下 RG',html:'<h3>另一条对角线</h3><p>右上 RG ÷ 左下 RG。本例约为 1.08，落在配置范围。与 RG1 是不同的对角组合，不能把方向颠倒。</p>'},
+ {kicker:'RG3 中心与四角',dur:22,draw:rg3,caption:p=>'⑧ RG3：中心 RG 除以四角 RG 的平均',html:'<h3>中心对四角</h3><p>源码为 4×中心RG / (左上+右上+左下+右下 RG)，数学上等于中心 RG ÷ 四角 RG 平均。图中四角和中心均高亮；不是和 25 块平均比较。</p>'},
+ {kicker:'BG1 对角比较',dur:20,draw:bg1,caption:p=>'⑨ BG1：左上 BG 除以右下 BG',html:'<h3>BG1 的方向</h3><p>左上 BG ÷ 右下 BG，本例约 1.2，超过上限 1.1；这是人为设计的失败示例，并非实测。</p>'},
+ {kicker:'BG2 对角比较',dur:20,draw:bg2,caption:p=>'⑩ BG2：右上 BG 除以左下 BG',html:'<h3>另一条 BG 对角线</h3><p>右上 BG ÷ 左下 BG，本例约 1.04167，处于范围。这里是 BG 与 BG 比较，不是 BG 除 RG。</p>'},
+ {kicker:'BG3 中心与四角',dur:22,draw:bg3,caption:p=>'⑪ BG3：中心 BG 除以四角 BG 的平均',html:'<h3>中心对四角</h3><p>BG3=4×中心BG/(四角 BG 之和)，即中心 BG ÷ 四角平均。本例约 1.03226。公式使用未舍入值；图中只作范围预览。</p>'},
+ {kicker:'依次对照六个范围',dur:24,draw:threshold,caption:p=>'⑫ RG3 → RG1 → RG2 → BG3 → BG1 → BG2',html:'<h3>检查顺序</h3><p>六项先算出，之后以 else if 顺序检查 RG3、RG1、RG2、BG3、BG1、BG2。严格大于上限或小于下限才失败，边界相等不失败。本例 BG1 首先超限，之后 BG2 不再被条件检查，子项为 158 / grade 5。</p>'},
+ {kicker:'源码的除法条件',dur:24,draw:guards,caption:p=>'⑬ 检查源码的分母防护，不把缺失检查当成完整防护',html:'<h3>特殊分支</h3><p>六项初始为 2；代码检查 RG右下、RG左下、BG左下都非零，并重复检查 RG左下。BG右下没有检查，但用作 BG1 分母；两个四角和也没检查。若零分母导致 Inf 或 NaN，比较结果可能异常，尤其 NaN 不满足普通大小比较。请开发人员核查；本页不修改源码。</p>'},
+ {kicker:'前置均值异常',dur:24,draw:low,caption:p=>'⑭ 当先前 Gr 或 Gb 均值不大于零时',html:'<h3>−1 的风险</h3><p>当 Light_Response 保存的任一 Gr/Gb 均值 ≤ 0，共用函数将向量和五点映射填 −1。−1 非零，因此 5×5 的条件成立，六个公式均得到 1；此配置范围是 [0.9,1.1]，结果会保留初始通过。这不是有效测量，须请开发人员确认。五点正常比例大于 10 也会在映射中改为 −1。</p>'},
+ {kicker:'返回与追加',dur:20,draw:returns,caption:p=>'⑮ 返回一个子项，insert 将向量追加',html:'<h3>一个返回子项</h3><p>V1.0 返回一个 Color_Shading_5*5，未返回 MA；关闭时 g_msg=false。未知版本返回一个 false 且 g_msg=false 的子项。调用方将向量追加到 items_results；最终 bin 由所有子项共同决定。</p>'},
+ {kicker:'互动观察',dur:24,draw:interaction,caption:p=>'⑯ 修改右下 B，看 BG1、BG3 和判定顺序',html:'<h3>互动模拟</h3><p>只改变右下 ROI 的模拟 B，重新计算五点及六项；其他点不变。改为 120 时可看到本例各项均在范围内；更低值可能令 BG3 先于 BG1 超限。不是实测，也不修改配置。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+const input=document.getElementById('bval'),out=document.getElementById('bout');
+function setB(v){state.b=Number(v);input.value=String(v);out.textContent=String(v);AlgoAnim.render();}
+input.addEventListener('input',()=>setB(input.value));
+document.getElementById('sample').addEventListener('click',()=>setB(100));
+document.getElementById('pass').addEventListener('click',()=>setB(120));
+</script>
+
+<script>
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
+setTimeout(function () {
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
+  }
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
+</script>
+</body>
+</html>
