@@ -130,7 +130,23 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
   .wrap{padding:0 14px}
   .card .head,figure,.explain{padding-left:14px; padding-right:14px}
   .cap{margin-left:14px; margin-right:14px}
-}</style>
+}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+.story-code{border-top:1px solid #344664;margin-top:20px}.story-code .source-block{margin:16px 0}.story-code .source-path{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere;color:#a9c6ff}.story-code pre{max-height:300px;overflow:auto}</style>
 </head>
 <body>
 <header class="hero">
@@ -141,10 +157,30 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="lead">这一页把动画的 7 幕各定格成一帧，图下边配该幕字幕和同一份讲解文字。内容和 index.html 里的动画完全一致，只是不会动。</p>
     <p class="banner">
       <b>为什么有这一页？</b>配套的 <code>index.html</code> 是带脚本的动画。
-      如果你打开它只看到「脚本没有运行起来」之类的提示，说明当前阅读器（预览框 / 沙箱 / 邮件客户端）
-      屏蔽了页面脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
+      如果你打开它只看到「脚本没有运行起来」之类的提示，可能是脚本运行出错，也可能是当前阅读器不支持脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
       <strong>不执行任何脚本、不请求任何外部文件</strong>。
     </p>
+    <section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+<div class="config-keys"><span class="config-key">窗口宽：<code>[w_win]=96</code></span><span class="config-key">窗口高：<code>[h_win]=54</code></span><span class="config-key">比例下限（%）：<code>[min_ratio]=20</code></span><span class="config-key">比例上限（%）：<code>[max_ratio]=100</code></span><span class="config-key">失败 bin：<code>[bin]=2202</code></span><span class="config-key">失败 grade：<code>[grade]=8</code></span></div><div class="config-layout"><section class="config-file"><h3>RelativeIllumination.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/RelativeIllumination.data</div><pre tabindex="0" aria-label="RelativeIllumination.data 文件原文，可滚动"><code>[w_win]=96
+[h_win]=54
+[min_ratio]=20
+[max_ratio]=100
+[bin]=2202
+[grade]=8
+
+[open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section></div>
+</section>
     <nav class="chips"><a href="#s1"><span class="n">01</span>定位</a>
       <a href="#s2"><span class="n">02</span>取窗口</a>
       <a href="#s3"><span class="n">03</span>求均值</a>
@@ -180,6 +216,11 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
           res.grade = param.grade_;   // 8
       }</code></pre>
             <p class="tip">坐标体系不同是最大的坑：这里窗口坐标是 <b>RAW 像素</b>；Light_Response 的 ROI 是 <b>拆分后平面</b>的坐标（一半）。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp:38–40</p><p>这一步调用相对照度子项；下面章节进入具体计算。</p><pre tabindex="0"><code>   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
+   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));
+   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -203,6 +244,27 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       ROI_2 = 中心   [h/2-h_win/2 .. +h_win) × [w/2-w_win/2 .. +w_win)</code></pre>
             <p>4 个角窗口各 96×54 = 5184 个像素，加起来只占全图的约 <b>0.25%</b> —— 算得很快。</p>
             <p class="tip">窗口必须落在有效成像区内。若 <code>w_win</code> 配得比图还大，或者 RAW 含 OB 区，角上取到的就不是有效像素了。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:1587–1595</p><p>ROI_3 的循环展示左上窗口的取样与求均值；其他窗口同理。</p><pre tabindex="0"><code> 1587      for (int i=0; i&lt;h_win; ++i)
+ 1588      {
+ 1589          for (int j=0; j&lt;w_win; ++j)
+ 1590          {
+ 1591              ROI_3+=pData[w*i+j];
+ 1592              cnt+=1;
+ 1593          }
+ 1594      }
+ 1595      ROI_3/=cnt;</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:1630–1639</p><p>中心窗口按中心位置计算；四角与中心共五个窗口。</p><pre tabindex="0"><code> 1630      cnt = 0;
+ 1631      for (int i=h/2-h_win/2; i&lt;h/2-h_win/2+h_win; ++i)
+ 1632      {
+ 1633          for (int j=w/2-w_win/2; j&lt;w/2-w_win/2+w_win; ++j)
+ 1634          {
+ 1635              ROI_2+=pData[w*i+j];
+ 1636              cnt+=1;
+ 1637          }
+ 1638      }
+ 1639      ROI_2/=cnt;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -224,6 +286,17 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       // 其余三个角、中心同理</code></pre>
             <p>五个窗口面积相同（N 都是 5184），所以均值可以直接横向比较，不需要再归一化。</p>
             <p class="tip">均值本身不看单点：一个坏点落在窗口里几乎不影响结果。边缘坏点、划伤由 ImageDirt / Pixel_Defect 等子项负责。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:1587–1595</p><p>ROI_3 的循环展示左上窗口的取样与求均值；其他窗口同理。</p><pre tabindex="0"><code> 1587      for (int i=0; i&lt;h_win; ++i)
+ 1588      {
+ 1589          for (int j=0; j&lt;w_win; ++j)
+ 1590          {
+ 1591              ROI_3+=pData[w*i+j];
+ 1592              cnt+=1;
+ 1593          }
+ 1594      }
+ 1595      ROI_3/=cnt;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -248,6 +321,18 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
               <li><b>ratio</b>：边缘占中心的百分比。20% 表示边缘只有中心的 1/5。</li>
             </ul>
             <p class="tip">注意分母是 center：如果中心被遮挡/压暗，ratio 反而会变大，所以代码才加了 &gt;10 倍的防呆。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:1640–1649</p><p>ROI_2 是中心均值，darkest 实际是四角均值的平均；先处理极端情况，再返回百分比。</p><pre tabindex="0"><code> 1640      if (ROI_2&lt;0.001)
+ 1641          ROI_2 = 0.001;
+ 1642  
+ 1643      double darkest = (ROI_3 + ROI_4 + ROI_5 + ROI_6)/4;
+ 1644      if (ROI_2&lt;darkest/10)
+ 1645          return 1000;
+ 1646      else if (ROI_2&gt;darkest*10)
+ 1647          return 10;
+ 1648      else
+ 1649          return 100*darkest/ROI_2;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -268,6 +353,16 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       else if (ROI_2 &gt; darkest*10) return 10; // 中心远亮于边缘</code></pre>
             <p>两个返回值（1000 和 10）都必然超出 20~100 的 Spec，所以"异常"一定会被卡住，不会误判成良品。</p>
             <p class="tip">看到 ratio 恰好是 <b>1000</b> 或 <b>10</b>，别怀疑测量精度 —— 那是防呆分支被命中了，去查图像本身（中心是否全黑 / 光源是否偏）。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:1640–1647</p><p>中心均值的下限与极端比例返回值用于特殊情况。</p><pre tabindex="0"><code> 1640      if (ROI_2&lt;0.001)
+ 1641          ROI_2 = 0.001;
+ 1642  
+ 1643      double darkest = (ROI_3 + ROI_4 + ROI_5 + ROI_6)/4;
+ 1644      if (ROI_2&lt;darkest/10)
+ 1645          return 1000;
+ 1646      else if (ROI_2&gt;darkest*10)
+ 1647          return 10;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -291,6 +386,17 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
             <p>本例配置：<code>min_ratio=20</code>、<code>max_ratio=100</code>、<code>bin=2202</code>、<code>grade=8</code>。</p>
             <p>ratio 太小 = 暗角太重（镜头/装配/遮光问题）；ratio 大于 100% = 边缘比中心亮，通常是中心被遮挡或参数错。</p>
             <p class="tip">和 Light_Response 不同，这里没有 161/162 这种"极端 bin"，只有配置里那一个 <code>bin_</code>。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:1332–1340</p><p>计算结果与上下限比较；超出则设置失败、bin、grade。</p><pre tabindex="0"><code> 1332          double RelIllum = AlgorithmFuncs::TestRelativeIlumination (
+ 1333                      g_buf_raw_,w,h,manage.param_relative_illu_.w_win_,
+ 1334                      manage.param_relative_illu_.h_win_);
+ 1335          if (RelIllum&gt;manage.param_relative_illu_.limit_max_ratio_ ||
+ 1336                  RelIllum&lt;manage.param_relative_illu_.limit_min_ratio_)
+ 1337          {
+ 1338              res.is_passed = false;
+ 1339              res.bin=manage.param_relative_illu_.bin_;
+ 1340              res.grade= manage.param_relative_illu_.grade_;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -313,6 +419,13 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
             <pre><code>if (!item.is_passed &amp;&amp; item.grade &gt; final_result.grade)
           final_result = item;     // 只换更严重的</code></pre>
             <p class="tip">所以看到机台回 2201，不代表相对照度没问题——它可能也失败了，只是被更严重的项覆盖。排障要看完整 log（<code>g_str_msg_all</code>）。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:1342–1346</p><p>计算结果与子项名称被追加到日志。</p><pre tabindex="0"><code> 1342          g_str_msg_all[site_]+=boost::str(boost::format(&quot;Relative Illumination:%.2f\n&quot;)
+ 1343                                 % RelIllum);
+ 1344          g_str_log_all[site_]+=boost::str(boost::format(&quot;%.2f|&quot;)
+ 1345                                 % RelIllum);
+ 1346          g_str_log_all[site_]+=boost::str(boost::format(&quot;%s|&quot;) % res.name.c_str());</code></pre></div>
+      </div>
     </div>
   </section>
 

@@ -11,4 +11,14 @@ node docs/tools/test_player.js
 python3 docs/build.py --check
 ```
 
-每个范围包含锚点校验，章节名与顺序也会校验；若源码或章节改变，请重新核对 `code_guides.py` 里的范围、锚点和解释再构建。锚点不保证语义一定正确，仍需人工对照源码审查。静态分镜是定格画面，当前不包含随章节切换的代码面板；完整对应代码请看动画页面。
+每个范围包含锚点校验，章节名与顺序也会校验；若源码或章节改变，请重新核对 `code_guides.py` 里的范围、锚点和解释再构建。锚点不保证语义一定正确，仍需人工对照源码审查。静态分镜每幕也显示相同的源码摘录、行号和中文解释；无需脚本。构建时校验分镜章节与映射顺序。
+
+五个动画和分镜页的顶部均显示 GC8613T 白帧示例的对应 `.data` 和 `Basic.data` 原文。配置文件路径和重点字段解释在 `docs/config_guides.py` 中维护，字段值和全文在构建时读取仓库原文件；原文框可滚动。不要把这些示例配置或动画模拟值误认为任意产线实测。更新配置后同时构建动画和分镜：
+
+```bash
+python3 docs/build.py
+python3 docs/build_story.py
+python3 docs/tools/test_config_story.py
+python3 docs/build.py --check
+python3 docs/build_story.py --check
+```

@@ -20,6 +20,7 @@ import re
 import sys
 from pathlib import Path
 from code_guides import GUIDES, EXPECTED_KICKERS, get_guides
+from config_guides import CSS as CONFIG_CSS, render_config
 
 ROOT = Path(__file__).resolve().parent
 CSS = (ROOT / 'shared' / 'player.css').read_text(encoding='utf-8').strip()
@@ -82,13 +83,16 @@ def build_one(src: Path, dst: Path) -> str:
 
     html, n_css = re.subn(
         r'<link[^>]+href="[^"]*shared/player\.css"[^>]*>',
-        lambda m: '<style>\n' + CSS + '\n</style>',
+        lambda m: '<style>\n' + CSS + '\n' + CONFIG_CSS + '\n</style>',
         html, count=1)
 
     page = src.parent.name
     guide_js = ''
     if page in GUIDES:
         guides = get_guides(page)
+        if html.count('  <main>') != 1:
+            raise SystemExit(f'{page}: 找不到唯一的 main，无法插入配置')
+        html = html.replace('  <main>', render_config(page) + '\n  <main>', 1)
         # 检查章节数，避免增减章节后代码与动画错位。
         scene_source = html.split('const SCENES', 1)[1].split('AlgoAnim.start', 1)[0]
         kickers = re.findall(r'\bkicker\s*:\s*[\'\"]([^\'\"]+)[\'\"]', scene_source)

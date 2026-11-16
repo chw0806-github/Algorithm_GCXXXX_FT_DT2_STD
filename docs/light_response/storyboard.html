@@ -130,7 +130,23 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
   .wrap{padding:0 14px}
   .card .head,figure,.explain{padding-left:14px; padding-right:14px}
   .cap{margin-left:14px; margin-right:14px}
-}</style>
+}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+.story-code{border-top:1px solid #344664;margin-top:20px}.story-code .source-block{margin:16px 0}.story-code .source-path{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere;color:#a9c6ff}.story-code pre{max-height:300px;overflow:auto}</style>
 </head>
 <body>
 <header class="hero">
@@ -141,10 +157,46 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="lead">这一页把动画的 8 幕各定格成一帧，图下边配该幕字幕和同一份讲解文字。内容和 index.html 里的动画完全一致，只是不会动。</p>
     <p class="banner">
       <b>为什么有这一页？</b>配套的 <code>index.html</code> 是带脚本的动画。
-      如果你打开它只看到「脚本没有运行起来」之类的提示，说明当前阅读器（预览框 / 沙箱 / 邮件客户端）
-      屏蔽了页面脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
+      如果你打开它只看到「脚本没有运行起来」之类的提示，可能是脚本运行出错，也可能是当前阅读器不支持脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
       <strong>不执行任何脚本、不请求任何外部文件</strong>。
     </p>
+    <section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+<div class="config-keys"><span class="config-key">R 均值下限：<code>[MinMeanR]=80</code></span><span class="config-key">R 均值上限：<code>[MaxMeanR]=220</code></span><span class="config-key">Gr 均值下限：<code>[MinMeanGr]=144</code></span><span class="config-key">Gr 均值上限：<code>[MaxMeanGr]=216</code></span><span class="config-key">ROI 起始 X：<code>[ROI_X]=768</code></span><span class="config-key">ROI 起始 Y：<code>[ROI_Y]=432</code></span><span class="config-key">ROI 宽：<code>[ROI_W]=384</code></span><span class="config-key">ROI 高：<code>[ROI_H]=216</code></span><span class="config-key">响应失败 bin：<code>[bin_response]=2201</code></span></div><div class="config-layout"><section class="config-file"><h3>LightResponse.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/LightResponse.data</div><pre tabindex="0" aria-label="LightResponse.data 文件原文，可滚动"><code>[MinMeanR]=80
+[MaxMeanR]=220
+[MinMeanGr]=144
+[MaxMeanGr]=216
+[MinMeanGb]=144
+[MaxMeanGb]=216
+[MinMeanB]=80
+[MaxMeanB]=220
+
+
+[ROI_X]=768
+[ROI_Y]=432
+[ROI_W]=384
+[ROI_H]=216
+
+
+[bin_response]=2201
+[grade_response]=9
+
+
+[response_open_mode]=1
+
+[log_align]=1
+
+[error_MIN]=50
+[error_MAX]=241</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section></div>
+</section>
     <nav class="chips"><a href="#s1"><span class="n">01</span>总览</a>
       <a href="#s2"><span class="n">02</span>拆解代码</a>
       <a href="#s3"><span class="n">03</span>多工位</a>
@@ -182,6 +234,14 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
           Algorithm_all[site_].Calculate_The_Final_Bin(items_results);
       int code = bright_result.bin;      // 返回给机台分选</code></pre>
             <p class="tip">所以这一行的返回值只是「一项体检结论」，不是最终分选结果。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp:35–40</p><p>push_back 把此工位的子项结果放入结果集合；site_ 是工位索引。</p><pre tabindex="0"><code>   35      std::vector&lt;Subitem_Result&gt; items_results;   //各测试子项 测试结果集合
+   36  
+   37      logMsg (&quot;Start flow test!&quot;,0);
+   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
+   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));
+   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -212,6 +272,14 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
           bool g_msg;         // false = 不参与汇总
       };</code></pre>
             <p class="tip">记住这 5 个字段，后面所有判定都在填这张表。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp:35–40</p><p>push_back 把此工位的子项结果放入结果集合；site_ 是工位索引。</p><pre tabindex="0"><code>   35      std::vector&lt;Subitem_Result&gt; items_results;   //各测试子项 测试结果集合
+   36  
+   37      logMsg (&quot;Start flow test!&quot;,0);
+   38      items_results.push_back(Algorithm_all[site_].Light_Response(test_manage));
+   39      items_results.push_back(Algorithm_all[site_].Relative_Illumination(test_manage));
+   40      items_results.push_back(Algorithm_all[site_].Non_Uniformity(test_manage));</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -232,6 +300,13 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       // 每个工位：Algorithm_all[i].set_site(i)</code></pre>
             <p><code>site_</code> 就是工位号。<b>全局数组 + 工位下标</b>让 4 个工位共用同一套代码，但各用各的图像缓冲（<code>g_buf_r_ / gr_ / gb_ / b_</code>）和日志。</p>
             <p class="tip">排查现场问题：如果 <code>site_</code> 和机台通道对不上，就会拿别的工位的图来算 —— 现象是「图像正常但结果乱飞」。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp:25–29</p><p>全局数组用工位索引选择对应算法对象。</p><pre tabindex="0"><code>   25  std::vector&lt;std::string&gt; g_str_logtmp(Parallel_num);
+   26  std::vector&lt;std::string&gt; g_str_msg_all(Parallel_num);
+   27  std::vector&lt;std::string&gt; g_str_log_all(Parallel_num);
+   28  
+   29  AlgorithmItems Algorithm_all[Parallel_num];</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -256,6 +331,30 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       // 奇数行同理 → Gb / B</code></pre>
             <p>拆完后每个平面是 <b>W/2 × H/2</b>。之后所有 ROI、均值都在这个半尺寸平面上算。</p>
             <p class="tip">关键坐标概念：配置文件里 <code>ROI_X=768</code> 是在 <b>1920 宽的平面</b>上量的，不是 3840 的 RAW。<code>bayer</code> 配错（RG/GB）会导致 R 和 B 互换，值就会整体错位。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp:27–33</p><p>RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。</p><pre tabindex="0"><code>   27      switch (bayer) {
+   28      case RG:
+   29          *pb1 = g_buf_r_;
+   30          *pb2 = g_buf_gr_;
+   31          *pb3 = g_buf_gb_;
+   32          *pb4 = g_buf_b_;
+   33          break;</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp:64–78</p><p>循环每次跨两行、两列，把 2×2 各位置写入对应通道。</p><pre tabindex="0"><code>   64      distribute_pointer_by_RGB_BAYER(bayer,&amp;pb1,&amp;pb2,&amp;pb3,&amp;pb4,
+   65                                      g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);
+   66  
+   67      for (int i=0; i&lt;h; i=i+2)
+   68      {
+   69          for (int j=0; j&lt;w; j=j+2)
+   70          {
+   71              *pb1++ = g_buf_raw_[w*i+ j];
+   72              *pb2++ = g_buf_raw_[w*i+ j+1];
+   73          }
+   74          for (int j=0; j&lt;w; j=j+2)
+   75          {
+   76              *pb3++ = g_buf_raw_[w*(i+1)+ j];
+   77              *pb4++ = g_buf_raw_[w*(i+1)+ j+1];
+   78          }</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -280,6 +379,16 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       for (...) mean_t += pData[width*i+j];
       return mean_t/cnt;</code></pre>
             <p class="tip">越界很危险：函数返回 <code>-1</code>，均值 -1 必然越过下限，若 <code>error_min_open</code> 打开就直接落 <b>bin 161</b>。看到「明明图像很亮却报 161」，先查 ROI 是否越界。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:908–915</p><p>这里将 ROI 的位置和尺寸以及四个通道缓冲区传给计算函数。</p><pre tabindex="0"><code>  908          //---------------------Whole Region Light Response------------------
+  909          TestItem::test_roi_channel_mean( w,h,
+  910                                           manage.param_light_response_.roi_x_,
+  911                                           manage.param_light_response_.roi_y_,
+  912                                           manage.param_light_response_.roi_w_,
+  913                                           manage.param_light_response_.roi_h_,
+  914                                           mean_r_roi,mean_gr_roi,mean_gb_roi,mean_b_roi,
+  915                                           g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -302,6 +411,21 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       mean = Σ DN / N</code></pre>
             <p>均值代表<b>整体响应灵敏度</b>：偏暗说明光电转换弱 / 曝光不足，偏亮说明增益过大或接近饱和。</p>
             <p class="tip">均值会「稀释」个别坏点：一个 255 的亮点平均到几十万像素里几乎看不出来。所以坏点由 Pixel_Defect、DAG 等子项负责 —— 每个子项各管一件事。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:7951–7963</p><p>循环累加 ROI 像素并计数；返回总和除以个数。</p><pre tabindex="0"><code> 7951      int cnt = 0;
+ 7952      double mean_t = 0;
+ 7953      if(line+win_h&gt;=height || col+win_w&gt;=width)
+ 7954          return -1;
+ 7955      for (int i=line; i&lt;=line+win_h; ++i)
+ 7956      {
+ 7957          for (int j=col; j&lt;=col+win_w; ++j)
+ 7958          {
+ 7959              mean_t+=pData[width*i+j];
+ 7960              cnt+=1;
+ 7961          }
+ 7962      }
+ 7963      return mean_t/cnt;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -330,6 +454,18 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
       }</code></pre>
             <p>本例配置：R/B 的 80~220，Gr/Gb 的 144~216，<code>error_MIN=50</code>、<code>error_MAX=241</code>、<code>bin_response=2201</code>。</p>
             <p class="tip">先判 161 再判 162：即使某个通道同时满足「低于 50」和「另一通道高于 241」，也只会落 <b>161</b>。这是代码顺序决定的，不是巧合。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:933–942</p><p>四通道均值与各自上下限比较；超出任一范围则失败。</p><pre tabindex="0"><code>  933          if (mean_r_roi&gt;manage.param_light_response_.limit_r_max_ ||
+  934                  mean_r_roi&lt;manage.param_light_response_.limit_r_min_ ||
+  935                  mean_gr_roi&gt;manage.param_light_response_.limit_gr_max_ ||
+  936                  mean_gr_roi&lt;manage.param_light_response_.limit_gr_min_ ||
+  937                  mean_gb_roi&gt;manage.param_light_response_.limit_gb_max_ ||
+  938                  mean_gb_roi&lt;manage.param_light_response_.limit_gb_min_ ||
+  939                  mean_b_roi&gt;manage.param_light_response_.limit_b_max_ ||
+  940                  mean_b_roi&lt;manage.param_light_response_.limit_b_min_)
+  941          {
+  942              res.is_passed=false;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -358,6 +494,37 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
               <li><code>g_msg=false</code>（未开启 / 版本不匹配）的子项不参与竞争。</li>
             </ul>
             <p class="tip">Light_Response 在 <code>response_open_mode≠1</code> 或版本号不是 <code>LightResponse_V1.0</code> 时返回 <code>g_msg=false</code>：不是「通过」，而是「不表态」。现场查「为什么这项没卡住」先看这里。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:960–964</p><p>对应分支把配置的 bin 和 grade 写入子项结果。</p><pre tabindex="0"><code>  960              else
+  961              {
+  962                  res.bin=manage.param_light_response_.bin_response_;
+  963                  res.grade=manage.param_light_response_.grade_response_;
+  964              }</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:5903–5926</p><p>遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。</p><pre tabindex="0"><code> 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector&lt;Subitem_Result&gt;&amp; items_results)
+ 5904  {
+ 5905      Subitem_Result final_result(&quot;The initial value&quot;,true,1,0,true);
+ 5906  
+ 5907      for(int i=0;i!=items_results.size();++i)
+ 5908      {
+ 5909          const Subitem_Result&amp; item=items_results[i];
+ 5910  
+ 5911          if(item.g_msg == false)
+ 5912              continue;
+ 5913  
+ 5914          std::string item_log =item.name;
+ 5915          QString log_;
+ 5916          if(item.is_passed)
+ 5917              log_+=&quot; is Pass. Bin: &quot;+ QString::number(item.bin)+&quot; Grade: &quot;+ QString::number(item.grade)+&quot;\n&quot;;
+ 5918          else
+ 5919              log_+=&quot; is Failed. Bin: &quot;+ QString::number(item.bin)+&quot; Grade: &quot;+ QString::number(item.grade)+&quot;\n&quot;;
+ 5920  
+ 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();
+ 5922  
+ 5923          if(!item.is_passed &amp;&amp; item.grade&gt;final_result.grade)
+ 5924              final_result=item;
+ 5925      }
+ 5926      return final_result;</code></pre></div>
+      </div>
     </div>
   </section>
 

@@ -130,7 +130,23 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
   .wrap{padding:0 14px}
   .card .head,figure,.explain{padding-left:14px; padding-right:14px}
   .cap{margin-left:14px; margin-right:14px}
-}</style>
+}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+.story-code{border-top:1px solid #344664;margin-top:20px}.story-code .source-block{margin:16px 0}.story-code .source-path{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere;color:#a9c6ff}.story-code pre{max-height:300px;overflow:auto}</style>
 </head>
 <body>
 <header class="hero">
@@ -141,10 +157,88 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="lead">动画的 14 幕各定格成一帧，图下配字幕和同一份讲解文字。</p>
     <p class="banner">
       <b>为什么有这一页？</b>配套的 <code>index.html</code> 是带脚本的动画。
-      如果你打开它只看到「脚本没有运行起来」之类的提示，说明当前阅读器（预览框 / 沙箱 / 邮件客户端）
-      屏蔽了页面脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
+      如果你打开它只看到「脚本没有运行起来」之类的提示，可能是脚本运行出错，也可能是当前阅读器不支持脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
       <strong>不执行任何脚本、不请求任何外部文件</strong>。
     </p>
+    <section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>
+<div class="config-keys"><span class="config-key">每侧邻行/邻列数：<code>[radius]=5</code></span><span class="config-key">R 行 TA 比例阈值：<code>[Spec_DeadRow_R_TA]=0.025</code></span><span class="config-key">R 列 TA 比例阈值：<code>[Spec_DeadCol_R_TA]=0.030</code></span><span class="config-key">R 行 DOL 阈值：<code>[SpecDOL_Row_R]=80</code></span><span class="config-key">R 断行阈值：<code>[breakrow_spec_r]=10</code></span><span class="config-key">坏行 bin：<code>[bin_dead_row]=2210</code></span><span class="config-key">坏列 bin：<code>[bin_dead_col]=2208</code></span></div><div class="config-layout"><section class="config-file"><h3>LineDefect.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/LineDefect.data</div><pre tabindex="0" aria-label="LineDefect.data 文件原文，可滚动"><code>[StripRow]=0
+[StripCol]=0
+
+[Spec_DeadRow_R_TA]=0.025
+[Spec_DeadRow_Gr_TA]=0.025
+[Spec_DeadRow_Gb_TA]=0.025
+[Spec_DeadRow_B_TA]=0.025
+
+[Spec_DeadRow_R_MA]=0.025
+[Spec_DeadRow_Gr_MA]=0.025
+[Spec_DeadRow_Gb_MA]=0.025
+[Spec_DeadRow_B_MA]=0.025
+
+
+[Spec_DeadCol_R_TA]=0.030
+[Spec_DeadCol_Gr_TA]=0.030
+[Spec_DeadCol_Gb_TA]=0.030
+[Spec_DeadCol_B_TA]=0.030
+
+[Spec_DeadCol_R_MA]=0.030
+[Spec_DeadCol_Gr_MA]=0.030
+[Spec_DeadCol_Gb_MA]=0.030
+[Spec_DeadCol_B_MA]=0.030
+
+
+[SpecDOL_Row_R]=80
+[SpecDOL_Row_Gr]=90
+[SpecDOL_Row_Gb]=90
+[SpecDOL_Row_B]=80
+
+[SpecDOL_Col_R]=80
+[SpecDOL_Col_Gr]=90
+[SpecDOL_Col_Gb]=90
+[SpecDOL_Col_B]=80
+
+[radius]=5
+[bin_dead_row]=2210
+[grade_dead_row]=7
+[bin_dead_row_MA]=2211
+[grade_dead_row_MA]=2
+[bin_dead_col]=2208
+[grade_dead_col]=7
+[bin_dead_col_MA]=2209
+[grade_dead_col_MA]=2
+[bin_dol]=2212
+[grade_dol]=6
+
+
+[breakrow_spec_r]=10
+[breakrow_spec_gr]=10
+[breakrow_spec_gb]=10
+[breakrow_spec_b]=10
+
+
+[breakcol_spec_r]=10
+[breakcol_spec_gr]=10
+[breakcol_spec_gb]=10
+[breakcol_spec_b]=10
+
+[bin_break_line]=2213
+[grade_break_line]=5
+
+
+[log_print]=0
+
+[open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section></div>
+</section>
     <nav class="chips"><a href="#s1"><span class="n">01</span>任务</a>
       <a href="#s2"><span class="n">02</span>分通道</a>
       <a href="#s3"><span class="n">03</span>认识行列</a>
@@ -173,6 +267,11 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>① 对比邻近线，找出与周围明显不同的行或列</span></p>
     <div class="explain">
       <h3>先理解要做什么</h3><p>白帧是一张受均匀照明的图像。这里寻找与附近线有明显差异的行或列，并额外检查线内波动和断线指标。</p><p>画面使用 GC8613T 的 V1.0 示例配置。数值都是模拟，不代表实际测量。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp:44–46</p><p>调用结果被放入 items_results；true 是 log_flag，并非判定开关。</p><pre tabindex="0"><code>   44  
+   45      items_results.push_back(Algorithm_all[site_].Deadrow_Deadcol_bright(test_manage,true));
+   46      items_results.push_back(Algorithm_all[site_].Edge_Deadrow_Deadcol_bright(test_manage));</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -187,6 +286,30 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>② 每张图 1920×1080；行检测和列检测分别处理四通道</span></p>
     <div class="explain">
       <h3>为什么有四张图？</h3><p>示例 RAW 为 3840×2160，RG Bayer 每 2×2 块中有 R、Gr、Gb、B 各一个位置。把同类位置按原位置排列，得到四张 1920×1080 通道图。</p><p>行、列检测分别启动四个通道线程；本页只展示 R 通道示例。代码支持 V1.0 / V1.1，本页以 V1.0 为准。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp:27–33</p><p>RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。</p><pre tabindex="0"><code>   27      switch (bayer) {
+   28      case RG:
+   29          *pb1 = g_buf_r_;
+   30          *pb2 = g_buf_gr_;
+   31          *pb3 = g_buf_gb_;
+   32          *pb4 = g_buf_b_;
+   33          break;</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp:64–78</p><p>循环每次跨两行、两列，把 2×2 各位置写入对应通道。</p><pre tabindex="0"><code>   64      distribute_pointer_by_RGB_BAYER(bayer,&amp;pb1,&amp;pb2,&amp;pb3,&amp;pb4,
+   65                                      g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);
+   66  
+   67      for (int i=0; i&lt;h; i=i+2)
+   68      {
+   69          for (int j=0; j&lt;w; j=j+2)
+   70          {
+   71              *pb1++ = g_buf_raw_[w*i+ j];
+   72              *pb2++ = g_buf_raw_[w*i+ j+1];
+   73          }
+   74          for (int j=0; j&lt;w; j=j+2)
+   75          {
+   76              *pb3++ = g_buf_raw_[w*(i+1)+ j];
+   77              *pb4++ = g_buf_raw_[w*(i+1)+ j+1];
+   78          }</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -201,6 +324,24 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>③ 一列从上到下：1080 个像素；行与列分别检测</span></p>
     <div class="explain">
       <h3>行和列分别是什么？</h3><p>一张 R 通道图宽 1920 像素、高 1080 像素。横着从左到右是一行，一行有 1920 个像素，共 1080 行；竖着是一列，一列有 1080 个像素，共 1920 列。</p><p>图形只是缩略图，不是实际画出每一个像素。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp:3636–3648</p><p>行检测分别为四个通道设置半尺寸参数并启动线程，随后等待。</p><pre tabindex="0"><code> 3636      p_row_defect[R]-&gt;setparam(g_buf_r_,w/2,h/2,radius,skip,spec_R,spec_dol_R,0,0,0,0,0,0,0,breakline_row_spec_r,0,0,0,mode,&quot;&quot;);
+ 3637      p_row_defect[Gr]-&gt;setparam(g_buf_gr_,w/2,h/2,radius,skip,spec_Gr,spec_dol_Gr,0,0,0,0,0,0,0,breakline_row_spec_gr,0,0,0,mode,&quot;&quot;);
+ 3638      p_row_defect[Gb]-&gt;setparam(g_buf_gb_,w/2,h/2,radius,skip,spec_Gb,spec_dol_Gb,0,0,0,0,0,0,0,breakline_row_spec_gb,0,0,0,mode,&quot;&quot;);
+ 3639      p_row_defect[B]-&gt;setparam(g_buf_b_,w/2,h/2,radius,skip,spec_B,spec_dol_B,0,0,0,0,0,0,0,breakline_row_spec_b,0,0,0,mode,&quot;&quot;);
+ 3640  
+ 3641      for (int i=0; i &lt; Channel_Num; i++)
+ 3642      {
+ 3643          p_row_defect[i]-&gt;start();
+ 3644      }
+ 3645  
+ 3646      for (int i=0; i &lt; Channel_Num; i++)
+ 3647      {
+ 3648          p_row_defect[i]-&gt;wait();</code></pre></div>
+<div class="source-block"><p class="source-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data:1–3</p><p>这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。</p><pre tabindex="0"><code>    1  [width]=3840
+    2  [height]=2160
+    3  [bayer]=RG</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -215,6 +356,26 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>④ 这一行的平均亮度为 189.5 DN；其他行各自计算</span></p>
     <div class="explain">
       <h3>一行怎么变成一个数？</h3><p>本例前 20 个像素的亮度依次为 180 到 199 DN，这 20 个值重复 96 次，共 1920 个像素。总和为 363840 DN，除以 1920 得到行均值 189.5 DN。画面上方压缩显示全部像素，下方只把前 20 个放大。重复只是为了让示例可复算，实际像素值不必重复。</p><p>每一行都要分别求自己的平均，不是对整张图求一个平均。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:4940–4957</p><p>逐行读取像素：mean_t 是一行之和，除以 2*N 得整行均值；另外保存两半均值。</p><pre tabindex="0"><code> 4940      for (int i=0; i&lt;h; ++i)
+ 4941      {
+ 4942          double mean_t = 0.0;
+ 4943          double mean_t_half1 =0.0;
+ 4944          double mean_t_half2 =0.0;
+ 4945  
+ 4946          for (int j=0; j&lt;N; ++j)
+ 4947          {
+ 4948              mean_t+=(double)(pData[w*i+2*j]);
+ 4949              mean_t+=(double)(pData[w*i+2*j+1]);
+ 4950              if(j&lt;(N&gt;&gt;1))
+ 4951                  mean_t_half1 = mean_t_half1 + (double)(pData[w*i+2*j]) + (double)(pData[w*i+2*j+1]);
+ 4952              else
+ 4953                  mean_t_half2 = mean_t_half2 + (double)(pData[w*i+2*j]) + (double)(pData[w*i+2*j+1]);
+ 4954          }
+ 4955          each_row_.push_back (mean_t/(2*N));
+ 4956          each_row_half1_.push_back (mean_t_half1/N);
+ 4957          each_row_half2_.push_back (mean_t_half2/N);</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -229,6 +390,33 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑤ 上方 200，下方 210；不把目标行算进邻行</span></p>
     <div class="explain">
       <h3>邻居指哪些行？</h3><p>配置 radius=5。对居中的目标行，分别取上面五行和下面五行，不包含目标行。每侧先将 5 个行均值再求平均；两侧不能合并成一个均值。</p><p>目标行均值 189.5；上方五行均值分别是 196、198、200、202、204，下方分别是 206、208、210、212、214，均为模拟数。每个数字代表整行均值，不是行内所有像素都相同。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5025–5049</p><p>i 是目标行，r 是邻域半径；上下各自累加并除以计数。边界条件会阻止不足 r 条时进入对应循环。</p><pre tabindex="0"><code> 5025      for (int i=stripCnt/2; i&lt;each_row_.size ()-stripCnt/2; ++i)
+ 5026      {
+ 5027          double mean_top = each_row_.at (i);
+ 5028          double mean_down = each_row_.at (i);
+ 5029          if (i-r&gt;=stripCnt/2)
+ 5030          {
+ 5031              int cnt_t1 = 0;
+ 5032              mean_top = 0.0;
+ 5033              for (int index = i-r; index&lt;=i-1; ++index)
+ 5034              {
+ 5035                  mean_top+=each_row_.at(index);
+ 5036                  cnt_t1+=1;
+ 5037              }
+ 5038              mean_top/=cnt_t1;
+ 5039          }
+ 5040          if (i+r&lt;each_row_.size ()-stripCnt/2)
+ 5041          {
+ 5042              int cnt_t1 = 0;
+ 5043              mean_down = 0.0;
+ 5044              for (int index = i+1; index&lt;=i+r; ++index)
+ 5045              {
+ 5046                  mean_down+=each_row_.at(index);
+ 5047                  cnt_t1+=1;
+ 5048              }
+ 5049              mean_down/=cnt_t1;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -243,6 +431,25 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑥ 9.76% 大于行阈值 2.5%，目标行计为异常</span></p>
     <div class="explain">
       <h3>一步一步算</h3><p>上方差 = |189.5−200|/200 = 5.25%；下方差 = |189.5−210|/210 ≈ 9.76%。取较大值约 9.76%，与行阈值 0.025（即 2.5%）比较。</p><p>严格大于才计数；等于阈值不计数。这个例子只计算一条目标行，不推断整张图的异常行数。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5064–5071</p><p>比例模式下分别除以上下均值，std::max 选较大的一侧。</p><pre tabindex="0"><code> 5064          else
+ 5065          {
+ 5066              if(mode==Ratio)
+ 5067              {
+ 5068                  dif_top_ratio = dif_top/mean_top;
+ 5069                  dif_down_ratio = dif_down/mean_down;
+ 5070                  diff = std::max(dif_top_ratio,dif_down_ratio);
+ 5071              }</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5079–5087</p><p>diff 是两侧较大比例差；严格大于阈值时计数加一。</p><pre tabindex="0"><code> 5079          if( diff &gt; max_diff)
+ 5080          {
+ 5081              max_diff = diff;
+ 5082              max_pos = i*2;
+ 5083          }
+ 5084  
+ 5085          if (diff&gt;spec_line)
+ 5086          {
+ 5087              cnt_lines+=1;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -257,6 +464,17 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑦ 所有行处理后，汇总各通道的异常行计数</span></p>
     <div class="explain">
       <h3>不是只看一行</h3><p>R 通道有 1080 行：每行求均值后，逐行计算上下邻行差；超出阈值时计数。四个通道分别运行，之后汇总计数。</p><p>图中移动的亮线表示计算位置。靠近边缘时有特殊规则，第 12 幕解释；某条异常行也可能影响邻行的参考均值。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5079–5087</p><p>diff 是两侧较大比例差；严格大于阈值时计数加一。</p><pre tabindex="0"><code> 5079          if( diff &gt; max_diff)
+ 5080          {
+ 5081              max_diff = diff;
+ 5082              max_pos = i*2;
+ 5083          }
+ 5084  
+ 5085          if (diff&gt;spec_line)
+ 5086          {
+ 5087              cnt_lines+=1;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -271,6 +489,55 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑧ 一列 1080 个像素；与左右邻列比较，列阈值为 3%</span></p>
     <div class="explain">
       <h3>列和行的区别</h3><p>R 通道有 1920 列，每列 1080 像素。先求列均值，再分别求左侧和右侧各 5 列均值，计算两侧比例差并取较大值。</p><p>本配置列 TA 阈值为 0.030，即 3%，严格大于才计数。行列分别运行，各通道分别计算。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5225–5271</p><p>列检测用左右邻列；与行检测方向不同。</p><pre tabindex="0"><code> 5225      for (int i=stripCnt/2; i&lt;each_col_.size ()-stripCnt/2; ++i)
+ 5226      {
+ 5227          double mean_left = each_col_.at (i);
+ 5228          double mean_right = each_col_.at (i);
+ 5229          if (i-r&gt;=stripCnt/2)
+ 5230          {
+ 5231              int cnt_t1 = 0;
+ 5232              mean_left = 0.0;
+ 5233              for (int index = i-r; index&lt;=i-1; ++index)
+ 5234              {
+ 5235                  mean_left+=each_col_.at(index);
+ 5236                  cnt_t1+=1;
+ 5237              }
+ 5238              mean_left/=cnt_t1;
+ 5239          }
+ 5240          if (i+r&lt;each_col_.size ()-stripCnt/2)
+ 5241          {
+ 5242              int cnt_t1 = 0;
+ 5243              mean_right = 0.0;
+ 5244              for (int index = i+1; index&lt;=i+r; ++index)
+ 5245              {
+ 5246                  mean_right+=each_col_.at(index);
+ 5247                  cnt_t1+=1;
+ 5248              }
+ 5249              mean_right/=cnt_t1;
+ 5250          }
+ 5251          double dif_left = std::abs (each_col_.at (i)-mean_left);
+ 5252          double dif_right= std::abs (each_col_.at (i)-mean_right);
+ 5253  
+ 5254  
+ 5255          double dif_left_ratio=0;
+ 5256          double dif_right_ratio=0;
+ 5257          double diff=0;
+ 5258  
+ 5259          if(mean_left==0||mean_right==0)
+ 5260          {
+ 5261              dif_left_ratio =-1;
+ 5262              dif_right_ratio =-1;
+ 5263              diff =-1;
+ 5264          }
+ 5265          else
+ 5266          {
+ 5267              if(mode==Ratio)
+ 5268              {
+ 5269                  dif_left_ratio = dif_left/mean_left;
+ 5270                  dif_right_ratio = dif_right/mean_right;
+ 5271                  diff = std::max(dif_left_ratio,dif_right_ratio);</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -285,6 +552,27 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑨ 样本标准差约 95.57 DN，超过 R 通道阈值 80</span></p>
     <div class="explain">
       <h3>为什么还要检查线内波动？</h3><p>此模拟行有 20 个不同亮度：50～59 和 241～250 DN，各出现 96 次。平均为 150；即使邻行均值也是 150，行内差异仍然很大。DOL 用整行或整列像素的标准差衡量线内波动。</p><p>本源码 GetDatasStd 使用样本标准差，除以 N−1：√(17526720/1919)≈95.57 DN。R/B 阈值 80、Gr/Gb 阈值 90，严格大于时计数。此例与之前行均值例子独立。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5096–5103</p><p>先收集行内像素，再计算标准差；严格超过 DOL 阈值时计数。</p><pre tabindex="0"><code> 5096          std::vector&lt;int&gt; row_data;
+ 5097          int index_row = i;
+ 5098          for (int index_col=0; index_col&lt;w; ++index_col)
+ 5099              row_data.push_back (pData[w*index_row+index_col]);
+ 5100          double std_dol = GetDatasStd&lt;int&gt;(row_data);
+ 5101          if (std_dol&gt;spec_dol)
+ 5102          {//dol
+ 5103              cnt_dol+=1;</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:18–28</p><p>源码计算样本标准差：先求平均，再求平方差之和，除以 N−1 后开平方。</p><pre tabindex="0"><code>   18      double mean_t = 0;
+   19      for (int i=0; i&lt;datas.size (); ++i)
+   20          mean_t+=(double)datas.at (i);
+   21      mean_t/=datas.size ();
+   22      double std_t = 0.0;
+   23      for (int i=0; i&lt;datas.size (); ++i)
+   24      {
+   25          std_t+=(double)((mean_t-datas.at (i))*(mean_t-datas.at (i)));
+   26      }
+   27      std_t/=datas.size ()-1;
+   28      return std::sqrt (std_t);</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -299,6 +587,20 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑩ 沿行方向排列左半的均值：198、201、220</span></p>
     <div class="explain">
       <h3>断线指标第一步：分半</h3><p>每行分为左半、右半，各有 960 像素；分别求均值。对于连续多行，把左半均值按行顺序组成一个序列，右半也形成另一序列。</p><p>这里只画连续三行的例子；三行左半均值假定是 198、201、220，右半也要单独检查。列则分为上、下两半，每半 540 像素。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:4946–4957</p><p>每次读取相邻两个像素，同时分别累加左半与右半，最后保存半行均值。</p><pre tabindex="0"><code> 4946          for (int j=0; j&lt;N; ++j)
+ 4947          {
+ 4948              mean_t+=(double)(pData[w*i+2*j]);
+ 4949              mean_t+=(double)(pData[w*i+2*j+1]);
+ 4950              if(j&lt;(N&gt;&gt;1))
+ 4951                  mean_t_half1 = mean_t_half1 + (double)(pData[w*i+2*j]) + (double)(pData[w*i+2*j+1]);
+ 4952              else
+ 4953                  mean_t_half2 = mean_t_half2 + (double)(pData[w*i+2*j]) + (double)(pData[w*i+2*j+1]);
+ 4954          }
+ 4955          each_row_.push_back (mean_t/(2*N));
+ 4956          each_row_half1_.push_back (mean_t_half1/N);
+ 4957          each_row_half2_.push_back (mean_t_half2/N);</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -313,6 +615,22 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑪ 二次差 16 大于阈值 10，计数加 1</span></p>
     <div class="explain">
       <h3>什么是二次差？</h3><p>左半的三个均值 198、201、220：第一次变化是 3，第二次变化是 19；二次差为 |19−3|=16。超过阈值 10，本次计数加 1。</p><p>窗口继续滑动到下一组三行；左半和右半都检查。列同理，对每列的上半与下半均值序列运算。指标不保证和肉眼看到的断线一一对应。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:4964–4977</p><p>delta1、delta2 是相邻变化；两者差的绝对值大于阈值时计数。</p><pre tabindex="0"><code> 4964      for(int i=0; i&lt;each_row_half1_.size()-2; i++)
+ 4965      {
+ 4966          double delta1 =each_row_half1_.at(i+1)-each_row_half1_.at(i);
+ 4967          double delta2 =each_row_half1_.at(i+2)-each_row_half1_.at(i+1);
+ 4968          double delta = std::abs(delta2-delta1);
+ 4969          delta_each_row_half1.push_back(delta);
+ 4970      }
+ 4971  
+ 4972      for(int i=0; i&lt;delta_each_row_half1.size(); i++)
+ 4973      {
+ 4974          if(delta_each_row_half1.at(i)&gt;break_line_spec)
+ 4975          {
+ 4976              break_line_cnt++;
+ 4977          }</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -327,6 +645,24 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑫ 任一侧邻近均值为零，两侧比例差和最终差设为 −1</span></p>
     <div class="explain">
       <h3>边界不是简单缩短邻域</h3><p>当某一侧不够 radius=5 条时，源码用目标线自身的均值作为该侧参考。若任一侧均值为 0，则两侧比例差和最终差都设为 −1，不会因比例差超过正阈值而计数。</p><p>本配置 StripRow、StripCol 为 0；其他配置的处理范围可能不同。DOL、断线有各自的计算。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5025–5034</p><p>先默认参考均值为当前行；只有上方足够 r 条时才改算上方邻行。</p><pre tabindex="0"><code> 5025      for (int i=stripCnt/2; i&lt;each_row_.size ()-stripCnt/2; ++i)
+ 5026      {
+ 5027          double mean_top = each_row_.at (i);
+ 5028          double mean_down = each_row_.at (i);
+ 5029          if (i-r&gt;=stripCnt/2)
+ 5030          {
+ 5031              int cnt_t1 = 0;
+ 5032              mean_top = 0.0;
+ 5033              for (int index = i-r; index&lt;=i-1; ++index)
+ 5034              {</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5058–5063</p><p>任一侧均值为零时，源码将两个比例差和最终差都设为 −1。</p><pre tabindex="0"><code> 5058          if(mean_top==0||mean_down==0)
+ 5059          {
+ 5060              dif_top_ratio =-1;
+ 5061              dif_down_ratio =-1;
+ 5062              diff =-1;
+ 5063          }</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -341,6 +677,32 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑬ 按列、行、DOL、断线顺序，只有更高 grade 才覆盖</span></p>
     <div class="explain">
       <h3>为什么列和行同时异常时选列？</h3><p>代码先检查列，再检查行、DOL 和断线。后续分支的 grade 必须严格大于当前 grade 才能覆盖。此示例行列 grade 均为 7，所以两者同时触发时保留列 bin 2208。</p><p>示例 TA/MA 阈值相同，触发 TA 时进入图中常见分支。其他配置存在 MA 分支，最终 bin 还要与其他测试子项汇总。参数 true 是 log_flag，控制日志，不是改变缺陷判定的开关。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:5110–5124</p><p>先汇总 DOL 和断线计数；任何类型大于零就失败，然后优先检查列。</p><pre tabindex="0"><code> 5110          int cnt_dol = cnt_row_dol + cnt_col_dol;
+ 5111          int cnt_break_line = cnt_breakline_row + cnt_breakline_col;
+ 5112  
+ 5113          if (cnt_dead_col&gt;0 || cnt_dead_row&gt;0 || cnt_dol&gt;0 || cnt_break_line&gt;0)
+ 5114              result_line.is_passed = false;
+ 5115  
+ 5116          if (cnt_dead_col&gt;0)
+ 5117          {
+ 5118              if(max_col_diff[0]&gt;=manage.param_line_defect_bright_.deadcol_spec_r_MA_ ||
+ 5119                      max_col_diff[1]&gt;=manage.param_line_defect_bright_.deadcol_spec_gr_MA_ ||
+ 5120                      max_col_diff[2]&gt;=manage.param_line_defect_bright_.deadcol_spec_gb_MA_ ||
+ 5121                      max_col_diff[3]&gt;=manage.param_line_defect_bright_.deadcol_spec_b_MA_ )
+ 5122              {
+ 5123                  result_line.bin = manage.param_line_defect_bright_.bin_dead_col_;
+ 5124                  result_line.grade = manage.param_line_defect_bright_.grade_dead_col_;</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:5132–5140</p><p>后续行分支要求行 grade 严格大于当前 grade 才能覆盖；其余分支也要分别查看。</p><pre tabindex="0"><code> 5132          if (cnt_dead_row&gt;0 &amp;&amp; manage.param_line_defect_bright_.grade_dead_row_&gt;result_line.grade)
+ 5133          {
+ 5134              if(max_row_diff[0]&gt;=manage.param_line_defect_bright_.deadrow_spec_r_MA_ ||
+ 5135                      max_row_diff[1]&gt;=manage.param_line_defect_bright_.deadrow_spec_gr_MA_ ||
+ 5136                      max_row_diff[2]&gt;=manage.param_line_defect_bright_.deadrow_spec_gb_MA_ ||
+ 5137                      max_row_diff[3]&gt;=manage.param_line_defect_bright_.deadrow_spec_b_MA_ )
+ 5138              {
+ 5139                  result_line.bin = manage.param_line_defect_bright_.bin_dead_row_;
+ 5140                  result_line.grade = manage.param_line_defect_bright_.grade_dead_row_;</code></pre></div>
+      </div>
     </div>
   </section>
 
@@ -355,6 +717,34 @@ footer code{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
     <p class="cap"><span class="dot"></span><span>⑭ 等于阈值不算超限；两者都超限时模拟选择列 bin 2208</span></p>
     <div class="explain">
       <h3>动手体验阈值</h3><p>滑杆是两个独立目标线的简化例子，假设各自两侧背景均值固定 200。行均值 195 或 205 时差为 2.5%，不超限；194 或 206 时超限。列均值 194 或 206 时差为 3%，不超限；193 或 207 时超限。</p><p>这里只模拟目标线，假设其他线和通道、DOL、断线计数为零，不模拟完整图像。实际异常线可能影响附近线、DOL 或断线的判断。</p>
+      <div class="story-code"><h3>本幕对应源码</h3>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5064–5071</p><p>比例模式下分别除以上下均值，std::max 选较大的一侧。</p><pre tabindex="0"><code> 5064          else
+ 5065          {
+ 5066              if(mode==Ratio)
+ 5067              {
+ 5068                  dif_top_ratio = dif_top/mean_top;
+ 5069                  dif_down_ratio = dif_down/mean_down;
+ 5070                  diff = std::max(dif_top_ratio,dif_down_ratio);
+ 5071              }</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp:5079–5087</p><p>diff 是两侧较大比例差；严格大于阈值时计数加一。</p><pre tabindex="0"><code> 5079          if( diff &gt; max_diff)
+ 5080          {
+ 5081              max_diff = diff;
+ 5082              max_pos = i*2;
+ 5083          }
+ 5084  
+ 5085          if (diff&gt;spec_line)
+ 5086          {
+ 5087              cnt_lines+=1;</code></pre></div>
+<div class="source-block"><p class="source-path">Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp:5132–5140</p><p>后续行分支要求行 grade 严格大于当前 grade 才能覆盖；其余分支也要分别查看。</p><pre tabindex="0"><code> 5132          if (cnt_dead_row&gt;0 &amp;&amp; manage.param_line_defect_bright_.grade_dead_row_&gt;result_line.grade)
+ 5133          {
+ 5134              if(max_row_diff[0]&gt;=manage.param_line_defect_bright_.deadrow_spec_r_MA_ ||
+ 5135                      max_row_diff[1]&gt;=manage.param_line_defect_bright_.deadrow_spec_gr_MA_ ||
+ 5136                      max_row_diff[2]&gt;=manage.param_line_defect_bright_.deadrow_spec_gb_MA_ ||
+ 5137                      max_row_diff[3]&gt;=manage.param_line_defect_bright_.deadrow_spec_b_MA_ )
+ 5138              {
+ 5139                  result_line.bin = manage.param_line_defect_bright_.bin_dead_row_;
+ 5140                  result_line.grade = manage.param_line_defect_bright_.grade_dead_row_;</code></pre></div>
+      </div>
     </div>
   </section>
 

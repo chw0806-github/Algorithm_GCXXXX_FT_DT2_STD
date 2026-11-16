@@ -8,11 +8,11 @@
   + CSS + base64 内嵌图片，零脚本、零外部请求，任何环境都能看。
 
 用法：
-  python3 docs/build_story.py           # 生成两页
+  python3 docs/build_story.py           # 生成全部分镜页
   python3 docs/build_story.py --check   # 只校验产物是否与素材一致（CI 用）
 
 素材来源（docs/<page>/story/）：
-  sNN.png     —— 动画第 NN 幕的一帧定格（1000x620，96 色量化，约 60 KB）
+  sNN.png     —— 动画第 NN 幕的一帧定格（1000x620，可选量化）
   meta.json   —— [{i, file, kicker, caption, dur, html}, ...]，由导出脚本生成
 """
 
@@ -20,6 +20,9 @@ import base64
 import json
 import os
 import sys
+from html import escape
+from code_guides import EXPECTED_KICKERS, get_guides
+from config_guides import CSS as CONFIG_CSS, render_config
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -210,10 +213,10 @@ PAGE = """<!doctype html>
     <p class="lead">{lead}</p>
     <p class="banner">
       <b>为什么有这一页？</b>配套的 <code>index.html</code> 是带脚本的动画。
-      如果你打开它只看到「脚本没有运行起来」之类的提示，说明当前阅读器（预览框 / 沙箱 / 邮件客户端）
-      屏蔽了页面脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
+      如果你打开它只看到「脚本没有运行起来」之类的提示，可能是脚本运行出错，也可能是当前阅读器不支持脚本。本页是同一份内容的<strong>定格版</strong>：纯 HTML + CSS，图片直接内嵌，
       <strong>不执行任何脚本、不请求任何外部文件</strong>。
     </p>
+    {config}
     <nav class="chips">{chips}</nav>
   </div>
 </header>
@@ -240,6 +243,9 @@ CARD = """  <section class="card" id="s{n}">
     <p class="cap"><span class="dot"></span><span>{caption}</span></p>
     <div class="explain">
 {html}
+      <div class="story-code"><h3>本幕对应源码</h3>
+{code}
+      </div>
     </div>
   </section>
 """
@@ -261,6 +267,11 @@ def build(page):
         meta = json.load(fh)
 
     total = len(meta)
+    guides = get_guides(page["dir"])
+    if [item["kicker"] for item in meta] != EXPECTED_KICKERS[page["dir"]] or len(guides) != total:
+        raise ValueError(f'{page["dir"]}: 分镜与源码章节不匹配，请重新导出分镜')
+    if [item["i"] for item in meta] != list(range(1, total + 1)):
+        raise ValueError(f'{page["dir"]}: 分镜编号不连续')
     cards, chips = [], []
     for item in meta:
         n = item["i"]
@@ -281,6 +292,10 @@ def build(page):
                 title=page["title"],
                 caption=item["caption"],
                 html=indent(item.get("html", "")),
+                code="\n".join(
+                    '<div class="source-block"><p class="source-path">{}:{}–{}</p><p>{}</p><pre tabindex="0"><code>{}</code></pre></div>'.format(
+                        escape(b["path"]), b["first"], b["last"], escape(b["note"]), escape(b["code"]))
+                    for b in guides[n - 1]),
             )
         )
 
@@ -289,7 +304,8 @@ def build(page):
         sub=page["sub"],
         crumb=page["crumb"],
         lead=page["lead"],
-        css=CSS.strip(),
+        css=CSS.strip() + "\n" + CONFIG_CSS + "\n" + ".story-code{border-top:1px solid #344664;margin-top:20px}.story-code .source-block{margin:16px 0}.story-code .source-path{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere;color:#a9c6ff}.story-code pre{max-height:300px;overflow:auto}",
+        config=render_config(page["dir"]),
         chips="\n      ".join(chips),
         cards="\n".join(cards),
         dir=page["dir"],

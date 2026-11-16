@@ -1,5 +1,7 @@
 # Relative_Illumination 动画讲解
 
+动画页和静态分镜页顶部均展示本示例对应的 `.data` 与 `Basic.data` 原文（框内可滚动）；静态分镜每幕也展示对应源码摘录。配置为 GC8613T 白帧示例，不等于实测数据。
+
 与 [Light_Response](../light_response/index.html) 成对的第二个例子：**同一个白帧，换一个角度看**。
 
 - 动画：`index.html`（7 幕，单文件可直接打开；源文件为同目录 `index.src.html`）
