@@ -30,6 +30,9 @@ JS_SAFE = JS.replace('</script>', '<\\/script>')
 
 # (源文件, 成品文件)
 PAGES = [
+    (ROOT / 'blemish_test' / 'index.src.html', ROOT / 'blemish_test' / 'index.html'),
+    (ROOT / 'color_gi_5x5' / 'index.src.html', ROOT / 'color_gi_5x5' / 'index.html'),
+    (ROOT / 'color_gi' / 'index.src.html', ROOT / 'color_gi' / 'index.html'),
     (ROOT / 'color_shading_15x15' / 'index.src.html', ROOT / 'color_shading_15x15' / 'index.html'),
     (ROOT / 'color_shading_5x5' / 'index.src.html', ROOT / 'color_shading_5x5' / 'index.html'),
     (ROOT / 'color_shading' / 'index.src.html', ROOT / 'color_shading' / 'index.html'),

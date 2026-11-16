@@ -27,6 +27,17 @@ from config_guides import CSS as CONFIG_CSS, render_config
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
+    {"dir": "blemish_test", "title": "Blemish_Test", "sub": "污点检测：双路候选、PD 排除与增强匹配", "crumb": "图像传感器 FT 测试 · 白帧测试子项", "lead": "15 幕定格图、逐幕源码和示例配置原文；像素与候选为教学假设。"},
+    {"dir": "color_gi_5x5", "title": "Color_GI_5_5",
+     "sub": "五点绿色不平衡：相对差与逐点上限",
+     "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+     "lead": "15 幕定格图与逐幕源码；GI_5x5.data 缺失，专用参数和像素为假设。"},
+    {
+        "dir": "color_gi", "title": "Color_GI",
+        "sub": "绿色不平衡：区域 Gr/Gb 极值与阈值",
+        "crumb": "图像传感器 FT 测试 · 白帧测试子项",
+        "lead": "14 幕定格图、逐幕源码与示例配置原文；像素为模拟数据。",
+    },
     {
         "dir": "color_shading_15x15", "title": "Color_Shading_15_15",
         "sub": "15×15 色彩阴影：四角与边缘比例差",

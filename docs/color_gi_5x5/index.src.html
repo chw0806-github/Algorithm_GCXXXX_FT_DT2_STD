@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Color_GI_5_5 动画讲解</title><link rel="stylesheet" href="../shared/player.css"></head>
+<body><div class="app"><header class="top"><div class="brand"><div class="logo">◎</div><div><h1>图像传感器 FT 测试 · 五点绿色不平衡（Color_GI_5_5）</h1><p class="sub">逐行拆解 <code>vector&lt;Subitem_Result&gt; ratio_GI_5x5 = Color_GI_5_5(test_manage);</code><br><code>items_results.insert(items_results.end(), ratio_GI_5x5.begin(), ratio_GI_5x5.end());</code></p></div></div><div class="badges"><span class="badge">C++ / Qt · V1.0 源码</span><span class="badge">GI_5x5 配置缺失，参数为假设</span><a class="badge link" href="storyboard.html">看不了动画？→ 静态分镜</a></div></header>
+  <main>
+<section class="stage-col"><div class="stage-card"><canvas id="stage" aria-label="算法动画舞台"></canvas><div class="caption"><span class="dot"></span><span id="caption">① 四角和中心分别计算绿色差异，再比较各自上限</span></div></div><div class="controls"><button id="prev">◀ 上一节</button><button id="play" class="primary">⏸ 暂停</button><button id="next">下一节 ▶</button><button id="replay">↺ 重播</button><div class="progress"><div id="bar"></div></div><div class="speed"><button data-speed="0.5">0.5×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div></div>
+<div class="tuner"><div class="tuner-head"><h2>互动：调整右下区域模拟 Gr</h2><span>只影响最后一幕；不修改配置或前面算例</span></div><div class="sliders two"><label class="slider"><span>右下 Gr</span><input id="gr" type="range" min="160" max="240" value="230" step="1"><output id="grout">230</output></label></div><div class="presets"><button id="sample">恢复示例 230</button><button id="normal">假设未超限 200</button><button id="dark">观察 Gr 较小 160</button></div></div></section>
+<aside class="side"><nav class="chapters" id="chapters" aria-label="章节"></nav><section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section><div class="explain" id="explain"><h3>本页在讲什么</h3><p>通过虚构数据解释五点的绿色差异和阈值判定；GI_5x5 专用配置文件缺失。</p></div></aside>
+</main><footer class="foot">Basic.data、ColorRatio.data、LightResponse.data 是示例目录原文；仓库没有 GI_5x5.data。分区、阈值、bin、grade 和像素均为教学假设。</footer></div>
+<script src="../shared/player.js"></script><script>
+const state=AlgoAnim.state;state.gr=230;
+const N=384*216;
+// 数值、阈值和 bin 都是假设，顺序为左上、右上、中心、左下、右下。
+const POINTS=[{name:'左上',id:0,gr:200,limit:.05},{name:'右上',id:4,gr:210,limit:.08},{name:'中心',id:12,gr:220,limit:.10},{name:'左下',id:20,gr:190,limit:.08},{name:'右下',id:24,gr:230,limit:.12}];
+function measure(gr,gb=200){
+ const g1=gr*N+.1,g2=gb*N+.1,avg=(g1+g2)/2;
+ const raw=g2*100<g1?100:Math.abs((g1-g2)/avg);
+ return {g1,g2,avg,raw,mapped:raw>10?-1:raw};
+}
+function exceeds(values,limits){return values.some((v,i)=>v>limits[i]);}
+function calculate(gr=230){const vals=POINTS.map((v,i)=>measure(i===4?gr:v.gr));return {vals,fail:exceeds(vals.map(v=>v.mapped),POINTS.map(v=>v.limit))};}
+function f(v){return v.toFixed(6);}
+function box(x,y,w,h,title,lines,p,color){card(x,y,w,h,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});txt(title,x+18,y+32,{size:15,weight:700,color:color||C.accent});const n=Math.min(lines.length,1+Math.floor(clamp01(p/.76)*lines.length));lines.forEach((v,i)=>{if(i<n)txt(v,x+18,y+68+i*31,{size:13,color:i===n-1?C.ink:C.dim});});}
+function note(s){txt(s,55,545,{size:12,color:C.dim});}
+function grid(ids){const marked=new Set(ids||[]);for(let i=0;i<25;i++){const x=55+(i%5)*58,y=155+Math.floor(i/5)*58;card(x,y,53,53,{r:4,fill:marked.has(i)?withA(C.accent2,.4):withA(C.accent,.08),stroke:marked.has(i)?C.accent2:withA(C.accent,.25)});txt(i,x+26,y+32,{size:14,color:marked.has(i)?C.ink:C.dim,align:'center'});}}
+function intro(p){header(0,'一眼看懂','每块计算绿色相对差，选择四角和中心各自比较上限');box(55,155,425,320,'流程',['① 分区：示例假设 5×5','② 每块分别计算 Gr、Gb 的和','③ 差的绝对值 ÷ 两和的平均','④ 取四角和中心五个结果','⑤ 各自严格超过上限则失败'],p,C.accent2);box(510,155,425,320,'注意与 Color_GI 不同',['本函数用绿色差 ÷ 绿色平均','不是 Gr ÷ Gb','不计算所有 ROI 的最大最小','每一点用自己的上限','演示参数和像素均为假设'],p);note('源码逐像素求和，画面只展示结果，不播放逐个累加。');}
+function config(p){header(1,'配置与假设','专用配置缺失，不能将教学阈值当成真实参数');box(55,155,425,320,'仓库可确认',['未找到 GI_5x5.data','加载器无法打开文件时返回 false','无法确认实际版本、开关与阈值','Basic.data：3840×2160，RG Bayer','本页 V1.0 仅为代码演示'],p,C.accent2);box(510,155,425,320,'以下仅为教学假设',['Skip=0，ROI=5×5，开关=1','左上/右上/中心上限：.05/.08/.10','左下/右下上限：.08/.12','失败 bin=9001、grade=5','不是仓库配置，也不是实测'],p);note('实际网格、上限及结果必须从运行环境的 GI_5x5.data 确认。');}
+function gate(p){header(2,'前置与开关','区分自己的开关和此前 Light_Response 的两个绿色均值');box(55,155,425,320,'进入计算',['此函数只看 GI_5x5 的开关','不检查 ColorRatio 的开关','共用函数要求 Gr 均值 > 0','并要求 Gb 均值 > 0','本例假设这两个前置值都有效'],p,C.accent2);box(510,155,425,320,'与 Color_GI 的区别',['不检查 Gr 是否大于 10','Gr>0 且 Gb>0 即进行 ROI 计算','任一不大于 0：五点映射写 −1','后续仍会拿 −1 与上限比较','初始通过不证明有效测量'],p);note('这里的前置均值来自 Light_Response，独立于后面虚构的五点像素。');}
+function layout(p){header(3,'假设分成 25 块','示例以 5×5 划分；源码实际使用专用配置中的行列数');grid([0,4,12,20,24]);box(410,155,525,320,'根据 Basic 与假设尺寸',['RAW 3840×2160 → 每通道 1920×1080','假设 Skip=0，分 5 列、5 行','每块 384×216 = 82944 像素 / 通道','共 25 块；行优先从 0 编号','四角 0、4、20、24；中心 12','四角和中心分别比较各自上限'],p,C.accent2);note('黄色为判定使用的五点；代码仍会计算全部 25 块。');}
+function inputs(p){header(4,'准备五点输入','五点各自有两个绿色通道；其余区域未模拟');grid([0,4,12,20,24]);box(410,155,525,320,'五点模拟 Gr / Gb（DN）',POINTS.map(v=>v.name+' ROI '+v.id+'：Gr '+v.gr+'，Gb 200').concat(['每块内对应通道像素取固定值']),p,C.accent2);note('模拟值只为了复算；另 20 块未模拟，且不是产线测量。');}
+function formula(p){let m=measure(220);header(5,'一块的计算方法','以中心为例：两绿色和之差 ÷ 两绿色和的平均');box(55,155,425,320,'中心模拟输入',['Gr=220，Gb=200','每通道 82944 个像素','Gr 和 = '+m.g1.toFixed(1),'Gb 和 = '+m.g2.toFixed(1),'每个通道的和均从 0.1 开始'],p,C.accent2);box(510,155,425,320,'按源码算绿色相对差',['绿色平均和 = (Gr 和 + Gb 和) ÷ 2','= '+m.avg.toFixed(1),'差的绝对值 = |Gr 和 − Gb 和|','绿色相对差 = 绝对差 ÷ 平均和','本例中心 ≈ '+f(m.raw)],p);note('底层 GG 在此函数是相对差，不是 Gr/Gb；显示舍入，判断用未舍入数。');}
+function pointStep(k,p){const v=POINTS[k],m=measure(v.gr);header(6+k,v.name+'逐步比较','先看这个位置的模拟绿色值，再算相对差并比较假设上限');grid([v.id]);txt(v.name+' ROI '+v.id,55,475,{size:14,color:C.accent2,weight:700});card(410,155,525,330,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});txt('① 这块的输入：Gr '+v.gr+'，Gb 200',430,190,{size:15,color:C.accent2,weight:700});
+ if(p>=.18){txt('② Gr 和 = '+m.g1.toFixed(1)+'；Gb 和 = '+m.g2.toFixed(1),430,235,{size:13});txt('绿色平均和 = '+m.avg.toFixed(1),430,267,{size:13});}
+ if(p>=.42){txt('③ |Gr 和 − Gb 和| ÷ 绿色平均和',430,310,{size:14,color:C.accent});txt('≈ '+f(m.raw),430,342,{size:16,weight:700});}
+ if(p>=.68){txt('④ 假设上限 '+v.limit.toFixed(2)+' → '+(m.mapped>v.limit?'超限':'未超限'),430,405,{size:15,weight:700,color:m.mapped>v.limit?C.fail:C.pass});}
+ note('每个和包含初始值 0.1；此处像素与上限都只是教学假设。');}
+function pointCaption(k,p){const name=POINTS[k].name;return p<.18?name+'：先查看模拟 Gr 和 Gb':p<.42?name+'：直接展示两个通道的和与绿色平均和':p<.68?name+'：绿色和的绝对差除以平均和':name+'：与该点假设上限比较，判断是否超限';}
+function pt0(p){pointStep(0,p)}function pt1(p){pointStep(1,p)}function pt2(p){pointStep(2,p)}function pt3(p){pointStep(3,p)}function pt4(p){pointStep(4,p)}
+function summary(p){const d=calculate();header(11,'五点汇总','只要任意一个映射值严格超过它自己的上限，子项失败');box(55,155,425,320,'五点模拟结果',POINTS.map((v,i)=>v.name+'：'+f(d.vals[i].mapped)+'；假设上限 '+v.limit.toFixed(2)),p,C.accent2);box(510,155,425,320,'V1.0 判断',['左上、右上、左下、右下、中心','任意一个 > 对应 TargetGI → 失败','本例右下约 0.139535 > 0.12','假设失败 bin 9001 / grade 5','等于上限不失败；没有下限检查'],p);note('假设上限和 bin 与产线配置无关；比较使用未舍入值。');}
+function abnormal(p){header(12,'异常值与映射','−1 不是有效测量：注意源码仍把它和上限比较');box(55,155,425,320,'前置均值异常',['前置 Gr 或 Gb ≤ 0','五点映射写为 −1','此函数没有额外 Gr>10 门槛','仍把 −1 与每点上限比较','若上限为正，−1 不触发失败'],p,C.accent2);box(510,155,425,320,'极端绿色比例',['Gb 和 ×100 < Gr 和 → 原始值 100','五点映射将 >10 的值替换成 −1','例如 Gb 全为 0、Gr 正时可能发生','正上限下 −1 不触发超限','初始通过不代表有效测量'],p);note('先有有效 Light_Response 前置、合法区域和像素数据，才能解释正常结果。');}
+function returns(p){header(13,'返回与追加','V1.0 返回一个子项，调用方把整个向量追加');box(55,155,425,320,'子项与开关',['初始化 true，bin 1，grade 0','开关关闭时 g_msg=false','异常值可能保留初始通过','开关为 1 且任一项超限则失败','假设失败 bin / grade 不代表产线'],p,C.accent2);box(510,155,425,320,'其他依赖',['未知版本：false，g_msg=false','ColorRatio target 用于映射的键','不是五点上限，也不加 offset','只返回一个 GI_5x5 子项','最终 bin 还要汇总其他子项'],p);note('未找到专用配置，不能据此断定实际运行的版本或结果。');}
+function interactive(p){const d=calculate(state.gr),m=d.vals[4];header(14,'互动观察','改右下 Gr，重新计算该点相对差与五点判定');box(55,155,425,320,'右下模拟区域',['Gr='+state.gr+'，Gb=200','绿色相对差 ≈ '+f(m.raw),'五点映射值 ≈ '+f(m.mapped),'右下假设上限 0.12','其他四点不变'],1,C.accent2);box(510,155,425,320,'假设参数下',['仅右下值随滑杆变化','五点任何一项超上限：'+(d.fail?'是':'否'),d.fail?'假设失败 bin 9001 / grade 5':'假设未超限，保持初始结果','两个方向的偏差都取绝对值','显示值舍入，判断用未舍入数'],1);note('这只是虚构算例；不更新前面的固定数据、前置均值或配置。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:20,draw:intro,caption:p=>'① 各区域求绿色相对差，四角和中心分别比较上限',html:'<h3>先看流程</h3><p>Color_GI_5_5 不同于 Color_GI：底层计算 <code>|Gr和−Gb和| / ((Gr和+Gb和)/2)</code>，选出四角与中心，五个值分别与位置上限比较；不找全图最大最小。</p><p>本页面的专用配置与像素都是教学假设。</p>'},
+ {kicker:'配置与假设',dur:22,draw:config,caption:p=>'② GI_5x5.data 缺失：5×5、开关、阈值和 bin 均为假设',html:'<h3>哪些数据是真实的？</h3><p>仓库没有 GI_5x5.data，加载器打开失败即返回 false；不能从该目录确认实际版本和专用参数。本页引用真实 Basic.data、ColorRatio.data、LightResponse.data，演示假设 V1.0、Skip=0、5×5、开关 1。</p><p>五点上限左上 0.05、右上 0.08、中心 0.10、左下 0.08、右下 0.12；失败 bin 9001、grade 5。全部是教学假设。</p>'},
+ {kicker:'前置与开关',dur:22,draw:gate,caption:p=>'③ 只检查本项开关；两个前置绿色均值都须大于零才能计算',html:'<h3>先检查条件</h3><p>V1.0 只检查 GI_5x5 自己的 ratio_open_mode。共用函数使用此前 Light_Response 的 Gr、Gb 中心均值作为前置：必须都大于零才计算各 ROI；不检查 ColorRatio 的开关，不要求 Light_Response 子项通过。</p><p>不同于 Color_GI，本函数没有 Gr&gt;10 的额外检查。</p>'},
+ {kicker:'假设分成 25 块',dur:22,draw:layout,caption:p=>'④ 假设 5×5；每块 384×216，五点索引为 0、4、12、20、24',html:'<h3>分区与五点</h3><p>Basic.data 的 RAW 3840×2160 RG Bayer 分成四个 1920×1080 的通道。假设 Skip=0、5×5，得到 25 块，每块每通道 384×216=82944 像素。四角和中心按行优先编号 0、4、12、20、24。</p><p>源码计算所有块并保留五点映射；实际数量与 Skip 需要专用配置确定。</p>'},
+ {kicker:'准备五点输入',dur:22,draw:inputs,caption:p=>'⑤ 五点分别构造 Gr 和 Gb 的模拟值；其他 20 块未模拟',html:'<h3>五点数据</h3><p>假设五点 Gb 都为 200 DN；左上、右上、中心、左下、右下的 Gr 分别为 200、210、220、190、230 DN。每块内各通道取固定值，均为虚构，不是实测。</p><p>其余 20 块未模拟；真实代码仍会计算它们。只要区域和输入有效，五点判断不依赖其他区域的比例值。</p>'},
+ {kicker:'一块的计算方法',dur:24,draw:formula,caption:p=>p<.3?'⑥ 看中心 Gr 和 Gb 的模拟值':p<.6?'⑥ 求两绿色和以及它们的平均':'⑥ 绝对差除以平均和，得到绿色相对差',html:'<h3>中心如何计算？</h3><p>假设中心 Gr=220、Gb=200，各有 82944 个像素。两个和均以 0.1 开始，分别为 18247680.1 和 16588800.1；绿色平均和为 17418240.1。结果为两和之差绝对值除以平均和，约 0.095238。</p><p>这是无量纲相对差，不是 Gr/Gb，也不是以 DN 为单位的直接差。</p>'},
+ {kicker:'左上逐步比较',dur:24,draw:pt0,caption:p=>pointCaption(0,p),html:'<h3>左上 ROI 0</h3><p>模拟 Gr=Gb=200，两和相等，相对差为 0。与假设上限 0.05 比较，不超限。</p>'},
+ {kicker:'右上逐步比较',dur:24,draw:pt1,caption:p=>pointCaption(1,p),html:'<h3>右上 ROI 4</h3><p>模拟 Gr=210、Gb=200，相对差约 0.048780，与假设上限 0.08 比较不超限。显示结果舍入，比较不使用舍入值。</p>'},
+ {kicker:'中心逐步比较',dur:24,draw:pt2,caption:p=>pointCaption(2,p),html:'<h3>中心 ROI 12</h3><p>模拟 Gr=220、Gb=200，相对差约 0.095238，与假设上限 0.10 比较不超限。</p>'},
+ {kicker:'左下逐步比较',dur:24,draw:pt3,caption:p=>pointCaption(3,p),html:'<h3>左下 ROI 20</h3><p>模拟 Gr=190、Gb=200，差为负但取绝对值，相对差约 0.051282，与假设上限 0.08 比较不超限。</p>'},
+ {kicker:'右下逐步比较',dur:24,draw:pt4,caption:p=>pointCaption(4,p),html:'<h3>右下 ROI 24</h3><p>模拟 Gr=230、Gb=200，相对差约 0.139535，大于假设上限 0.12。这里只是在判断此点；下一幕汇总五点。</p>'},
+ {kicker:'五点汇总',dur:22,draw:summary,caption:p=>'⑫ 任一点严格超过自己的假设上限，即模拟子项失败',html:'<h3>一个子项结果</h3><p>源码以或条件分别比较左上、右上、左下、右下、中心与其各自 TargetGI；只要任意一项严格大于就失败，等于不失败。没有下限判断。本模拟只有右下超假设上限，假设 bin 9001、grade 5。</p><p>这些上限和 bin 并非实际配置；实际使用未舍入值判断。</p>'},
+ {kicker:'异常值与映射',dur:24,draw:abnormal,caption:p=>'⑬ 前置异常或极端绿色值可能变为 −1；初始通过不证明有效',html:'<h3>需要核查的异常路径</h3><p>此前 Light_Response 的 Gr 或 Gb 均值不大于 0 时，五点映射均为 −1，此函数仍直接与上限比较。若所有上限为正，−1 不触发失败，保持初始通过；不代表有效测量。</p><p>底层在 Gb和×100&lt;Gr和时把值设为 100，五点映射把大于 10 的值改为 −1，同样可能在正上限下不触发失败。区域数量或尺寸不合法也可能导致无效索引或除零。</p>'},
+ {kicker:'返回与追加',dur:20,draw:returns,caption:p=>'⑭ 只返回一个 GI_5x5 子项；调用方追加向量',html:'<h3>结果与依赖</h3><p>V1.0 初始子项 true、bin 1、grade 0；关闭时 g_msg=false。未知版本返回 false 且 g_msg=false。实际运行状态和失败 bin 要由专用配置确认。</p><p>ColorRatio 的 GG target 用于构造及读取映射键，不是本项五个上限，也没有应用 offset。insert 只是追加，最终 bin 还需汇总其他子项。</p>'},
+ {kicker:'互动观察',dur:24,draw:interactive,caption:p=>'⑮ 调整右下 Gr，观察绿色相对差及假设上限判定',html:'<h3>滑杆观察</h3><p>只调整右下 Gr，Gb 固定 200，其余四点不变；右下假设上限为 0.12。Gr=230 时超限，Gr=200 时未超限，Gr=160 时因绝对差也可能超限。</p><p>实际判断用未舍入值；本幕不模拟前置异常、其他 20 块、配置加载或最终 bin。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+const input=document.getElementById('gr'),out=document.getElementById('grout');
+function setGr(v){state.gr=Number(v);input.value=String(v);out.textContent=String(v);AlgoAnim.render();}
+input.addEventListener('input',()=>setGr(input.value));document.getElementById('sample').addEventListener('click',()=>setGr(230));document.getElementById('normal').addEventListener('click',()=>setGr(200));document.getElementById('dark').addEventListener('click',()=>setGr(160));
+</script></body></html>

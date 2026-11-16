@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Color_GI_5_5 动画讲解</title><style>
+:root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 目录页 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px}
+.card-link{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(110,168,254,.10),rgba(255,255,255,.02));padding:18px 20px;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.card-link:hover{transform:translateY(-2px);border-color:rgba(110,168,254,.5);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.card-link h3{margin:0 0 8px;font-size:15px;color:#eaf2ff}
+.card-link p{margin:0;font-size:12.5px;line-height:1.75;color:var(--dim)}
+.card-link .tag{display:inline-block;font-size:10.5px;color:#ffd166;border:1px solid rgba(255,209,102,.35);
+  background:rgba(255,209,102,.08);border-radius:999px;padding:2px 8px;margin-bottom:10px}
+.sliders.two{grid-template-columns:repeat(2,1fr)}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+</style></head>
+<body><div class="app"><header class="top"><div class="brand"><div class="logo">◎</div><div><h1>图像传感器 FT 测试 · 五点绿色不平衡（Color_GI_5_5）</h1><p class="sub">逐行拆解 <code>vector&lt;Subitem_Result&gt; ratio_GI_5x5 = Color_GI_5_5(test_manage);</code><br><code>items_results.insert(items_results.end(), ratio_GI_5x5.begin(), ratio_GI_5x5.end());</code></p></div></div><div class="badges"><span class="badge">C++ / Qt · V1.0 源码</span><span class="badge">GI_5x5 配置缺失，参数为假设</span><a class="badge link" href="storyboard.html">看不了动画？→ 静态分镜</a></div></header>
+<section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p><b>仓库没有 GI_5x5.data；无法确认专用配置。</b> 下方为已有 Basic、ColorRatio、LightResponse 原文，5×5 网格、开关、阈值和 bin 均为教学假设。</p>
+<div class="config-keys"><span class="config-key">RAW 宽：<code>[width]=3840</code></span><span class="config-key">RAW 高：<code>[height]=2160</code></span><span class="config-key">Bayer 排列：<code>[bayer]=RG</code></span></div><div class="config-layout"><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section><section class="config-file"><h3>ColorRatio.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/ColorRatio.data</div><pre tabindex="0" aria-label="ColorRatio.data 文件原文，可滚动"><code>[Skip]=0
+[ROI_X_Cnt]=9
+[ROI_Y_Cnt]=9
+
+[TargetRatioGG_leftup]=1.000
+[TargetRatioRG_leftup]=0.512
+[TargetRatioBG_leftup]=0.62
+[TargetRatioGG_leftup_offset]=0
+[TargetRatioRG_leftup_offset]=0.05
+[TargetRatioBG_leftup_offset]=-0.006
+
+[TargetRatioGG_rightup]=1.000
+[TargetRatioRG_rightup]=0.512
+[TargetRatioBG_rightup]=0.62
+[TargetRatioGG_rightup_offset]=0
+[TargetRatioRG_rightup_offset]=0.05
+[TargetRatioBG_rightup_offset]=-0.007
+
+
+[TargetRatioGG_center]=1.000
+[TargetRatioRG_center]=0.55
+[TargetRatioBG_center]=0.61
+[TargetRatioGG_center_offset]=0
+[TargetRatioRG_center_offset]=0.07
+[TargetRatioBG_center_offset]=-0.008
+
+[TargetRatioGG_leftdown]=1.000
+[TargetRatioRG_leftdown]=0.512
+[TargetRatioBG_leftdown]=0.62
+[TargetRatioGG_leftdown_offset]=0
+[TargetRatioRG_leftdown_offset]=0.05
+[TargetRatioBG_leftdown_offset]=-0.006
+
+[TargetRatioGG_rightdown]=1.000
+[TargetRatioRG_rightdown]=0.512
+[TargetRatioBG_rightdown]=0.62
+[TargetRatioGG_rightdown_offset]=0
+[TargetRatioRG_rightdown_offset]=0.05
+[TargetRatioBG_rightdown_offset]=-0.007
+
+
+[Factor_Center_Gr_Gb_Ratio]=0.08
+
+[Factor_Center_Class1]=0.2
+[Factor_Center_Class2]=0.2
+
+[Factor_Corner_Class1]=0.5
+[Factor_Corner_Class2]=0.5
+
+[Factor_Limit]=0.08
+
+[Factor_Golden]=0.02
+
+
+[bin_ratio]=2220
+[grade_ratio]=5
+
+[bin_ratio_MA]=2221
+[grade_ratio_MA]=2
+
+[bin_ratio_Golden]=2222
+[grade_ratio_Golden]=0
+
+[bin_ratio_Corner_RG_Max]=2223
+[grade_ratio_Corner_RG_Max]=0
+
+[bin_ratio_Corner_RG_Min]=2224
+[grade_ratio_Corner_RG_Min]=0
+
+[bin_ratio_Corner_BG_Max]=2225
+[grade_ratio_Corner_BG_Max]=0
+
+[bin_ratio_Corner_BG_Min]=2226
+[grade_ratio_Corner_BG_Min]=0
+
+[Gr_Gb_Diff]=50
+
+[bin_GI]=2219
+[grade_GI]=3
+
+[ratio_open_mode]=1
+
+[log_align]=1</code></pre></section><section class="config-file"><h3>LightResponse.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/LightResponse.data</div><pre tabindex="0" aria-label="LightResponse.data 文件原文，可滚动"><code>[MinMeanR]=80
+[MaxMeanR]=220
+[MinMeanGr]=144
+[MaxMeanGr]=216
+[MinMeanGb]=144
+[MaxMeanGb]=216
+[MinMeanB]=80
+[MaxMeanB]=220
+
+
+[ROI_X]=768
+[ROI_Y]=432
+[ROI_W]=384
+[ROI_H]=216
+
+
+[bin_response]=2201
+[grade_response]=9
+
+
+[response_open_mode]=1
+
+[log_align]=1
+
+[error_MIN]=50
+[error_MAX]=241</code></pre></section></div>
+</section>
+  <main>
+<section class="stage-col"><div class="stage-card"><canvas id="stage" aria-label="算法动画舞台"></canvas><div class="caption"><span class="dot"></span><span id="caption">① 四角和中心分别计算绿色差异，再比较各自上限</span></div></div><div class="controls"><button id="prev">◀ 上一节</button><button id="play" class="primary">⏸ 暂停</button><button id="next">下一节 ▶</button><button id="replay">↺ 重播</button><div class="progress"><div id="bar"></div></div><div class="speed"><button data-speed="0.5">0.5×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div></div>
+<div class="tuner"><div class="tuner-head"><h2>互动：调整右下区域模拟 Gr</h2><span>只影响最后一幕；不修改配置或前面算例</span></div><div class="sliders two"><label class="slider"><span>右下 Gr</span><input id="gr" type="range" min="160" max="240" value="230" step="1"><output id="grout">230</output></label></div><div class="presets"><button id="sample">恢复示例 230</button><button id="normal">假设未超限 200</button><button id="dark">观察 Gr 较小 160</button></div></div></section>
+<aside class="side"><nav class="chapters" id="chapters" aria-label="章节"></nav><section class="code-guide" id="code-guide" aria-label="本幕对应源码"><h3>本幕对应源码</h3><p>请打开生成后的 index.html 查看源码摘录。</p></section><div class="explain" id="explain"><h3>本页在讲什么</h3><p>通过虚构数据解释五点的绿色差异和阈值判定；GI_5x5 专用配置文件缺失。</p></div></aside>
+</main><footer class="foot">Basic.data、ColorRatio.data、LightResponse.data 是示例目录原文；仓库没有 GI_5x5.data。分区、阈值、bin、grade 和像素均为教学假设。</footer></div>
+<script>
+/* ==========================================================================
+   AlgoAnim · 算法动画共用播放器
+   --------------------------------------------------------------------------
+   页面里只需要写「场景」，播放器负责：画布自适应、章节、控制条、字幕、快捷键。
+
+   用法：
+     <link rel="stylesheet" href="../shared/player.css">
+     <script src="../shared/player.js"><\/script>
+     <script>
+       const state = AlgoAnim.state;          // 共用状态（scene/t/speed + 自定义字段）
+       state.xxx = ...;
+       function drawStep1(p){ ... }           // p = 0..1，用全局 ctx / txt / card 画
+       const SCENES = [{ kicker, dur, draw:drawStep1, caption:p=>'...', html:'...' }];
+       AlgoAnim.start({ scenes: SCENES });
+     <\/script>
+
+   绘图工具箱（全部是全局函数）：txt card arrow rr para wrapLines withA
+   常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
+   ========================================================================== */
+'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / ' + String(scenes.length).padStart(2,'0') + ' · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+
+
+/* ==========================================================================
+   播放器
+   ========================================================================== */
+const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
+let scenes = [];
+let elCaption = null, elBar = null;
+
+function resize(){
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  if(!ctx || !scenes.length) return;
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = scenes[PState.scene];
+  const p = clamp01(PState.t / sc.dur);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
+  if(elCaption){
+    const cap = sc.caption(p);
+    if(elCaption.textContent !== cap) elCaption.textContent = cap;
+  }
+}
+
+let lastTime = performance.now();
+
+function tick(now){
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  const sc = scenes[PState.scene];
+  if(sc && PState.playing){
+    PState.t += dt * PState.speed;
+    if(PState.t >= sc.dur){
+      if(PState.scene < scenes.length - 1){
+        gotoScene(PState.scene + 1, true);
+      } else {
+        PState.t = sc.dur;
+        PState.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  if(!elBar || !scenes.length) return;
+  const sc = scenes[PState.scene];
+  const overall = (PState.scene + clamp01(PState.t/sc.dur)) / scenes.length;
+  elBar.style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
+function gotoScene(i, autoplay){
+  if(!scenes.length) return;
+  PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
+  PState.t = 0;
+  PState.playing = autoplay !== false;
+  syncPlayButton();
+  const ex = document.getElementById('explain');
+  if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === PState.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+  render();
+}
+
+function buildChapters(){
+  const box = document.getElementById('chapters');
+  if(!box) return;
+  box.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'chapter';
+    b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') +
+                  '</span><span class="name">' + s.kicker + '</span>';
+    b.addEventListener('click', ()=> gotoScene(i, true));
+    box.appendChild(b);
+  });
+}
+
+function bindControls(){
+  const play = document.getElementById('play');
+  if(play) play.addEventListener('click', ()=>{
+    if(!PState.playing && PState.t >= scenes[PState.scene].dur - 0.01) PState.t = 0;
+    PState.playing = !PState.playing;
+    syncPlayButton();
+  });
+  const prev = document.getElementById('prev');
+  if(prev) prev.addEventListener('click', ()=> gotoScene(PState.scene-1, true));
+  const next = document.getElementById('next');
+  if(next) next.addEventListener('click', ()=> gotoScene(PState.scene+1, true));
+  const replay = document.getElementById('replay');
+  if(replay) replay.addEventListener('click', ()=> gotoScene(0, true));
+
+  document.querySelectorAll('.speed button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      PState.speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(play) play.click(); }
+    if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(PState.scene+1, true); }
+    if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(PState.scene-1, true); }
+  });
+}
+
+const AlgoAnim = {
+  get state(){ return PState; },
+  get ctx(){ return ctx; },
+  get canvas(){ return canvas; },
+  get scenes(){ return scenes; },
+  gotoScene: gotoScene,
+  render: render,
+  start: function(opts){
+    opts = opts || {};
+    canvas = document.getElementById(opts.canvas || 'stage');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
+    scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    Object.assign(PState, opts.state || {});
+    elCaption = document.getElementById('caption');
+    elBar = document.getElementById('bar');
+    buildChapters();
+    bindControls();
+    if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize);
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
+  }
+};
+window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 63, "last": 64, "note": "调用并追加整个向量。", "code": "   63      vector<Subitem_Result> ratio_GI_5x5 = Color_GI_5_5( test_manage);\n   64      items_results.insert(items_results.end(),ratio_GI_5x5.begin(),ratio_GI_5x5.end());"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "5×5 路径的 GG 是绿色和之差除平均和。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "五点各自与上限严格比较。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp", "first": 6491, "last": 6503, "note": "文件打开失败返回 false；本仓库未找到专用文件。", "code": " 6491  bool ParamManage::load_Color_GI_5x5_Param(const std::string &dir)\n 6492  {\n 6493      std::string path_file = dir;\n 6494      path_file.append(\"/GI_5x5.data\");\n 6495      QFile file(QString::fromStdString(path_file));\n 6496      if(!file.open(QFile::Text | QFile::ReadOnly))\n 6497          return false;\n 6498\n 6499      QTextStream rd(&file);\n 6500      bool ok = true;\n 6501      int cnt_param = 0;\n 6502\n 6503      gi_5_5_ratio_version = \"gi_5_5_ratio_V1.0\";"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 532, "last": 556, "note": "版本分派并检查此项开关；教程的 5×5 参数为假设。", "code": "  532  vector<Subitem_Result> BrightTest::Color_GI_5_5( ParamManage& manage)\n  533  {\n  534      if(manage.gi_5_5_ratio_version == \"gi_5_5_ratio_V1.0\")\n  535          return Color_GI_5_5_V1_0(manage);\n  536\n  537      Subitem_Result res(\"GI_5_5\", false);\n  538      res.g_msg = false;\n  539      vector<Subitem_Result> Color_GI_5_5_test_result;\n  540      Color_GI_5_5_test_result.push_back(res);\n  541      return Color_GI_5_5_test_result;\n  542  }\n  543\n  544\n  545\n  546  vector<Subitem_Result> BrightTest::Color_GI_5_5_V1_0( ParamManage& manage)\n  547  {\n  548      Algorithm_all[site_].time_begin=clock();\n  549      g_str_msg_all[site_]+=boost::str(boost::format(\"-------------------------- ROI GI 5*5 V1.0-----------------------------\\n\"));\n  550\n  551      int w=manage.width_;\n  552      int h=manage.height_;\n  553      Subitem_Result result_GI_5x5 (\"GI_5x5\",true);\n  554\n  555\n  556      if (manage.param_GI_5x5.ratio_open_mode_ == 1 )"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 897, "last": 915, "note": "此前 Light_Response 对两个绿色前置均值赋值。", "code": "  897      mean_gr_roi = -1;\n  898      mean_gb_roi = -1;\n  899      double mean_r_roi = -1;\n  900      double mean_b_roi = -1;\n  901\n  902      if(manage.param_light_response_.response_open_mode_ == 1)\n  903      {\n  904          time_begin=clock();\n  905\n  906          g_str_msg_all[site_]+=boost::str(boost::format(\"------------------------ROI Light Response V1.0-----------------------------\\n\"));\n  907\n  908          //---------------------Whole Region Light Response------------------\n  909          TestItem::test_roi_channel_mean( w,h,\n  910                                           manage.param_light_response_.roi_x_,\n  911                                           manage.param_light_response_.roi_y_,\n  912                                           manage.param_light_response_.roi_w_,\n  913                                           manage.param_light_response_.roi_h_,\n  914                                           mean_r_roi,mean_gr_roi,mean_gb_roi,mean_b_roi,\n  915                                           g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1915, "last": 1919, "note": "两个前置均值都大于零才计算。", "code": " 1915      int total_roi_cnt = roi_x_cnt*roi_y_cnt;\n 1916      int roi_x_pitch = (w/2 - 2*skip/2)/roi_x_cnt;\n 1917      int roi_y_pitch = (h/2 - 2*skip/2)/roi_y_cnt;\n 1918\n 1919      if (mean_gr>0 && mean_gb>0)"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1998, "last": 2012, "note": "否则五点映射填 −1；本函数无 Gr>10 检查。", "code": " 1998      }\n 1999      else\n 2000      {\n 2001          for (int i=0; i<total_roi_cnt; i++)\n 2002          {\n 2003              roi_rg_ratio.append(-1);\n 2004              roi_bg_ratio.append(-1);\n 2005              roi_gg_ratio.append(-1);\n 2006          }\n 2007\n 2008          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=-1;\n 2009          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=-1;\n 2010          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=-1;\n 2011          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=-1;\n 2012          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=-1;"}], [{"path": "STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps/Basic.data", "first": 1, "last": 3, "note": "这里是示例配置，不是 C++：图像 3840×2160，Bayer 顺序为 RG。", "code": "    1  [width]=3840\n    2  [height]=2160\n    3  [bayer]=RG"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 27, "last": 33, "note": "RG 排列将四个位置映射到 R、Gr、Gb、B 缓冲区。", "code": "   27      switch (bayer) {\n   28      case RG:\n   29          *pb1 = g_buf_r_;\n   30          *pb2 = g_buf_gr_;\n   31          *pb3 = g_buf_gb_;\n   32          *pb4 = g_buf_b_;\n   33          break;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1915, "last": 1929, "note": "根据专用配置的 Skip、行数和列数构造 ROI；本示例数量为假设。", "code": " 1915      int total_roi_cnt = roi_x_cnt*roi_y_cnt;\n 1916      int roi_x_pitch = (w/2 - 2*skip/2)/roi_x_cnt;\n 1917      int roi_y_pitch = (h/2 - 2*skip/2)/roi_y_cnt;\n 1918\n 1919      if (mean_gr>0 && mean_gb>0)\n 1920      {\n 1921          QVector<cv::Rect> ROI;\n 1922          for(int i=0; i<roi_y_cnt; i++)\n 1923          {\n 1924              int roi_y = skip/2 + i*roi_y_pitch;\n 1925              for(int j=0; j<roi_x_cnt; j++)\n 1926              {\n 1927                  int roi_x = skip/2 + j*roi_x_pitch;\n 1928                  ROI.append(cv::Rect(roi_x,roi_y,roi_x_pitch,roi_y_pitch));\n 1929              }"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1948, "last": 1970, "note": "选取中心、四角的索引。", "code": " 1948          double ratio_g_g_center = roi_gg_ratio[total_roi_cnt/2];\n 1949          double ratio_r_g_center = roi_rg_ratio[total_roi_cnt/2];\n 1950          double ratio_b_g_center = roi_bg_ratio[total_roi_cnt/2];\n 1951          double gr_gb_diff_center = roi_g_g_diff_ratio[total_roi_cnt/2];\n 1952\n 1953          double ratio_g_g_left_up = roi_gg_ratio[0];\n 1954          double ratio_r_g_left_up = roi_rg_ratio[0];\n 1955          double ratio_b_g_left_up = roi_bg_ratio[0];\n 1956          double gr_gb_diff_left_up = roi_g_g_diff_ratio[0];\n 1957\n 1958          double ratio_g_g_right_up = roi_gg_ratio[roi_x_cnt-1];\n 1959          double ratio_r_g_right_up = roi_rg_ratio[roi_x_cnt-1];\n 1960          double ratio_b_g_right_up = roi_bg_ratio[roi_x_cnt-1];\n 1961          double gr_gb_diff_right_up = roi_g_g_diff_ratio[roi_x_cnt-1];\n 1962\n 1963          double ratio_g_g_left_down = roi_gg_ratio[total_roi_cnt-roi_x_cnt];\n 1964          double ratio_r_g_left_down = roi_rg_ratio[total_roi_cnt-roi_x_cnt];\n 1965          double ratio_b_g_left_down = roi_bg_ratio[total_roi_cnt-roi_x_cnt];\n 1966          double gr_gb_diff_left_down = roi_g_g_diff_ratio[total_roi_cnt-roi_x_cnt];\n 1967\n 1968          double ratio_g_g_right_down = roi_gg_ratio[total_roi_cnt-1];\n 1969          double ratio_r_g_right_down = roi_rg_ratio[total_roi_cnt-1];\n 1970          double ratio_b_g_right_down = roi_bg_ratio[total_roi_cnt-1];"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1932, "last": 1945, "note": "共用函数逐块计算并存入向量；本教程仅模拟五点。", "code": " 1932          QVector<double> roi_g_g_diff_ratio;\n 1933          for(int i=0;i!=ROI.size();++i)\n 1934          {\n 1935              double r_g_ratio;\n 1936              double b_g_ratio;\n 1937              double g_g_ratio;\n 1938              double g_g_diff;\n 1939              AlgorithmFuncs::get_roi_colorratio_5X5(g_buf_r_,g_buf_gr_,g_buf_gb_,g_buf_b_,\n 1940                                                     w/2,h/2,ROI.at(i).x,ROI.at(i).y,ROI.at(i).width,ROI.at(i).height,\n 1941                                                     g_g_ratio,r_g_ratio,b_g_ratio,g_g_diff);\n 1942              roi_rg_ratio.push_back(r_g_ratio);\n 1943              roi_bg_ratio.push_back(b_g_ratio);\n 1944              roi_gg_ratio.push_back(g_g_ratio);\n 1945              roi_g_g_diff_ratio.push_back(g_g_diff);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1948, "last": 1970, "note": "从向量读取五点对应的比例。", "code": " 1948          double ratio_g_g_center = roi_gg_ratio[total_roi_cnt/2];\n 1949          double ratio_r_g_center = roi_rg_ratio[total_roi_cnt/2];\n 1950          double ratio_b_g_center = roi_bg_ratio[total_roi_cnt/2];\n 1951          double gr_gb_diff_center = roi_g_g_diff_ratio[total_roi_cnt/2];\n 1952\n 1953          double ratio_g_g_left_up = roi_gg_ratio[0];\n 1954          double ratio_r_g_left_up = roi_rg_ratio[0];\n 1955          double ratio_b_g_left_up = roi_bg_ratio[0];\n 1956          double gr_gb_diff_left_up = roi_g_g_diff_ratio[0];\n 1957\n 1958          double ratio_g_g_right_up = roi_gg_ratio[roi_x_cnt-1];\n 1959          double ratio_r_g_right_up = roi_rg_ratio[roi_x_cnt-1];\n 1960          double ratio_b_g_right_up = roi_bg_ratio[roi_x_cnt-1];\n 1961          double gr_gb_diff_right_up = roi_g_g_diff_ratio[roi_x_cnt-1];\n 1962\n 1963          double ratio_g_g_left_down = roi_gg_ratio[total_roi_cnt-roi_x_cnt];\n 1964          double ratio_r_g_left_down = roi_rg_ratio[total_roi_cnt-roi_x_cnt];\n 1965          double ratio_b_g_left_down = roi_bg_ratio[total_roi_cnt-roi_x_cnt];\n 1966          double gr_gb_diff_left_down = roi_g_g_diff_ratio[total_roi_cnt-roi_x_cnt];\n 1967\n 1968          double ratio_g_g_right_down = roi_gg_ratio[total_roi_cnt-1];\n 1969          double ratio_r_g_right_down = roi_rg_ratio[total_roi_cnt-1];\n 1970          double ratio_b_g_right_down = roi_bg_ratio[total_roi_cnt-1];"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7875, "last": 7889, "note": "绿色和从 0.1 开始；画面直接展示，不播放累加。", "code": " 7875      double sum_r = 0.1;\n 7876      double sum_g1 = 0.1;\n 7877      double sum_g2 = 0.1;\n 7878      double sum_b = 0.1;\n 7879      int cnt_t = 0;\n 7880      for (int i=y; i<y+h_rect; ++i)\n 7881      {\n 7882          for (int j=x; j<x+w_rect; ++j)\n 7883          {\n 7884              if (i>=0 && i<h && j>=0 && j<w)\n 7885              {\n 7886                  sum_r+=(double)pR[w*i+j];\n 7887                  sum_g1+=(double)pG1[w*i+j];\n 7888                  sum_g2+=(double)pG2[w*i+j];\n 7889                  sum_b+=(double)pB[w*i+j];"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "绿色差绝对值除绿色平均和；极端条件设为 100。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1974, "last": 1978, "note": "从五点向量构造映射，值大于 10 时变成 −1。", "code": " 1974          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=(ratio_g_g_left_up>10)? -1 : ratio_g_g_left_up;\n 1975          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=(ratio_g_g_right_up>10)? -1 : ratio_g_g_right_up;\n 1976          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=(ratio_g_g_center>10)? -1 : ratio_g_g_center;\n 1977          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=(ratio_g_g_left_down>10)? -1 : ratio_g_g_left_down;\n 1978          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=(ratio_g_g_right_down>10)? -1 : ratio_g_g_right_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "左上的绿色相对差由两个绿色通道的和计算。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "五点各自与对应假设上限比较；实际值来自专用配置。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1974, "last": 1978, "note": "从五点向量构造映射，值大于 10 时变成 −1。", "code": " 1974          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=(ratio_g_g_left_up>10)? -1 : ratio_g_g_left_up;\n 1975          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=(ratio_g_g_right_up>10)? -1 : ratio_g_g_right_up;\n 1976          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=(ratio_g_g_center>10)? -1 : ratio_g_g_center;\n 1977          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=(ratio_g_g_left_down>10)? -1 : ratio_g_g_left_down;\n 1978          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=(ratio_g_g_right_down>10)? -1 : ratio_g_g_right_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "右上的绿色相对差由两个绿色通道的和计算。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "五点各自与对应假设上限比较；实际值来自专用配置。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1974, "last": 1978, "note": "从五点向量构造映射，值大于 10 时变成 −1。", "code": " 1974          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=(ratio_g_g_left_up>10)? -1 : ratio_g_g_left_up;\n 1975          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=(ratio_g_g_right_up>10)? -1 : ratio_g_g_right_up;\n 1976          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=(ratio_g_g_center>10)? -1 : ratio_g_g_center;\n 1977          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=(ratio_g_g_left_down>10)? -1 : ratio_g_g_left_down;\n 1978          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=(ratio_g_g_right_down>10)? -1 : ratio_g_g_right_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "中心的绿色相对差由两个绿色通道的和计算。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "五点各自与对应假设上限比较；实际值来自专用配置。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1974, "last": 1978, "note": "从五点向量构造映射，值大于 10 时变成 −1。", "code": " 1974          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=(ratio_g_g_left_up>10)? -1 : ratio_g_g_left_up;\n 1975          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=(ratio_g_g_right_up>10)? -1 : ratio_g_g_right_up;\n 1976          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=(ratio_g_g_center>10)? -1 : ratio_g_g_center;\n 1977          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=(ratio_g_g_left_down>10)? -1 : ratio_g_g_left_down;\n 1978          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=(ratio_g_g_right_down>10)? -1 : ratio_g_g_right_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "左下的绿色相对差由两个绿色通道的和计算。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "五点各自与对应假设上限比较；实际值来自专用配置。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1974, "last": 1978, "note": "从五点向量构造映射，值大于 10 时变成 −1。", "code": " 1974          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=(ratio_g_g_left_up>10)? -1 : ratio_g_g_left_up;\n 1975          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=(ratio_g_g_right_up>10)? -1 : ratio_g_g_right_up;\n 1976          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=(ratio_g_g_center>10)? -1 : ratio_g_g_center;\n 1977          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=(ratio_g_g_left_down>10)? -1 : ratio_g_g_left_down;\n 1978          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=(ratio_g_g_right_down>10)? -1 : ratio_g_g_right_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "右下的绿色相对差由两个绿色通道的和计算。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "五点各自与对应假设上限比较；实际值来自专用配置。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "各点采用自己的上限，任一严格大于时失败。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1998, "last": 2012, "note": "前置任一非正时五点映射均为 −1。", "code": " 1998      }\n 1999      else\n 2000      {\n 2001          for (int i=0; i<total_roi_cnt; i++)\n 2002          {\n 2003              roi_rg_ratio.append(-1);\n 2004              roi_bg_ratio.append(-1);\n 2005              roi_gg_ratio.append(-1);\n 2006          }\n 2007\n 2008          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=-1;\n 2009          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=-1;\n 2010          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=-1;\n 2011          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=-1;\n 2012          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=-1;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7907, "last": 7910, "note": "底层极端情况设为 100。", "code": " 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/testitems.cpp", "first": 1974, "last": 1978, "note": "五点大于 10 转 −1；正上限下 −1 不触发大于。", "code": " 1974          GG_ratio[QPair<QString,double>(\"leftup\",GG_Ratio_target.value(\"leftup\"))]=(ratio_g_g_left_up>10)? -1 : ratio_g_g_left_up;\n 1975          GG_ratio[QPair<QString,double>(\"rightup\",GG_Ratio_target.value(\"rightup\"))]=(ratio_g_g_right_up>10)? -1 : ratio_g_g_right_up;\n 1976          GG_ratio[QPair<QString,double>(\"center\",GG_Ratio_target.value(\"center\"))]=(ratio_g_g_center>10)? -1 : ratio_g_g_center;\n 1977          GG_ratio[QPair<QString,double>(\"leftdown\",GG_Ratio_target.value(\"leftdown\"))]=(ratio_g_g_left_down>10)? -1 : ratio_g_g_left_down;\n 1978          GG_ratio[QPair<QString,double>(\"rightdown\",GG_Ratio_target.value(\"rightdown\"))]=(ratio_g_g_right_down>10)? -1 : ratio_g_g_right_down;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "无效 −1 仍直接参与上限比较。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 532, "last": 541, "note": "未知版本返回 false 且不参与汇总。", "code": "  532  vector<Subitem_Result> BrightTest::Color_GI_5_5( ParamManage& manage)\n  533  {\n  534      if(manage.gi_5_5_ratio_version == \"gi_5_5_ratio_V1.0\")\n  535          return Color_GI_5_5_V1_0(manage);\n  536\n  537      Subitem_Result res(\"GI_5_5\", false);\n  538      res.g_msg = false;\n  539      vector<Subitem_Result> Color_GI_5_5_test_result;\n  540      Color_GI_5_5_test_result.push_back(res);\n  541      return Color_GI_5_5_test_result;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 640, "last": 653, "note": "关闭时 g_msg=false；V1.0 返回一个子项。", "code": "  640      }\n  641      else\n  642      {\n  643          result_GI_5x5.g_msg = false;\n  644      }\n  645\n  646      vector<Subitem_Result> Color_GI_5x5_test_result;\n  647      Color_GI_5x5_test_result.push_back(result_GI_5x5);\n  648\n  649\n  650      Algorithm_all[site_].time_end=clock();\n  651      g_str_msg_all[site_]+=\"\\n cast_time:\"+QString::number(Algorithm_all[site_].time_end-Algorithm_all[site_].time_begin).toStdString()+\"\\n\";\n  652\n  653      return  Color_GI_5x5_test_result;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 63, "last": 64, "note": "调用方追加返回向量。", "code": "   63      vector<Subitem_Result> ratio_GI_5x5 = Color_GI_5_5( test_manage);\n   64      items_results.insert(items_results.end(),ratio_GI_5x5.begin(),ratio_GI_5x5.end());"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 5903, "last": 5926, "note": "遍历子项：忽略不参与汇总的项，失败且 grade 严格更高时覆盖最终结果。", "code": " 5903  Subitem_Result AlgorithmItems::Calculate_The_Final_Bin(const vector<Subitem_Result>& items_results)\n 5904  {\n 5905      Subitem_Result final_result(\"The initial value\",true,1,0,true);\n 5906\n 5907      for(int i=0;i!=items_results.size();++i)\n 5908      {\n 5909          const Subitem_Result& item=items_results[i];\n 5910\n 5911          if(item.g_msg == false)\n 5912              continue;\n 5913\n 5914          std::string item_log =item.name;\n 5915          QString log_;\n 5916          if(item.is_passed)\n 5917              log_+=\" is Pass. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5918          else\n 5919              log_+=\" is Failed. Bin: \"+ QString::number(item.bin)+\" Grade: \"+ QString::number(item.grade)+\"\\n\";\n 5920\n 5921          g_str_msg_all[site_]+=item_log+log_.toStdString();\n 5922\n 5923          if(!item.is_passed && item.grade>final_result.grade)\n 5924              final_result=item;\n 5925      }\n 5926      return final_result;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 7895, "last": 7910, "note": "互动调整右下区域模拟 Gr 后重算相对差。", "code": " 7895      double sum_g_average = (sum_g1 +sum_g2)/2;\n 7896\n 7897      if (sum_g1>0 && sum_g2>0)\n 7898      {\n 7899          if (sum_g1*100<sum_r)\n 7900              r_g = 100;\n 7901          else\n 7902              r_g = sum_r/sum_g_average;\n 7903          if (sum_g2*100<sum_b)\n 7904              b_g = 100;\n 7905          else\n 7906              b_g = sum_b/sum_g_average;\n 7907          if (sum_g2*100<sum_g1)\n 7908              g_g = 100;\n 7909          else\n 7910              g_g = std::abs((sum_g1-sum_g2)/sum_g_average);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/BrightTest.cpp", "first": 613, "last": 622, "note": "使用假设的每点上限，仍按源码的严格大于比较。", "code": "  613          if(ratio_value.gg_leftup_5X5 > manage.param_GI_5x5.TargetGI_Leftup ||\n  614                  ratio_value.gg_rightup_5X5 > manage.param_GI_5x5.TargetGI_Rightup||\n  615                  ratio_value.gg_leftdown_5X5 > manage.param_GI_5x5.TargetGI_Leftdown ||\n  616                  ratio_value.gg_rightdown_5X5 > manage.param_GI_5x5.TargetGI_Rightdown||\n  617                  ratio_value.gg_center_5X5 > manage.param_GI_5x5.TargetGI_Center)\n  618          {\n  619              result_GI_5x5.is_passed = false;\n  620              result_GI_5x5.bin = manage.param_GI_5x5.bin_GI_5x5;\n  621              result_GI_5x5.grade = manage.param_GI_5x5.grade_GI_5x5;\n  622          }"}]];
+</script><script>
+const state=AlgoAnim.state;state.gr=230;
+const N=384*216;
+// 数值、阈值和 bin 都是假设，顺序为左上、右上、中心、左下、右下。
+const POINTS=[{name:'左上',id:0,gr:200,limit:.05},{name:'右上',id:4,gr:210,limit:.08},{name:'中心',id:12,gr:220,limit:.10},{name:'左下',id:20,gr:190,limit:.08},{name:'右下',id:24,gr:230,limit:.12}];
+function measure(gr,gb=200){
+ const g1=gr*N+.1,g2=gb*N+.1,avg=(g1+g2)/2;
+ const raw=g2*100<g1?100:Math.abs((g1-g2)/avg);
+ return {g1,g2,avg,raw,mapped:raw>10?-1:raw};
+}
+function exceeds(values,limits){return values.some((v,i)=>v>limits[i]);}
+function calculate(gr=230){const vals=POINTS.map((v,i)=>measure(i===4?gr:v.gr));return {vals,fail:exceeds(vals.map(v=>v.mapped),POINTS.map(v=>v.limit))};}
+function f(v){return v.toFixed(6);}
+function box(x,y,w,h,title,lines,p,color){card(x,y,w,h,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});txt(title,x+18,y+32,{size:15,weight:700,color:color||C.accent});const n=Math.min(lines.length,1+Math.floor(clamp01(p/.76)*lines.length));lines.forEach((v,i)=>{if(i<n)txt(v,x+18,y+68+i*31,{size:13,color:i===n-1?C.ink:C.dim});});}
+function note(s){txt(s,55,545,{size:12,color:C.dim});}
+function grid(ids){const marked=new Set(ids||[]);for(let i=0;i<25;i++){const x=55+(i%5)*58,y=155+Math.floor(i/5)*58;card(x,y,53,53,{r:4,fill:marked.has(i)?withA(C.accent2,.4):withA(C.accent,.08),stroke:marked.has(i)?C.accent2:withA(C.accent,.25)});txt(i,x+26,y+32,{size:14,color:marked.has(i)?C.ink:C.dim,align:'center'});}}
+function intro(p){header(0,'一眼看懂','每块计算绿色相对差，选择四角和中心各自比较上限');box(55,155,425,320,'流程',['① 分区：示例假设 5×5','② 每块分别计算 Gr、Gb 的和','③ 差的绝对值 ÷ 两和的平均','④ 取四角和中心五个结果','⑤ 各自严格超过上限则失败'],p,C.accent2);box(510,155,425,320,'注意与 Color_GI 不同',['本函数用绿色差 ÷ 绿色平均','不是 Gr ÷ Gb','不计算所有 ROI 的最大最小','每一点用自己的上限','演示参数和像素均为假设'],p);note('源码逐像素求和，画面只展示结果，不播放逐个累加。');}
+function config(p){header(1,'配置与假设','专用配置缺失，不能将教学阈值当成真实参数');box(55,155,425,320,'仓库可确认',['未找到 GI_5x5.data','加载器无法打开文件时返回 false','无法确认实际版本、开关与阈值','Basic.data：3840×2160，RG Bayer','本页 V1.0 仅为代码演示'],p,C.accent2);box(510,155,425,320,'以下仅为教学假设',['Skip=0，ROI=5×5，开关=1','左上/右上/中心上限：.05/.08/.10','左下/右下上限：.08/.12','失败 bin=9001、grade=5','不是仓库配置，也不是实测'],p);note('实际网格、上限及结果必须从运行环境的 GI_5x5.data 确认。');}
+function gate(p){header(2,'前置与开关','区分自己的开关和此前 Light_Response 的两个绿色均值');box(55,155,425,320,'进入计算',['此函数只看 GI_5x5 的开关','不检查 ColorRatio 的开关','共用函数要求 Gr 均值 > 0','并要求 Gb 均值 > 0','本例假设这两个前置值都有效'],p,C.accent2);box(510,155,425,320,'与 Color_GI 的区别',['不检查 Gr 是否大于 10','Gr>0 且 Gb>0 即进行 ROI 计算','任一不大于 0：五点映射写 −1','后续仍会拿 −1 与上限比较','初始通过不证明有效测量'],p);note('这里的前置均值来自 Light_Response，独立于后面虚构的五点像素。');}
+function layout(p){header(3,'假设分成 25 块','示例以 5×5 划分；源码实际使用专用配置中的行列数');grid([0,4,12,20,24]);box(410,155,525,320,'根据 Basic 与假设尺寸',['RAW 3840×2160 → 每通道 1920×1080','假设 Skip=0，分 5 列、5 行','每块 384×216 = 82944 像素 / 通道','共 25 块；行优先从 0 编号','四角 0、4、20、24；中心 12','四角和中心分别比较各自上限'],p,C.accent2);note('黄色为判定使用的五点；代码仍会计算全部 25 块。');}
+function inputs(p){header(4,'准备五点输入','五点各自有两个绿色通道；其余区域未模拟');grid([0,4,12,20,24]);box(410,155,525,320,'五点模拟 Gr / Gb（DN）',POINTS.map(v=>v.name+' ROI '+v.id+'：Gr '+v.gr+'，Gb 200').concat(['每块内对应通道像素取固定值']),p,C.accent2);note('模拟值只为了复算；另 20 块未模拟，且不是产线测量。');}
+function formula(p){let m=measure(220);header(5,'一块的计算方法','以中心为例：两绿色和之差 ÷ 两绿色和的平均');box(55,155,425,320,'中心模拟输入',['Gr=220，Gb=200','每通道 82944 个像素','Gr 和 = '+m.g1.toFixed(1),'Gb 和 = '+m.g2.toFixed(1),'每个通道的和均从 0.1 开始'],p,C.accent2);box(510,155,425,320,'按源码算绿色相对差',['绿色平均和 = (Gr 和 + Gb 和) ÷ 2','= '+m.avg.toFixed(1),'差的绝对值 = |Gr 和 − Gb 和|','绿色相对差 = 绝对差 ÷ 平均和','本例中心 ≈ '+f(m.raw)],p);note('底层 GG 在此函数是相对差，不是 Gr/Gb；显示舍入，判断用未舍入数。');}
+function pointStep(k,p){const v=POINTS[k],m=measure(v.gr);header(6+k,v.name+'逐步比较','先看这个位置的模拟绿色值，再算相对差并比较假设上限');grid([v.id]);txt(v.name+' ROI '+v.id,55,475,{size:14,color:C.accent2,weight:700});card(410,155,525,330,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});txt('① 这块的输入：Gr '+v.gr+'，Gb 200',430,190,{size:15,color:C.accent2,weight:700});
+ if(p>=.18){txt('② Gr 和 = '+m.g1.toFixed(1)+'；Gb 和 = '+m.g2.toFixed(1),430,235,{size:13});txt('绿色平均和 = '+m.avg.toFixed(1),430,267,{size:13});}
+ if(p>=.42){txt('③ |Gr 和 − Gb 和| ÷ 绿色平均和',430,310,{size:14,color:C.accent});txt('≈ '+f(m.raw),430,342,{size:16,weight:700});}
+ if(p>=.68){txt('④ 假设上限 '+v.limit.toFixed(2)+' → '+(m.mapped>v.limit?'超限':'未超限'),430,405,{size:15,weight:700,color:m.mapped>v.limit?C.fail:C.pass});}
+ note('每个和包含初始值 0.1；此处像素与上限都只是教学假设。');}
+function pointCaption(k,p){const name=POINTS[k].name;return p<.18?name+'：先查看模拟 Gr 和 Gb':p<.42?name+'：直接展示两个通道的和与绿色平均和':p<.68?name+'：绿色和的绝对差除以平均和':name+'：与该点假设上限比较，判断是否超限';}
+function pt0(p){pointStep(0,p)}function pt1(p){pointStep(1,p)}function pt2(p){pointStep(2,p)}function pt3(p){pointStep(3,p)}function pt4(p){pointStep(4,p)}
+function summary(p){const d=calculate();header(11,'五点汇总','只要任意一个映射值严格超过它自己的上限，子项失败');box(55,155,425,320,'五点模拟结果',POINTS.map((v,i)=>v.name+'：'+f(d.vals[i].mapped)+'；假设上限 '+v.limit.toFixed(2)),p,C.accent2);box(510,155,425,320,'V1.0 判断',['左上、右上、左下、右下、中心','任意一个 > 对应 TargetGI → 失败','本例右下约 0.139535 > 0.12','假设失败 bin 9001 / grade 5','等于上限不失败；没有下限检查'],p);note('假设上限和 bin 与产线配置无关；比较使用未舍入值。');}
+function abnormal(p){header(12,'异常值与映射','−1 不是有效测量：注意源码仍把它和上限比较');box(55,155,425,320,'前置均值异常',['前置 Gr 或 Gb ≤ 0','五点映射写为 −1','此函数没有额外 Gr>10 门槛','仍把 −1 与每点上限比较','若上限为正，−1 不触发失败'],p,C.accent2);box(510,155,425,320,'极端绿色比例',['Gb 和 ×100 < Gr 和 → 原始值 100','五点映射将 >10 的值替换成 −1','例如 Gb 全为 0、Gr 正时可能发生','正上限下 −1 不触发超限','初始通过不代表有效测量'],p);note('先有有效 Light_Response 前置、合法区域和像素数据，才能解释正常结果。');}
+function returns(p){header(13,'返回与追加','V1.0 返回一个子项，调用方把整个向量追加');box(55,155,425,320,'子项与开关',['初始化 true，bin 1，grade 0','开关关闭时 g_msg=false','异常值可能保留初始通过','开关为 1 且任一项超限则失败','假设失败 bin / grade 不代表产线'],p,C.accent2);box(510,155,425,320,'其他依赖',['未知版本：false，g_msg=false','ColorRatio target 用于映射的键','不是五点上限，也不加 offset','只返回一个 GI_5x5 子项','最终 bin 还要汇总其他子项'],p);note('未找到专用配置，不能据此断定实际运行的版本或结果。');}
+function interactive(p){const d=calculate(state.gr),m=d.vals[4];header(14,'互动观察','改右下 Gr，重新计算该点相对差与五点判定');box(55,155,425,320,'右下模拟区域',['Gr='+state.gr+'，Gb=200','绿色相对差 ≈ '+f(m.raw),'五点映射值 ≈ '+f(m.mapped),'右下假设上限 0.12','其他四点不变'],1,C.accent2);box(510,155,425,320,'假设参数下',['仅右下值随滑杆变化','五点任何一项超上限：'+(d.fail?'是':'否'),d.fail?'假设失败 bin 9001 / grade 5':'假设未超限，保持初始结果','两个方向的偏差都取绝对值','显示值舍入，判断用未舍入数'],1);note('这只是虚构算例；不更新前面的固定数据、前置均值或配置。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:20,draw:intro,caption:p=>'① 各区域求绿色相对差，四角和中心分别比较上限',html:'<h3>先看流程</h3><p>Color_GI_5_5 不同于 Color_GI：底层计算 <code>|Gr和−Gb和| / ((Gr和+Gb和)/2)</code>，选出四角与中心，五个值分别与位置上限比较；不找全图最大最小。</p><p>本页面的专用配置与像素都是教学假设。</p>'},
+ {kicker:'配置与假设',dur:22,draw:config,caption:p=>'② GI_5x5.data 缺失：5×5、开关、阈值和 bin 均为假设',html:'<h3>哪些数据是真实的？</h3><p>仓库没有 GI_5x5.data，加载器打开失败即返回 false；不能从该目录确认实际版本和专用参数。本页引用真实 Basic.data、ColorRatio.data、LightResponse.data，演示假设 V1.0、Skip=0、5×5、开关 1。</p><p>五点上限左上 0.05、右上 0.08、中心 0.10、左下 0.08、右下 0.12；失败 bin 9001、grade 5。全部是教学假设。</p>'},
+ {kicker:'前置与开关',dur:22,draw:gate,caption:p=>'③ 只检查本项开关；两个前置绿色均值都须大于零才能计算',html:'<h3>先检查条件</h3><p>V1.0 只检查 GI_5x5 自己的 ratio_open_mode。共用函数使用此前 Light_Response 的 Gr、Gb 中心均值作为前置：必须都大于零才计算各 ROI；不检查 ColorRatio 的开关，不要求 Light_Response 子项通过。</p><p>不同于 Color_GI，本函数没有 Gr&gt;10 的额外检查。</p>'},
+ {kicker:'假设分成 25 块',dur:22,draw:layout,caption:p=>'④ 假设 5×5；每块 384×216，五点索引为 0、4、12、20、24',html:'<h3>分区与五点</h3><p>Basic.data 的 RAW 3840×2160 RG Bayer 分成四个 1920×1080 的通道。假设 Skip=0、5×5，得到 25 块，每块每通道 384×216=82944 像素。四角和中心按行优先编号 0、4、12、20、24。</p><p>源码计算所有块并保留五点映射；实际数量与 Skip 需要专用配置确定。</p>'},
+ {kicker:'准备五点输入',dur:22,draw:inputs,caption:p=>'⑤ 五点分别构造 Gr 和 Gb 的模拟值；其他 20 块未模拟',html:'<h3>五点数据</h3><p>假设五点 Gb 都为 200 DN；左上、右上、中心、左下、右下的 Gr 分别为 200、210、220、190、230 DN。每块内各通道取固定值，均为虚构，不是实测。</p><p>其余 20 块未模拟；真实代码仍会计算它们。只要区域和输入有效，五点判断不依赖其他区域的比例值。</p>'},
+ {kicker:'一块的计算方法',dur:24,draw:formula,caption:p=>p<.3?'⑥ 看中心 Gr 和 Gb 的模拟值':p<.6?'⑥ 求两绿色和以及它们的平均':'⑥ 绝对差除以平均和，得到绿色相对差',html:'<h3>中心如何计算？</h3><p>假设中心 Gr=220、Gb=200，各有 82944 个像素。两个和均以 0.1 开始，分别为 18247680.1 和 16588800.1；绿色平均和为 17418240.1。结果为两和之差绝对值除以平均和，约 0.095238。</p><p>这是无量纲相对差，不是 Gr/Gb，也不是以 DN 为单位的直接差。</p>'},
+ {kicker:'左上逐步比较',dur:24,draw:pt0,caption:p=>pointCaption(0,p),html:'<h3>左上 ROI 0</h3><p>模拟 Gr=Gb=200，两和相等，相对差为 0。与假设上限 0.05 比较，不超限。</p>'},
+ {kicker:'右上逐步比较',dur:24,draw:pt1,caption:p=>pointCaption(1,p),html:'<h3>右上 ROI 4</h3><p>模拟 Gr=210、Gb=200，相对差约 0.048780，与假设上限 0.08 比较不超限。显示结果舍入，比较不使用舍入值。</p>'},
+ {kicker:'中心逐步比较',dur:24,draw:pt2,caption:p=>pointCaption(2,p),html:'<h3>中心 ROI 12</h3><p>模拟 Gr=220、Gb=200，相对差约 0.095238，与假设上限 0.10 比较不超限。</p>'},
+ {kicker:'左下逐步比较',dur:24,draw:pt3,caption:p=>pointCaption(3,p),html:'<h3>左下 ROI 20</h3><p>模拟 Gr=190、Gb=200，差为负但取绝对值，相对差约 0.051282，与假设上限 0.08 比较不超限。</p>'},
+ {kicker:'右下逐步比较',dur:24,draw:pt4,caption:p=>pointCaption(4,p),html:'<h3>右下 ROI 24</h3><p>模拟 Gr=230、Gb=200，相对差约 0.139535，大于假设上限 0.12。这里只是在判断此点；下一幕汇总五点。</p>'},
+ {kicker:'五点汇总',dur:22,draw:summary,caption:p=>'⑫ 任一点严格超过自己的假设上限，即模拟子项失败',html:'<h3>一个子项结果</h3><p>源码以或条件分别比较左上、右上、左下、右下、中心与其各自 TargetGI；只要任意一项严格大于就失败，等于不失败。没有下限判断。本模拟只有右下超假设上限，假设 bin 9001、grade 5。</p><p>这些上限和 bin 并非实际配置；实际使用未舍入值判断。</p>'},
+ {kicker:'异常值与映射',dur:24,draw:abnormal,caption:p=>'⑬ 前置异常或极端绿色值可能变为 −1；初始通过不证明有效',html:'<h3>需要核查的异常路径</h3><p>此前 Light_Response 的 Gr 或 Gb 均值不大于 0 时，五点映射均为 −1，此函数仍直接与上限比较。若所有上限为正，−1 不触发失败，保持初始通过；不代表有效测量。</p><p>底层在 Gb和×100&lt;Gr和时把值设为 100，五点映射把大于 10 的值改为 −1，同样可能在正上限下不触发失败。区域数量或尺寸不合法也可能导致无效索引或除零。</p>'},
+ {kicker:'返回与追加',dur:20,draw:returns,caption:p=>'⑭ 只返回一个 GI_5x5 子项；调用方追加向量',html:'<h3>结果与依赖</h3><p>V1.0 初始子项 true、bin 1、grade 0；关闭时 g_msg=false。未知版本返回 false 且 g_msg=false。实际运行状态和失败 bin 要由专用配置确认。</p><p>ColorRatio 的 GG target 用于构造及读取映射键，不是本项五个上限，也没有应用 offset。insert 只是追加，最终 bin 还需汇总其他子项。</p>'},
+ {kicker:'互动观察',dur:24,draw:interactive,caption:p=>'⑮ 调整右下 Gr，观察绿色相对差及假设上限判定',html:'<h3>滑杆观察</h3><p>只调整右下 Gr，Gb 固定 200，其余四点不变；右下假设上限为 0.12。Gr=230 时超限，Gr=200 时未超限，Gr=160 时因绝对差也可能超限。</p><p>实际判断用未舍入值；本幕不模拟前置异常、其他 20 块、配置加载或最终 bin。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+const input=document.getElementById('gr'),out=document.getElementById('grout');
+function setGr(v){state.gr=Number(v);input.value=String(v);out.textContent=String(v);AlgoAnim.render();}
+input.addEventListener('input',()=>setGr(input.value));document.getElementById('sample').addEventListener('click',()=>setGr(230));document.getElementById('normal').addEventListener('click',()=>setGr(200));document.getElementById('dark').addEventListener('click',()=>setGr(160));
+</script>
+<script>
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
+setTimeout(function () {
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
+  }
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
+</script>
+</body></html>

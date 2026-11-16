@@ -51,6 +51,9 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
+    'blemish_test': ['一眼看懂','配置与版本','图像预处理','亮度修正与增强','大小窗口找暗斑','区域阈值','提取连通候选','找 PD 标记','排除附近 PD','匹配增强候选','增强包围框','没匹配到增强','返回与特殊情况','边界与版本','互动观察'],
+    'color_gi_5x5': ['一眼看懂','配置与假设','前置与开关','假设分成 25 块','准备五点输入','一块的计算方法','左上逐步比较','右上逐步比较','中心逐步比较','左下逐步比较','右下逐步比较','五点汇总','异常值与映射','返回与追加','互动观察'],
+    'color_gi': ['一眼看懂','配置与入口','先检查前置条件','分通道和区域','一块怎么算','得到 81 个比例','找到最大和最小','两端离 1 多远','得到 GI','对照 GI 阈值','低亮度与无效前置','原始向量与特殊值','返回与追加','互动观察'],
     'color_shading_15x15': ['一眼看懂','配置与入口','分通道与分区','一块求通道均值','一块算比例','得到比例图','四角区域','一对角怎么比较','六对取最大','四边中间区域','上下边比较','左右边比较','对照上限','异常与风险','返回与追加','互动观察'],
     'color_shading_5x5': ['一眼看懂','配置与入口','分区与五点','一块先算 RG / BG','先得到五点比例','RG1 对角比较','RG2 对角比较','RG3 中心与四角','BG1 对角比较','BG2 对角比较','BG3 中心与四角','依次对照六个范围','源码的除法条件','前置均值异常','返回与追加','互动观察'],
     'color_shading': ['一眼看懂','版本与开关','前置与低亮度','把画面分区','每块算颜色比例','逐块计算','RG 找中心与极值','BG 找中心与极值','RG 和中心比较','BG 和中心比较','对照阈值','特殊情况','返回并追加结果','互动模拟'],
@@ -64,6 +67,49 @@ EXPECTED_KICKERS = {
 }
 
 GUIDES = {
+ 'blemish_test': [
+  [S(BRIGHT,149,156,'Blemish_Test','申请资源后调用此子项并追加结果。'),S(ITEM,3031,3040,'PD_all_single_pix_find','V1.1 先准备 PD 标记，再调用双路污点检测。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',423,429,'Blemish_V1.1.data','先尝试 V1.1 再尝试 V1.0，其他目录可能覆盖版本。'),S(ITEM,2968,2977,'blemish_V1.1','版本分派；未知版本返回 false 且不参与汇总。'),S(ITEM,3031,3050,'code_Blemish>0','V1.1 开关与结果。')],
+  [S(RAW,2451,2479,'medianBlur','普通路转 float，亮度提取、滤波及缩放。'),S(RAW,2572,2598,'resize_w_enhace','增强路同样预处理，使用另一尺寸。')],
+  [S(RAW,2486,2510,'mean_center/mean_corner','左上和中心参考构建 LSC 因子。'),S(RAW,2647,2665,'maxV','增强路再用最小最大值映射。')],
+  [S(RAW,2525,2542,'cv::divide','大小窗口差除以大窗口均值；注意零分母。')],
+  [S(RAW,2543,2564,'threshold_center_','中心 ROI 先阈值化，整图再阈值化，然后清边并提取候选。'),S(RAW,2670,2698,'threshold_center_enhace','增强路使用独立阈值和尺寸。')],
+  [S(RAW,1767,1815,'cnt_pix','从二值图出发，八邻域查找连通块。'),S(RAW,1806,1826,'sizeLimit','按外接框最大边筛选并记录左上角。')],
+  [S(ITEM,2927,2956,'find_all_single_pixel_defect','Blemish 使用 Ratio 模式和自己的 PD 参数。'),S(TEST,2769,2791,'RGGB_Map_Integrate_chao','四通道二值合回 Bayer。'),S(TEST,2816,2826,'pd_all_single_particle.push_back','每个 255 坐标加入列表，不检查孤立性。')],
+  [S(RAW,2216,2248,'pd_area_x_','普通候选左上角与 PD 的横纵差都在范围内时移除。')],
+  [S(RAW,2275,2298,'search_area_x','增强坐标乘倍率后按横纵范围匹配；无匹配记入列表。')],
+  [S(RAW,2323,2350,'current_x_plus_w','对所有匹配增强框求整体边界。'),S(RAW,2359,2372,'max_p_enhace','生成对应普通候选的增强包围框。'),S(RAW,2381,2402,'min_enhace_size','最大边大于下限且不超过上限才命中。')],
+  [S(RAW,2292,2298,'particle_not_in_enahce','没有匹配时记录普通候选。'),S(RAW,2412,2441,'particle_not_in_enahce.size()>0','未匹配非空也返回失败代码。')],
+  [S(RAW,2204,2213,'particle.size()>1000','计时开始后提取两路，普通候选超过 1000 提前返回。'),S(RAW,2277,2290,'elapsed() > 300','仅在特定循环检查 300 毫秒。'),S(ITEM,3043,3050,'code_Blemish>0','正 code 才令子项失败。'),finalbin],
+  [S(ITEM,3023,3037,'image.empty()','无效图像仅记录日志；开关开启时仍继续。'),S(RAW,2508,2510,'mean_center/mean_corner','参考和为零需核查。'),S(RAW,2647,2665,'maxV','增强拉伸要关注最大最小相等。'),S(ITEM,2968,2977,'g_msg = false','未知版本的结果。')],
+  [S(RAW,2221,2248,'pd_area_x_','按横纵差排除。'),S(RAW,2275,2298,'search_area_x','增强候选按坐标匹配。'),S(RAW,2381,2389,'min_enhace_size','匹配后的包围框尺寸判定；互动只模拟单个候选。'),S(RAW,2412,2439,'particle_not_in_enahce.size()>0','没有匹配也失败。')]],
+ 'color_gi_5x5': [
+  [S(BRIGHT,63,64,'ratio_GI_5x5','调用并追加整个向量。'),S(RAW,7895,7910,'sum_g1-sum_g2','5×5 路径的 GG 是绿色和之差除平均和。'),S(BRIGHT,613,622,'TargetGI_Leftup','五点各自与上限严格比较。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',6491,6503,'GI_5x5.data','文件打开失败返回 false；本仓库未找到专用文件。'),S(BRIGHT,532,556,'ratio_open_mode_','版本分派并检查此项开关；教程的 5×5 参数为假设。')],
+  [S(ITEM,897,915,'mean_gr_roi','此前 Light_Response 对两个绿色前置均值赋值。'),S(TEST,1915,1919,'mean_gr>0','两个前置均值都大于零才计算。'),S(TEST,1998,2012,'GG_ratio','否则五点映射填 −1；本函数无 Gr>10 检查。')],
+  [basic,bayer,S(TEST,1915,1929,'roi_x_pitch','根据专用配置的 Skip、行数和列数构造 ROI；本示例数量为假设。'),S(TEST,1948,1970,'ratio_g_g_center','选取中心、四角的索引。')],
+  [S(TEST,1932,1945,'get_roi_colorratio_5X5','共用函数逐块计算并存入向量；本教程仅模拟五点。'),S(TEST,1948,1970,'ratio_g_g_center','从向量读取五点对应的比例。')],
+  [S(RAW,7875,7889,'sum_g1 = 0.1','绿色和从 0.1 开始；画面直接展示，不播放累加。'),S(RAW,7895,7910,'sum_g1-sum_g2','绿色差绝对值除绿色平均和；极端条件设为 100。')],
+  *[[S(TEST,1974,1978,'GG_ratio','从五点向量构造映射，值大于 10 时变成 −1。'),S(RAW,7895,7910,'sum_g1-sum_g2',name+'的绿色相对差由两个绿色通道的和计算。'),S(BRIGHT,613,622,'TargetGI_Leftup','五点各自与对应假设上限比较；实际值来自专用配置。')] for name in ('左上','右上','中心','左下','右下')],
+  [S(BRIGHT,613,622,'TargetGI_Center','各点采用自己的上限，任一严格大于时失败。')],
+  [S(TEST,1998,2012,'GG_ratio','前置任一非正时五点映射均为 −1。'),S(RAW,7907,7910,'g_g = 100','底层极端情况设为 100。'),S(TEST,1974,1978,'>10','五点大于 10 转 −1；正上限下 −1 不触发大于。'),S(BRIGHT,613,622,'TargetGI_Leftup','无效 −1 仍直接参与上限比较。')],
+  [S(BRIGHT,532,541,'g_msg = false','未知版本返回 false 且不参与汇总。'),S(BRIGHT,640,653,'push_back','关闭时 g_msg=false；V1.0 返回一个子项。'),S(BRIGHT,63,64,'insert','调用方追加返回向量。'),finalbin],
+  [S(RAW,7895,7910,'sum_g1-sum_g2','互动调整右下区域模拟 Gr 后重算相对差。'),S(BRIGHT,613,622,'TargetGI_Rightdown','使用假设的每点上限，仍按源码的严格大于比较。')]],
+ 'color_gi': [
+  [S(BRIGHT,60,61,'ratio_GI_', '调用 Color_GI 并将返回范围追加到 items_results。'),S(BRIGHT,342,356,'GI = std::max','原始 GG 比例最大和最小分别与 1 比较，再取较大偏离。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',358,364,'GI_V1.1.data','依次尝试加载 V1.0 与 V1.1 配置。'),S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',6221,6234,'gi_ratio_V1.0','文件成功打开后选择 V1.0。'),S(BRIGHT,291,314,'ratio_open_mode_','版本分派；V1.0 只检查 GI 自身开关。')],
+  [S(ITEM,897,915,'mean_gr_roi','Light_Response 为两个绿色中心均值赋初值并计算。'),S(TEST,1780,1785,'mean_gr>0','要求两个绿色均值均大于零才计算区域比例。'),S(TEST,1863,1871,'roi_gg_ratio.append(-1)','否则向量填 −1。'),S(BRIGHT,342,356,'mean_gr_roi>10','先取极值，再检查 Gr 是否大于 10。')],
+  [basic,bayer,S(TEST,1780,1794,'roi_x_pitch','根据 GI 的 ROI 数量与 Skip，以整数 pitch 构造通道 ROI。')],
+  [S(RAW,7829,7844,'sum_g1 = 0.1','各通道和从 0.1 开始，画面直接展示模拟和。'),S(RAW,7851,7864,'g_g = std::abs','GG 是两绿色和的比；极端分支置 100。')],
+  [S(TEST,1797,1810,'roi_gg_ratio.push_back','每个 ROI 分别计算比例并保存至原始向量。')],
+  [S(BRIGHT,342,348,'max_element','对所有原始 GG 比例取最大和最小，而非只取五点映射。')],
+  [S(BRIGHT,348,356,'gg_roi_min_1','两个极值分别减 1 取绝对值。')],
+  [S(BRIGHT,350,356,'GI = std::max','两端偏离取最大作为 GI。')],
+  [S(BRIGHT,378,389,'GI > manage.param_GI.GI_Ratio','V1.0 使用严格大于；超限时使用 GI 配置的 bin 和 grade。')],
+  [S(TEST,1863,1871,'roi_gg_ratio.append(-1)','前置 Gr 或 Gb 不大于零时将向量设为 −1。'),S(BRIGHT,342,356,'mean_gr_roi>10','先取极值再检查 Gr；Gb 不在该条件中。'),S(BRIGHT,391,396,'not test GI','低 Gr 分支只记录日志，未修改初始化结果。')],
+  [S(TEST,1804,1810,'roi_gg_ratio.push_back','原始比例先存入向量。'),S(TEST,1839,1843,'>10','五点映射将大于 10 的值改为 −1，不改变原始向量。'),S(RAW,7861,7864,'g_g = 100','底层极端绿色比例设置 100。')],
+  [S(BRIGHT,291,302,'g_msg = false','未知版本返回一个不参与汇总的子项。'),S(BRIGHT,403,413,'push_back','开关关闭设置 g_msg=false；V1.0 返回一个子项。'),S(BRIGHT,60,61,'insert','追加返回结果。'),finalbin],
+  [S(BRIGHT,342,356,'GI = std::max','互动模拟重新计算所有区域比例和 GI。'),S(BRIGHT,384,389,'GI >','与示例真实阈值严格比较，不能用舍入后的显示值判断。')]],
  'color_shading_15x15': [
   [S(BRIGHT,57,58,'cs_shading_15x15','调用并追加向量。'),S(TEST,5086,5092,'RB_GrGb[i]','每块用四通道均值计算一个比例。'),S(TEST,5108,5116,'out_DiffCorner','六对角比较后取最大值。'),S(TEST,5136,5140,'out_Maxdiff','上下、左右边差取较大值。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',17812,17824,'ColorShading_15x15.data','文件打开失败时直接返回 false；本仓库没有该文件。'),S(BRIGHT,1181,1200,'open_mode_','分派 V1.0 后，仅 open_mode=1 进入计算。')],
@@ -199,8 +245,8 @@ def get_guides(page):
             extract = lines[first-1:last]
             if not any(anchor in line for line in extract):
                 raise ValueError(f'源码已变化，请复核: {path}:{first}-{last} 缺少 {anchor}')
-            # 新教程空白源码行只显示行号，避免分镜中的行尾空格；不改变非空行原文。
-            code = '\n'.join((f'{i:>5}' if page == 'color_shading_15x15' and not line else f'{i:>5}  {line}')
+            # 新增教程空白源码行只显示行号，避免分镜中的行尾空格；不改变非空行原文。
+            code = '\n'.join((f'{i:>5}' if page in ('color_shading_15x15', 'color_gi', 'color_gi_5x5', 'blemish_test') and not line else f'{i:>5}  {line}')
                              for i, line in enumerate(extract, first))
             blocks.append({'path': path, 'first': first, 'last': last, 'note': note, 'code': code})
         guides.append(blocks)
