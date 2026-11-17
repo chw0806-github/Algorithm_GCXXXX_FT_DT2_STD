@@ -30,6 +30,7 @@ JS_SAFE = JS.replace('</script>', '<\\/script>')
 
 # (源文件, 成品文件)
 PAGES = [
+    (ROOT / 'noise_col_channel' / 'index.src.html', ROOT / 'noise_col_channel' / 'index.html'),
     (ROOT / 'roi_prnu' / 'index.src.html', ROOT / 'roi_prnu' / 'index.html'),
     (ROOT / 'single_pixel_defect' / 'index.src.html', ROOT / 'single_pixel_defect' / 'index.html'),
     (ROOT / 'blemish_test' / 'index.src.html', ROOT / 'blemish_test' / 'index.html'),

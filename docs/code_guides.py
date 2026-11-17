@@ -51,6 +51,7 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
+    'noise_col_channel': ['一眼看懂','调用与配置','多帧输入','单点帧间 STD','标准差图','四个位置','一列怎么变成一个数','形成列序列','最大列与平均','四通道差值','严格比较','日志里的 dB','版本与边界','互动观察'],
     'roi_prnu': ['一眼看懂','真实示例配置','前置与开关','通道与区域','Delta 来源','模拟 ROI','原始像素均值','Delta 平方','计算 PRNU','四通道判定','共享缓冲','边界与无效值','返回与追加','互动模拟'],
     'single_pixel_defect': ['一眼看懂','配置与版本','模式选择','分通道','四块邻域','比例比较','标记与方向','合图与计数','亮点分档','亮暗竞争','总数覆盖','返回与追加','风险与边界','互动分档'],
     'blemish_test': ['一眼看懂','配置与版本','图像预处理','亮度修正与增强','大小窗口找暗斑','区域阈值','提取连通候选','找 PD 标记','排除附近 PD','匹配增强候选','增强包围框','没匹配到增强','返回与特殊情况','边界与版本','互动观察'],
@@ -69,6 +70,22 @@ EXPECTED_KICKERS = {
 }
 
 GUIDES = {
+ 'noise_col_channel': [
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',24,33,'Noise_Dark_Pixel_Col_chanel','生成共享 STD 图后调用子项并加入结果集合。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',400,419,'max_std_channel_dif','取四类位置中最大的原始 STD 差并比较上限。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp',436,443,'loadChannelNoiseParam','先加载 V1.0，再尝试 V1.1。'),S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',16664,16679,'col_channel_noise_version','V1.0 文件打开后赋版本，解析可能失败。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',769,775,'col_channel_noise_version','根据版本选择实现。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',4,25,'test_frameCnt<=1','检查帧数、尺寸和位深并转换输入。'),S(ITEM,249,285,'src[i] & mask','逐 ushort 依据 datatype 掩码转换。')],
+  [S(RAW,9709,9730,'std_t/=frame_cnt-1','先取各帧同坐标，均值中心化后除 N−1 并开平方。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',39,61,'h*3/4','四线程按行起点分段。'),S(RAW,9702,9715,'all_size=w*(h/4)','每段长度为 w×整数 h/4，按帧读取低 10 位。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',242,266,'g_buf_delta_raw_[(j+1)*w+i+1]','每 2×2 四位置分别累加，分别得到列均值；无 Bayer 映射。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',242,266,'sum = 2*sum/h','以偶数高度为例，列和除以 h/2。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',259,278,'mean_column_std.append(sum)','将每列的 STD 平均值放到四个独立向量中。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',272,278,'std::max_element','找出最大列并对该通道所有列平均。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',290,300,'dif_max_avg_std','最大列减去平均列。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',391,403,'column_std_channel_dif','收集四类位置的原始差并取最大。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',400,419,'max_std_channel_dif >','原始差严格大于阈值且大于 0 才设失败。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',276,303,'std::log10','日志中正值取 20×log10(value/1023)，判定用原始差。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',632,649,'column_noise_spec_level_2_','V1.1 先判 Level 2 后判 Level 1。'),S(RAW,9702,9715,'pRaw16[Raw16_loca+1]&0x03','STD 取数限制为低 10 位，行分段依赖整数除法。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',391,399,'(*max_std)','B 通道结构化日志误引用 R 最大值，消息日志正确。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',272,278,'std::accumulate','模拟计算仍包括异常列在全部列的平均中。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',400,419,'column_noise_spec','真实示例阈值比较假设输入的结果。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',28,35,'Calculate_The_Final_Bin','最终 bin 由所有子项汇总；互动仅模拟该子项。')]],
+
  'roi_prnu': [
   [S(BRIGHT,154,162,'ROI_PRNU','调用方将单个子项追加，然后继续汇总。'),S(RAW,8320,8351,'return sigma/mean*100','同一 ROI 的 Delta 平方量除以原始均值。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp',16994,17011,'ROI_PRNU_V1.0','打开文件后赋版本；后续解析未必成功。'),S(ITEM,5789,5796,'spec_prnu_r_','四通道分别比较各自上限，失败使用配置 bin 和 grade。')],

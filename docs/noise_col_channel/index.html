@@ -1,0 +1,682 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>暗场列通道噪声动画讲解</title><style>
+:root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#101a2e;
+    --ink:#eef3ff; --dim:#93a3c4; --faint:#63718f;
+    --line:rgba(255,255,255,.09);
+    --accent:#6ea8fe; --accent2:#ffd166; --pass:#3ddc97; --fail:#ff5f7e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1100px 560px at 18% -12%, #14243f 0%, rgba(7,11,20,0) 60%), var(--bg);
+    color:var(--ink); font-family:var(--ui); padding:22px 22px 44px; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1460px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .logo{
+    width:40px;height:40px;border-radius:12px;flex:0 0 auto;margin-top:2px;
+    background:linear-gradient(145deg,#1b2c4d,#0d1729);border:1px solid rgba(110,168,254,.35);
+    box-shadow:0 0 24px rgba(110,168,254,.25) inset, 0 6px 18px rgba(0,0,0,.35);
+    display:grid;place-items:center;color:var(--accent);font-size:18px;
+  }
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px;line-height:1.35}
+  .sub{margin:0;color:var(--dim);font-size:12.5px;line-height:1.7}
+  .sub code{font-family:var(--mono);font-size:11.5px;color:#cfe0ff;background:rgba(110,168,254,.1);
+    border:1px solid rgba(110,168,254,.18);border-radius:5px;padding:1px 5px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:11.5px;color:#b8c7e6;border:1px solid var(--line);background:rgba(255,255,255,.03);
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge b{color:var(--accent2);font-weight:600}
+  /* 头部里的“看不了动画 -> 静态分镜”入口：纯链接，不依赖脚本 */
+  a.badge.link{color:#cfe1ff;border-color:rgba(110,168,254,.45);background:rgba(110,168,254,.10);
+    text-decoration:none}
+  a.badge.link:hover{border-color:var(--accent);color:#ffffff;background:rgba(110,168,254,.18)}
+
+  /* ---------- layout ---------- */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:18px;align-items:start}
+  @media (max-width:1120px){ main{grid-template-columns:1fr} }
+
+  .stage-card{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1223,#070b15);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  #stage{display:block;width:100%;aspect-ratio:1000/620;background:#070b14}
+  .caption{
+    min-height:44px;display:flex;align-items:center;gap:10px;
+    padding:10px 16px;font-size:13px;color:#c3d0ea;line-height:1.6;
+    border-top:1px solid var(--line);background:rgba(10,17,32,.9)
+  }
+  .caption .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto;
+    box-shadow:0 0 10px var(--accent)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{
+    font-family:var(--ui);font-size:12.5px;color:#c9d6f0;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  button:hover{background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.4);color:#fff}
+  button.primary{background:rgba(110,168,254,.18);border-color:rgba(110,168,254,.45);color:#e8f1ff;min-width:88px}
+  .progress{flex:1 1 160px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}
+  #bar{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#6ea8fe);transition:width .1s linear}
+  .speed{display:flex;gap:4px}
+  .speed button{padding:6px 9px;font-size:11.5px}
+  .speed button.on{background:rgba(255,209,102,.16);border-color:rgba(255,209,102,.45);color:#ffe6a8}
+
+  /* ---------- tuner ---------- */
+  .tuner{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.022);padding:14px 16px}
+  .tuner-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tuner-head h2{font-size:13px;margin:0;font-weight:600;color:#cfdcf5}
+  .tuner-head span{font-size:11.5px;color:var(--faint)}
+  .sliders{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px}
+  @media (max-width:760px){ .sliders{grid-template-columns:repeat(2,1fr)} }
+  .slider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+  .slider .ch{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--c);width:20px}
+  .slider output{font-family:var(--mono);font-size:11.5px;color:#d7e3fa;min-width:44px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.08))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--c);border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--c);
+    border:2px solid #0b1220;box-shadow:0 0 10px var(--c);cursor:pointer}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-size:11.5px;padding:5px 10px;border-radius:8px}
+
+  /* ---------- side ---------- */
+  .side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+  @media (max-width:1120px){.side{position:static;max-height:none;overflow:visible}}
+  .code-guide{border:1px solid rgba(255,209,102,.30);border-radius:16px;background:#0a1020;padding:14px 16px;min-width:0}
+  .code-guide h3{font-size:14.5px;color:#ffe2a0;margin:0 0 7px}
+  .code-guide p{font-size:12.5px;line-height:1.7;color:#c3d1e9;margin:6px 0}
+  .code-guide .code-intro{color:#93a3c4;font-size:11.5px}
+  .code-guide .code-block+.code-block{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .code-path{font:11px/1.55 var(--mono);color:#8fb8ff;overflow-wrap:anywhere}
+  .code-guide pre{margin:8px 0 0;padding:10px;background:#050914;border-radius:8px;border:1px solid var(--line);max-height:220px;overflow:auto}
+  .code-guide pre code{white-space:pre;font:11.5px/1.65 var(--mono);color:#d4e6ff}
+  .chapters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chapter{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:10px;
+    font-size:12px;color:#9fb0d0;background:rgba(255,255,255,.025)}
+  .chapter .num{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .chapter.active{color:#eaf2ff;background:rgba(110,168,254,.14);border-color:rgba(110,168,254,.5);
+    box-shadow:0 0 18px rgba(110,168,254,.15)}
+  .chapter.active .num{color:var(--accent)}
+  .chapter:hover{color:#e6efff}
+
+  .explain{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#0d1526,#0a1020);
+    padding:16px 18px;max-height:calc(100vh - 210px);overflow:auto}
+  .explain h3{font-size:14.5px;margin:0 0 10px;color:#eaf1ff;letter-spacing:.2px}
+  .explain p{font-size:12.8px;line-height:1.85;color:#b8c6e2;margin:0 0 10px}
+  .explain ol,.explain ul{margin:0 0 10px;padding-left:18px}
+  .explain li{font-size:12.8px;line-height:1.8;color:#b8c6e2;margin-bottom:5px}
+  .explain b{color:#e9f1ff;font-weight:600}
+  .explain code{font-family:var(--mono);font-size:11.3px;color:#bfe0ff;background:rgba(110,168,254,.09);
+    padding:1px 4px;border-radius:4px}
+  .explain pre{margin:0 0 10px;background:#060a14;border:1px solid rgba(255,255,255,.07);border-radius:10px;
+    padding:12px;overflow:auto}
+  .explain pre code{background:none;border:none;padding:0;color:#b7cdf0;font-size:11px;line-height:1.65;white-space:pre}
+  .explain a{color:#8fc0ff;text-decoration:underline}
+  .explain a:hover{color:#cfe4ff}
+  /* 首屏静态内容（脚本没跑起来时就是这一屏） */
+  .explain .cue{font-size:12px;line-height:1.75;color:#b9cbe8;background:rgba(110,168,254,.07);
+    border:1px solid rgba(110,168,254,.22);border-radius:9px;padding:9px 11px;margin:0 0 10px}
+  .explain .cue b{color:#dbe9ff}
+  .tip{font-size:12px;line-height:1.75;color:#e3d5a8!important;background:rgba(255,209,102,.07);
+    border:1px solid rgba(255,209,102,.18);border-left:3px solid rgba(255,209,102,.6);
+    border-radius:8px;padding:9px 11px}
+  .foot{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.7}
+  .foot code{font-family:var(--mono);font-size:10.5px;color:#8fa4c8}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 目录页 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px}
+.card-link{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(160deg,rgba(110,168,254,.10),rgba(255,255,255,.02));padding:18px 20px;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.card-link:hover{transform:translateY(-2px);border-color:rgba(110,168,254,.5);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.card-link h3{margin:0 0 8px;font-size:15px;color:#eaf2ff}
+.card-link p{margin:0;font-size:12.5px;line-height:1.75;color:var(--dim)}
+.card-link .tag{display:inline-block;font-size:10.5px;color:#ffd166;border:1px solid rgba(255,209,102,.35);
+  background:rgba(255,209,102,.08);border-radius:999px;padding:2px 8px;margin-bottom:10px}
+.sliders.two{grid-template-columns:repeat(2,1fr)}
+
+.config-panel{margin:18px 0 22px;padding:16px 18px;border:1px solid #53658b;border-radius:14px;background:#111a2c;color:#e0e9fa;min-width:0}
+.config-panel h2{font-size:17px;margin:0 0 6px;color:#ffe2a0}
+.config-panel p{margin:6px 0;font-size:13px;line-height:1.6;color:#bbc9df}
+.config-keys{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 14px}
+.config-key{border:1px solid #405578;border-radius:7px;padding:3px 8px;font-size:12px;background:#17243a}
+.config-key code{color:#ffe2a0;font-family:ui-monospace,monospace}
+.config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.config-file{min-width:0;border:1px solid #344664;border-radius:9px;background:#0b1220;padding:10px 12px}
+.config-file h3{font-size:14px;color:#b9d3ff;margin:0 0 3px}
+.config-file .config-path{font-family:ui-monospace,monospace;font-size:11px;color:#a7b7cf;overflow-wrap:anywhere}
+.config-file pre{margin:8px 0 0;padding:10px;border:1px solid #273653;border-radius:7px;background:#050a14;max-height:190px;overflow:auto;white-space:pre;color:#dbe9ff;font:12px/1.55 ui-monospace,monospace}
+.config-file pre code{font:inherit;color:inherit;background:none;padding:0;border:0}
+@media(max-width:700px){.config-layout{grid-template-columns:minmax(0,1fr)}}
+
+</style></head>
+<body><div class="app"><header class="top"><div class="brand"><div class="logo">≋</div><div><h1>图像传感器 FT 测试 · 暗场列通道噪声</h1><p class="sub"><code>items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_Col_chanel));</code></p></div></div><div class="badges"><span class="badge">GC8613T · 暗帧示例</span><a class="badge link" href="storyboard.html">静态分镜 →</a></div></header>
+<section class="config-panel" aria-label="示例配置文件">
+<h2>本页使用的 .data 配置</h2>
+<p>来源：GC8613T / CP_SPEC / param_4l_f_dark1_normal_30fps。下方为真实配置原文；该目录没有 Channel_Noise_V1.1.data，加载是否成功需运行时确认。动画帧数和数据为模拟，不是实测。</p>
+<div class="config-keys"><span class="config-key">列通道最大差上限：<code>[Column_Noise_Max]=3.2</code></span><span class="config-key">失败 bin：<code>[bin]=2075</code></span><span class="config-key">失败 grade：<code>[grade]=5</code></span><span class="config-key">开关：<code>[open_mode]=1</code></span></div><div class="config-layout"><section class="config-file"><h3>Channel_Noise.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_dark1_normal_30fps/Channel_Noise.data</div><pre tabindex="0" aria-label="Channel_Noise.data 文件原文，可滚动"><code>[Column_Noise_Max]=3.2
+[bin]=2075
+[grade]=5
+[open_mode]=1</code></pre></section><section class="config-file"><h3>Basic.data · 文件原文</h3>
+<div class="config-path">STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_dark1_normal_30fps/Basic.data</div><pre tabindex="0" aria-label="Basic.data 文件原文，可滚动"><code>[width]=3840
+[height]=2160
+[bayer]=RG
+
+[flag_raw8_image]=1
+[flag_split_channel]=0</code></pre></section></div>
+</section>
+  <main>
+<section class="stage-col"><div class="stage-card"><canvas id="stage" aria-label="暗场列通道噪声动画"></canvas><div class="caption"><span class="dot"></span><span id="caption">多帧标准差图与通道列比较</span></div></div><div class="controls"><button id="prev">◀ 上一节</button><button id="play" class="primary">⏸ 暂停</button><button id="next">下一节 ▶</button><button id="replay">↺ 重播</button><div class="progress"><div id="bar"></div></div><div class="speed"><button data-speed="0.5">0.5×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div></div>
+<div class="tuner"><div class="tuner-head"><h2>互动：改变 R 通道一列的帧间波动</h2><span>假设其他位置不变；4 帧和像素数值均为模拟</span></div><div class="sliders two"><label class="slider"><span>模拟波动倍数 k</span><input id="amp" type="range" min="1" max="4" step="1" value="3"><output id="ampout">3</output></label></div><div class="presets"><button id="normal">未超限：k=2</button><button id="example">超限：k=3</button><button id="flat">各列相同：k=1</button></div></div></section>
+<aside class="side"><nav class="chapters" id="chapters" aria-label="章节"></nav><section class="code-guide" id="code-guide"><h3>本幕对应源码</h3><p>打开生成后的 index.html 查看源码。</p></section><div class="explain" id="explain"><h3>这一页讲什么</h3><p>从多帧同位置的标准差，到每通道列均值、最大偏差与阈值判断。</p></div></aside></main><footer class="foot">示例配置为 GC8613T 暗帧 Channel_Noise.data / Basic.data；帧数、像素、噪声图与结果为教学模拟，不是实测。</footer></div>
+<script>
+/* ==========================================================================
+   AlgoAnim · 算法动画共用播放器
+   --------------------------------------------------------------------------
+   页面里只需要写「场景」，播放器负责：画布自适应、章节、控制条、字幕、快捷键。
+
+   用法：
+     <link rel="stylesheet" href="../shared/player.css">
+     <script src="../shared/player.js"><\/script>
+     <script>
+       const state = AlgoAnim.state;          // 共用状态（scene/t/speed + 自定义字段）
+       state.xxx = ...;
+       function drawStep1(p){ ... }           // p = 0..1，用全局 ctx / txt / card 画
+       const SCENES = [{ kicker, dur, draw:drawStep1, caption:p=>'...', html:'...' }];
+       AlgoAnim.start({ scenes: SCENES });
+     <\/script>
+
+   绘图工具箱（全部是全局函数）：txt card arrow rr para wrapLines withA
+   常量：C（颜色） CH（通道色） CHLIST VW VH UI MONO
+   ========================================================================== */
+'use strict';
+
+/* ==========================================================================
+   老浏览器兼容补丁
+   Qt WebEngine / 旧 WebView 可能没有 Object.assign、String.padStart、
+   NodeList.forEach —— 缺一个页面就整块脚本挂掉，所以这里先补齐。
+   ========================================================================== */
+if (typeof Object.assign !== 'function') {
+  Object.assign = function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var src = arguments[i];
+      if (!src) continue;
+      for (var k in src) {
+        if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+    }
+    return target;
+  };
+}
+if (typeof String.prototype.padStart !== 'function') {
+  String.prototype.padStart = function (len, pad) {
+    var s = String(this);
+    pad = (pad === undefined || pad === null) ? ' ' : String(pad);
+    while (s.length < len) s = pad + s;
+    return s;
+  };
+}
+if (typeof window.NodeList !== 'undefined' && !window.NodeList.prototype.forEach) {
+  window.NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+/* ==========================================================================
+   错误上报：脚本出问题时，把原因写到页面上，而不是留一个空画布
+   ========================================================================== */
+window.__ERR = window.__ERR || [];
+var fatalShown = false;
+
+function reportFatal(msg, where) {
+  msg = String(msg || '未知错误');
+  window.__ERR.push(msg);
+  if (fatalShown) return;
+  fatalShown = true;
+  try {
+    var c = document.getElementById('caption');
+    if (c) c.textContent = '运行出错：' + msg;
+    var box = document.getElementById('fatal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fatal';
+      box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;' +
+        'background:rgba(60,12,24,.96);border:1px solid rgba(255,95,126,.6);border-radius:10px;' +
+        'padding:12px 14px;color:#ffd7e0;font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;' +
+        'white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent = '运行出错' + (where ? '（' + where + '）' : '') + '：' + msg +
+      '\n请把这句话反馈给维护者；也可以直接用 Chrome / Edge 打开本文件。';
+    box.style.display = 'block';
+  } catch (e) {}
+}
+
+window.addEventListener('error', function (e) {
+  var where = e && e.filename ? (String(e.filename).split('/').pop() + ':' + (e.lineno || '?')) : '';
+  reportFatal((e && e.message) || '脚本错误', where);
+});
+
+
+/* =====================================================================
+   基础设置
+   ===================================================================== */
+const VW = 1000, VH = 620;
+const UI = '"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+const MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+
+const C = {
+  ink:'#eef3ff', dim:'#93a3c4', faint:'#63718f', line:'rgba(255,255,255,0.10)',
+  accent:'#6ea8fe', accent2:'#ffd166', pass:'#3ddc97', fail:'#ff5f7e',
+  panel:'rgba(255,255,255,0.035)'
+};
+const CH = { R:'#ff7a7a', Gr:'#7fe08f', Gb:'#3ddcbf', B:'#6ea8fe' };
+const CHLIST = ['R','Gr','Gb','B'];
+
+
+/* =====================================================================
+   小工具
+   ===================================================================== */
+const clamp01 = v => v<0?0:(v>1?1:v);
+const lerp = (a,b,t) => a+(b-a)*t;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const ease = t => t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const easeOut = t => 1-Math.pow(1-t,3);
+const withA = (hex,a) => {
+  const n = parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+};
+
+function rr(x,y,w,h,r){
+  const q = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+q,y);
+  ctx.arcTo(x+w,y,x+w,y+h,q);
+  ctx.arcTo(x+w,y+h,x,y+h,q);
+  ctx.arcTo(x,y+h,x,y,q);
+  ctx.arcTo(x,y,x+w,y,q);
+  ctx.closePath();
+}
+
+function txt(s,x,y,o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||400)+' '+(o.size||14)+'px '+(o.font||UI);
+  ctx.fillStyle = o.color || C.ink;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = clamp01(o.alpha);
+  ctx.fillText(String(s), x, y);
+  ctx.restore();
+}
+
+function card(x,y,w,h,o){
+  o = o || {};
+  const r = o.r == null ? 14 : o.r;
+  ctx.save();
+  if(o.glow){ ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur==null?20:o.blur; }
+  rr(x,y,w,h,r);
+  ctx.fillStyle = o.fill || C.panel;
+  ctx.fill();
+  ctx.restore();
+  if(o.stroke !== false){
+    rr(x,y,w,h,r);
+    ctx.strokeStyle = o.stroke || C.line;
+    ctx.lineWidth = o.lw || 1;
+    ctx.stroke();
+  }
+}
+
+function arrow(x1,y1,x2,y2,color,width,dash){
+  ctx.save();
+  ctx.strokeStyle = color || C.line;
+  ctx.lineWidth = width || 1.5;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-9*Math.cos(a-0.42), y2-9*Math.sin(a-0.42));
+  ctx.lineTo(x2-9*Math.cos(a+0.42), y2-9*Math.sin(a+0.42));
+  ctx.closePath();
+  ctx.fillStyle = color || C.line;
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapLines(s, maxW, font){
+  ctx.save();
+  ctx.font = font;
+  const lines = [];
+  let cur = '';
+  for(const ch of s){
+    const test = cur + ch;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = ch; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  ctx.restore();
+  return lines;
+}
+
+function para(s, x, y, maxW, lh, o){
+  o = o || {};
+  const size = o.size || 15;
+  const font = (o.weight||400)+' '+size+'px '+(o.font||UI);
+  const lines = wrapLines(s, maxW, font);
+  lines.forEach((ln,i) => txt(ln, x, y+i*lh, o));
+  return lines.length;
+}
+
+/* 背景 */
+function drawBg(){
+  const g = ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#0a1120');
+  g.addColorStop(0.55,'#080d18');
+  g.addColorStop(1,'#06090f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.strokeStyle = 'rgba(110,168,254,0.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let x=0;x<=VW;x+=40){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,VH); }
+  for(let y=0;y<=VH;y+=40){ ctx.moveTo(0,y+0.5); ctx.lineTo(VW,y+0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(140,60,0,140,60,420);
+  glow.addColorStop(0,'rgba(110,168,254,0.10)');
+  glow.addColorStop(1,'rgba(110,168,254,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,VW,VH);
+}
+
+function header(idx, kicker, title, sub){
+  txt('STEP ' + String(idx+1).padStart(2,'0') + ' / ' + String(scenes.length).padStart(2,'0') + ' · ' + kicker, 40, 38,
+      {size:11.5, color:C.accent, weight:700});
+  txt(title, 40, 72, {size:23.5, color:'#f4f8ff', weight:700});
+  if(sub) txt(sub, 40, 96, {size:12.5, color:C.dim});
+  ctx.strokeStyle = C.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40,116); ctx.lineTo(960,116); ctx.stroke();
+}
+
+
+
+/* ==========================================================================
+   播放器
+   ========================================================================== */
+const PState = { scene:0, t:0, playing:true, speed:1 };
+let canvas = null, ctx = null;
+let scenes = [];
+let elCaption = null, elBar = null;
+
+function resize(){
+  let r = canvas.getBoundingClientRect();
+  if (r.height < 20) {                       // 老浏览器不支持 CSS aspect-ratio
+    canvas.style.height = Math.round(r.width * VH / VW) + 'px';
+    r = canvas.getBoundingClientRect();
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+}
+
+function render(){
+  if(!ctx || !scenes.length) return;
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.height / VH, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  drawBg();
+  const sc = scenes[PState.scene];
+  const p = clamp01(PState.t / sc.dur);
+  try {
+    sc.draw(p);
+  } catch (err) {
+    reportFatal((err && err.message) || err, 'draw ' + (sc.kicker || ''));
+  }
+  if(elCaption){
+    const cap = sc.caption(p);
+    if(elCaption.textContent !== cap) elCaption.textContent = cap;
+  }
+}
+
+let lastTime = performance.now();
+
+function tick(now){
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  const sc = scenes[PState.scene];
+  if(sc && PState.playing){
+    PState.t += dt * PState.speed;
+    if(PState.t >= sc.dur){
+      if(PState.scene < scenes.length - 1){
+        gotoScene(PState.scene + 1, true);
+      } else {
+        PState.t = sc.dur;
+        PState.playing = false;
+        syncPlayButton();
+      }
+    }
+  }
+  render();
+  updateProgress();
+  requestAnimationFrame(tick);
+}
+
+function updateProgress(){
+  if(!elBar || !scenes.length) return;
+  const sc = scenes[PState.scene];
+  const overall = (PState.scene + clamp01(PState.t/sc.dur)) / scenes.length;
+  elBar.style.width = (overall*100).toFixed(2) + '%';
+}
+
+function syncPlayButton(){
+  const btn = document.getElementById('play');
+  if(btn) btn.textContent = PState.playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+// 源码片段由构建脚本从仓库原文件提取，随章节切换；教学值不写进源码片段。
+function escapeGuideText(value){
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showCodeGuide(index){
+  const box=document.getElementById('code-guide');
+  if(!box) return;
+  const blocks=window.__CODE_GUIDE && window.__CODE_GUIDE[index];
+  if(!blocks || !blocks.length){box.innerHTML='<h3>本幕对应源码</h3><p>本幕暂无代码摘录。</p>';return;}
+  box.innerHTML='<h3>本幕对应源码</h3><p class="code-intro">随章节切换 · 原文摘录，模拟数据不在源码中</p>'+
+    blocks.map(b=>'<div class="code-block"><div class="code-path">'+escapeGuideText(b.path)+':'+b.first+'–'+b.last+'</div>'+
+      '<p>'+escapeGuideText(b.note)+'</p><pre tabindex="0" aria-label="源码摘录"><code>'+escapeGuideText(b.code)+'</code></pre></div>').join('');
+}
+
+function gotoScene(i, autoplay){
+  if(!scenes.length) return;
+  PState.scene = Math.max(0, Math.min(scenes.length - 1, i));
+  PState.t = 0;
+  PState.playing = autoplay !== false;
+  syncPlayButton();
+  const ex = document.getElementById('explain');
+  if(ex) ex.innerHTML = scenes[PState.scene].html || '';
+  showCodeGuide(PState.scene);
+  document.querySelectorAll('.chapter').forEach((b,k)=>{
+    b.classList.toggle('active', k === PState.scene);
+  });
+  const activeBtn = document.querySelector('.chapter.active');
+  if(activeBtn && activeBtn.scrollIntoView) activeBtn.scrollIntoView({block:'nearest'});
+  render();
+}
+
+function buildChapters(){
+  const box = document.getElementById('chapters');
+  if(!box) return;
+  box.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const b = document.createElement('button');
+    b.className = 'chapter';
+    b.innerHTML = '<span class="num">' + String(i+1).padStart(2,'0') +
+                  '</span><span class="name">' + s.kicker + '</span>';
+    b.addEventListener('click', ()=> gotoScene(i, true));
+    box.appendChild(b);
+  });
+}
+
+function bindControls(){
+  const play = document.getElementById('play');
+  if(play) play.addEventListener('click', ()=>{
+    if(!PState.playing && PState.t >= scenes[PState.scene].dur - 0.01) PState.t = 0;
+    PState.playing = !PState.playing;
+    syncPlayButton();
+  });
+  const prev = document.getElementById('prev');
+  if(prev) prev.addEventListener('click', ()=> gotoScene(PState.scene-1, true));
+  const next = document.getElementById('next');
+  if(next) next.addEventListener('click', ()=> gotoScene(PState.scene+1, true));
+  const replay = document.getElementById('replay');
+  if(replay) replay.addEventListener('click', ()=> gotoScene(0, true));
+
+  document.querySelectorAll('.speed button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      PState.speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on', x===b));
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(play) play.click(); }
+    if(e.code === 'ArrowRight'){ e.preventDefault(); gotoScene(PState.scene+1, true); }
+    if(e.code === 'ArrowLeft'){ e.preventDefault(); gotoScene(PState.scene-1, true); }
+  });
+}
+
+const AlgoAnim = {
+  get state(){ return PState; },
+  get ctx(){ return ctx; },
+  get canvas(){ return canvas; },
+  get scenes(){ return scenes; },
+  gotoScene: gotoScene,
+  render: render,
+  start: function(opts){
+    opts = opts || {};
+    canvas = document.getElementById(opts.canvas || 'stage');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    if(!ctx){ reportFatal('当前环境不支持 canvas 2d，无法播放动画'); return; }
+    scenes = opts.scenes || [];
+    window.__ANIM = { state:PState, scenes:scenes, render:render, gotoScene:gotoScene };
+    Object.assign(PState, opts.state || {});
+    elCaption = document.getElementById('caption');
+    elBar = document.getElementById('bar');
+    buildChapters();
+    bindControls();
+    if(window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+    else window.addEventListener('resize', resize);
+    try {
+      resize();
+      gotoScene(opts.start || 0, true);
+      requestAnimationFrame(tick);
+    } catch (err) {
+      reportFatal((err && err.message) || err, 'start');
+    }
+  }
+};
+window.AlgoAnim = AlgoAnim;
+window.__CODE_GUIDE = [[{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 24, "last": 33, "note": "生成共享 STD 图后调用子项并加入结果集合。", "code": "   24      logMsg (\"Start Get_STD_Map_by_4channel!\");\n   25      if(!Get_STD_Map_by_4channel(manage,pData,test_frameCnt))\n   26          return -2;\n   27  \n   28      std::vector<Subitem_Result> items_results;   //各测试子项 测试结果集合\n   29      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_read));\n   30      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_row));\n   31      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_ColRTS));\n   32      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_Col_chanel));\n   33      Subitem_Result noise_result=Algorithm_all[site_].Calculate_The_Final_Bin(items_results);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 400, "last": 419, "note": "取四类位置中最大的原始 STD 差并比较上限。", "code": "  400          double max_noise_channel = *std::max_element(column_noise_channel.begin(),column_noise_channel.end());\n  401          double min_noise_channel = *std::min_element(column_noise_channel.begin(),column_noise_channel.end());\n  402          double max_noise_channel_dif = *std::max_element(column_noise_channel_dif.begin(),column_noise_channel_dif.end());\n  403          double max_std_channel_dif = *std::max_element(column_std_channel_dif.begin(),column_std_channel_dif.end());\n  404  \n  405  \n  406  \n  407          double noise_channel_dif = max_noise_channel-min_noise_channel;\n  408          g_str_msg_all[site_]+=boost::str(boost::format(\"Channel Max:%.4f, Channel Min:%.4f, Channel dif:%.4f ,Channel std max-avg dif max:%.4f,Channel noise max-avg dif max:%.4f\\n\")\n  409                                           % (max_noise_channel) % min_noise_channel % noise_channel_dif % max_std_channel_dif % max_noise_channel_dif);\n  410          g_str_log_all[site_]+=boost::str(boost::format(\"%.4f|%.4f|%.4f|%.4f|\")\n  411                                          % (max_noise_channel) % (noise_channel_dif) % (max_std_channel_dif) % (max_noise_channel_dif));\n  412          g_str_log_all[site_]+=boost::str(boost::format(\"%s|\") % res.name.c_str());\n  413  \n  414  \n  415          if(max_std_channel_dif > manage.param_channel_noise_.column_noise_spec && max_std_channel_dif > 0)\n  416          {\n  417              res.is_passed=false;\n  418              res.bin=manage.param_channel_noise_.bin_;\n  419              res.grade=manage.param_channel_noise_.grade_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/FTAlgorithm.cpp", "first": 436, "last": 443, "note": "先加载 V1.0，再尝试 V1.1。", "code": "  436      //Dark\n  437      item =QString(\"Channel_Noise.data\");\n  438      ok = tmp->loadChannelNoiseParam (path_txt.toStdString());\n  439      if (ok) item_actual.append(item);\n  440  \n  441      item =QString(\"Channel_Noise_V1.1.data\");\n  442      ok = tmp->loadChannelNoiseParam_V1_1 (path_txt.toStdString());\n  443      if (ok) item_actual.append(item);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/parammanage.cpp", "first": 16664, "last": 16679, "note": "V1.0 文件打开后赋版本，解析可能失败。", "code": "16664  bool ParamManage::loadChannelNoiseParam(const std::string &dir)\n16665  {\n16666      std::string path_file = dir;\n16667      path_file.append(\"/Channel_Noise.data\");\n16668      QFile file(QString::fromStdString(path_file));\n16669      if(!file.open(QFile::Text | QFile::ReadOnly))\n16670          return false;\n16671  \n16672      QTextStream rd(&file);\n16673      bool ok = true;\n16674      int cnt_param = 0;\n16675      col_channel_noise_version = \"col_channel_noise_version_V1.0\";\n16676  \n16677      while(ok && !rd.atEnd())\n16678      {\n16679          QString line = rd.readLine();"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 769, "last": 775, "note": "根据版本选择实现。", "code": "  769      else if(type == Noise_Dark_Pixel_Col_chanel)\n  770      {\n  771          if(manage.col_channel_noise_version == \"col_channel_noise_version_V1.0\")\n  772              return Noise_Dark_Col_Channel(manage);\n  773          else if(manage.col_channel_noise_version == \"col_channel_noise_version_V1.1\")\n  774              return Noise_Dark_Col_Channel_V1_1(manage);\n  775      }"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 4, "last": 25, "note": "检查帧数、尺寸和位深并转换输入。", "code": "    4  int  NoiseTest::TestFunc_ALL_Noise_Dark(ParamManage& manage,uchar *pData,uchar *pImage_save)\n    5  {\n    6      if (test_frameCnt<=1)\n    7      {\n    8          g_str_msg_all[site_].append (\"frameCnt<=1!!!\\n\");\n    9          return -1;\n   10      }\n   11      logMsg (std::string(\"into row noise_pixel test, check params first!\"));\n   12      if (manage.width_<=0 ||manage.height_<=0 ||\n   13          (test_datatype !=8 && test_datatype !=10 && test_datatype !=12 && test_datatype !=14 && test_datatype !=16))\n   14      {\n   15          g_str_msg_all[site_].append (\"image size or cell size of some algorithm is wrong!\\n\");\n   16          logMsg (\"image size or cell size of some algorithm is wrong!\",0);\n   17          return -2;\n   18      }\n   19  \n   20      if(!Algorithm_all[site_]. Convert_Raw16_to_Ushort(manage,pData,(unsigned short *)pData,\n   21                                                       test_frameCnt,test_datatype))\n   22          return -2;\n   23  \n   24      logMsg (\"Start Get_STD_Map_by_4channel!\");\n   25      if(!Get_STD_Map_by_4channel(manage,pData,test_frameCnt))"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/algorithmitems.cpp", "first": 249, "last": 285, "note": "逐 ushort 依据 datatype 掩码转换。", "code": "  249      int total = w * h * frameCnt;\n  250  \n  251      // 根据位深计算掩码\n  252      unsigned short mask;\n  253      switch (datatype)\n  254      {\n  255          case 8:\n  256              mask = 0x00FF;\n  257              g_str_msg_all[site_].append(\"image data type is raw8\\n\");\n  258              break;\n  259          case 10:\n  260              mask = 0x03FF;\n  261              g_str_msg_all[site_].append(\"image data type is raw10\\n\");\n  262              break;\n  263          case 12:\n  264              mask = 0x0FFF;\n  265              g_str_msg_all[site_].append(\"image data type is raw12\\n\");\n  266              break;\n  267          case 14:\n  268              mask = 0x3FFF;\n  269              g_str_msg_all[site_].append(\"image data type is raw14\\n\");\n  270              break;\n  271          case 16:\n  272              mask = 0xFFFF;\n  273              g_str_msg_all[site_].append(\"image data type is raw16\\n\");\n  274              break;\n  275          default:\n  276              g_str_msg_all[site_].append(\n  277                  QString(\"image data type is wrong! datatype=%1\\n\").arg(datatype).toStdString());\n  278              return false;\n  279      }\n  280  \n  281      unsigned short *src = reinterpret_cast<unsigned short *>(pData);\n  282  \n  283      // 修正：< 而不是 <=\n  284      for (int i = 0; i < total; ++i)\n  285          pshort[i] = src[i] & mask;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9709, "last": 9730, "note": "先取各帧同坐标，均值中心化后除 N−1 并开平方。", "code": " 9709      for(int i=start_loca;i!=start_loca+all_size;++i)\n 9710      {\n 9711          int Raw16_loca=i*2;\n 9712          for(int cnt=0; cnt<frame_cnt; cnt++)\n 9713          {\n 9714              uchar *pRaw16 = pRaw16_in + cnt*w*h*2;\n 9715              two_byte_array_[cnt]=(unsigned short)pRaw16[Raw16_loca] | (((unsigned short)(pRaw16[Raw16_loca+1]&0x03))<<8);\n 9716          }\n 9717  \n 9718          double mean_t = 0;\n 9719          for (int size_i=0; size_i<frame_cnt; ++size_i)\n 9720              mean_t+=(double)two_byte_array_[size_i];\n 9721          mean_t/=frame_cnt;\n 9722          double std_t = 0.0;\n 9723          for (int size_i=0; size_i<frame_cnt; ++size_i)\n 9724          {\n 9725              std_t+=(double)((mean_t-two_byte_array_[size_i])*(mean_t-two_byte_array_[size_i]));\n 9726          }\n 9727          std_t/=frame_cnt-1;\n 9728          std_t =sqrt(std_t);\n 9729  \n 9730          std_out[i] =std_t;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 39, "last": 61, "note": "四线程按行起点分段。", "code": "   39  bool NoiseTest::Get_STD_Map_by_4channel(const ParamManage& manage,uchar *pData,int frame_cnt)\n   40  {\n   41      int w = manage.width_;\n   42      int h = manage.height_;\n   43  \n   44      bool flag = Algorithm_all[site_].New_Pointer_Buf( (uchar**) &g_buf_delta_raw_,\n   45                                              Result_area,Buf_double,w,h,1);\n   46      if(!flag)\n   47          return false;\n   48  \n   49      MultiThread::get_bychannel_std_map_raw16_chao *p_delta[Channel_Num];\n   50      for (int i=0; i < Channel_Num; i++)\n   51          p_delta[i] = new MultiThread::get_bychannel_std_map_raw16_chao();\n   52  \n   53      p_delta[0]->setparam(pData, g_buf_delta_raw_, w,h,0, frame_cnt);\n   54      p_delta[1]->setparam(pData, g_buf_delta_raw_, w,h,h/4, frame_cnt);\n   55      p_delta[2]->setparam(pData, g_buf_delta_raw_, w,h,h*2/4, frame_cnt);\n   56      p_delta[3]->setparam(pData, g_buf_delta_raw_, w,h,h*3/4, frame_cnt);\n   57  \n   58      for (int i=0; i < Channel_Num; i++)\n   59          p_delta[i]->start();\n   60      for (int i=0; i < Channel_Num; i++)\n   61          p_delta[i]->wait();"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9702, "last": 9715, "note": "每段长度为 w×整数 h/4，按帧读取低 10 位。", "code": " 9702      int w = width;\n 9703      int h = height;\n 9704      int all_size=w*(h/4);\n 9705      int start_loca=y_start*w;\n 9706      int frame_cnt=framecnt;\n 9707      vector<unsigned short> two_byte_array_(frame_cnt);\n 9708  \n 9709      for(int i=start_loca;i!=start_loca+all_size;++i)\n 9710      {\n 9711          int Raw16_loca=i*2;\n 9712          for(int cnt=0; cnt<frame_cnt; cnt++)\n 9713          {\n 9714              uchar *pRaw16 = pRaw16_in + cnt*w*h*2;\n 9715              two_byte_array_[cnt]=(unsigned short)pRaw16[Raw16_loca] | (((unsigned short)(pRaw16[Raw16_loca+1]&0x03))<<8);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 242, "last": 266, "note": "每 2×2 四位置分别累加，分别得到列均值；无 Bayer 映射。", "code": "  242          for(int i = 0; i < w; i+=2)\n  243          {\n  244              sum=0;\n  245              sum1=0;\n  246              sum2=0;\n  247              sum3=0;\n  248              for (int j=0; j<h; j+=2)\n  249              {\n  250                  sum += g_buf_delta_raw_[j*w+i];\n  251                  sum1 += g_buf_delta_raw_[j*w+i+1];\n  252                  sum2 += g_buf_delta_raw_[(j+1)*w+i];\n  253                  sum3 += g_buf_delta_raw_[(j+1)*w+i+1];\n  254              }\n  255              std_all_pixel+=sum;\n  256              std_all_pixel1+=sum1;\n  257              std_all_pixel2+=sum2;\n  258              std_all_pixel3+=sum3;\n  259              sum = 2*sum/h;\n  260              sum1 = 2*sum1/h;\n  261              sum2 = 2*sum2/h;\n  262              sum3 = 2*sum3/h;\n  263              mean_column_std.append(sum);\n  264              mean_column_std1.append(sum1);\n  265              mean_column_std2.append(sum2);\n  266              mean_column_std3.append(sum3);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 242, "last": 266, "note": "以偶数高度为例，列和除以 h/2。", "code": "  242          for(int i = 0; i < w; i+=2)\n  243          {\n  244              sum=0;\n  245              sum1=0;\n  246              sum2=0;\n  247              sum3=0;\n  248              for (int j=0; j<h; j+=2)\n  249              {\n  250                  sum += g_buf_delta_raw_[j*w+i];\n  251                  sum1 += g_buf_delta_raw_[j*w+i+1];\n  252                  sum2 += g_buf_delta_raw_[(j+1)*w+i];\n  253                  sum3 += g_buf_delta_raw_[(j+1)*w+i+1];\n  254              }\n  255              std_all_pixel+=sum;\n  256              std_all_pixel1+=sum1;\n  257              std_all_pixel2+=sum2;\n  258              std_all_pixel3+=sum3;\n  259              sum = 2*sum/h;\n  260              sum1 = 2*sum1/h;\n  261              sum2 = 2*sum2/h;\n  262              sum3 = 2*sum3/h;\n  263              mean_column_std.append(sum);\n  264              mean_column_std1.append(sum1);\n  265              mean_column_std2.append(sum2);\n  266              mean_column_std3.append(sum3);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 259, "last": 278, "note": "将每列的 STD 平均值放到四个独立向量中。", "code": "  259              sum = 2*sum/h;\n  260              sum1 = 2*sum1/h;\n  261              sum2 = 2*sum2/h;\n  262              sum3 = 2*sum3/h;\n  263              mean_column_std.append(sum);\n  264              mean_column_std1.append(sum1);\n  265              mean_column_std2.append(sum2);\n  266              mean_column_std3.append(sum3);\n  267          }\n  268          float column_noise_max =1;\n  269          float column_noise_max0 = 0;\n  270          int max_pos = 0;\n  271  \n  272          QVector <double>::const_iterator max_std = std::max_element(mean_column_std.begin(),mean_column_std.end());\n  273          max_pos = (mean_column_std.indexOf(*max_std)*2);\n  274  \n  275  \n  276          //均值\n  277          double sumavg = std::accumulate(mean_column_std.begin(),mean_column_std.end(),0.0);\n  278          double avg_std = sumavg/mean_column_std.size();"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 272, "last": 278, "note": "找出最大列并对该通道所有列平均。", "code": "  272          QVector <double>::const_iterator max_std = std::max_element(mean_column_std.begin(),mean_column_std.end());\n  273          max_pos = (mean_column_std.indexOf(*max_std)*2);\n  274  \n  275  \n  276          //均值\n  277          double sumavg = std::accumulate(mean_column_std.begin(),mean_column_std.end(),0.0);\n  278          double avg_std = sumavg/mean_column_std.size();"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 290, "last": 300, "note": "最大列减去平均列。", "code": "  290          if(*max_std >0 )\n  291              column_noise_max0 = std::log10((*max_std)/1023);\n  292          else\n  293              column_noise_max0 = 0;\n  294          column_noise_max = 20*column_noise_max0;\n  295          column_noise_channel.append(column_noise_max);\n  296          double dif_max_avg = (column_noise_max-column_noise_avg);\n  297          column_noise_channel_dif.append(dif_max_avg);\n  298          double dif_max_avg_std = (*max_std-avg_std);\n  299          column_std_channel_dif.append(dif_max_avg_std);\n  300          g_str_msg_all[site_]+=boost::str(boost::format(\"R Channel column_mean_std_Max:%.4f, std_avg:%.4f, noise_max:%.4f, noise_avg:%.4f,dif_std:%.4f,dif_noise:%.4f, noise_max pos:%d\\n\")"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 391, "last": 403, "note": "收集四类位置的原始差并取最大。", "code": "  391          column_noise_channel.append(column_noise_max);\n  392          dif_max_avg = (column_noise_max-column_noise_avg);\n  393          column_noise_channel_dif.append(dif_max_avg);\n  394          dif_max_avg_std = (*max_std3-avg_std);\n  395          column_std_channel_dif.append(dif_max_avg_std);\n  396          g_str_msg_all[site_]+=boost::str(boost::format(\"B Channel column_mean_std_Max:%.4f, mean_std_avg:%.4f,noise_max:%.4f,noise_avg:%.4f,dif_std:%.4f,dif_noise:%.4f,noise_max pos:%d\\n\")\n  397                                           % (*max_std3) % avg_std % column_noise_max %column_noise_avg % dif_max_avg_std % dif_max_avg %  max_pos);\n  398          g_str_log_all[site_]+=boost::str(boost::format(\"%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|\")\n  399                                           % (*max_std) %  avg_std % column_noise_max % column_noise_avg % dif_max_avg_std % dif_max_avg % max_pos);\n  400          double max_noise_channel = *std::max_element(column_noise_channel.begin(),column_noise_channel.end());\n  401          double min_noise_channel = *std::min_element(column_noise_channel.begin(),column_noise_channel.end());\n  402          double max_noise_channel_dif = *std::max_element(column_noise_channel_dif.begin(),column_noise_channel_dif.end());\n  403          double max_std_channel_dif = *std::max_element(column_std_channel_dif.begin(),column_std_channel_dif.end());"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 400, "last": 419, "note": "原始差严格大于阈值且大于 0 才设失败。", "code": "  400          double max_noise_channel = *std::max_element(column_noise_channel.begin(),column_noise_channel.end());\n  401          double min_noise_channel = *std::min_element(column_noise_channel.begin(),column_noise_channel.end());\n  402          double max_noise_channel_dif = *std::max_element(column_noise_channel_dif.begin(),column_noise_channel_dif.end());\n  403          double max_std_channel_dif = *std::max_element(column_std_channel_dif.begin(),column_std_channel_dif.end());\n  404  \n  405  \n  406  \n  407          double noise_channel_dif = max_noise_channel-min_noise_channel;\n  408          g_str_msg_all[site_]+=boost::str(boost::format(\"Channel Max:%.4f, Channel Min:%.4f, Channel dif:%.4f ,Channel std max-avg dif max:%.4f,Channel noise max-avg dif max:%.4f\\n\")\n  409                                           % (max_noise_channel) % min_noise_channel % noise_channel_dif % max_std_channel_dif % max_noise_channel_dif);\n  410          g_str_log_all[site_]+=boost::str(boost::format(\"%.4f|%.4f|%.4f|%.4f|\")\n  411                                          % (max_noise_channel) % (noise_channel_dif) % (max_std_channel_dif) % (max_noise_channel_dif));\n  412          g_str_log_all[site_]+=boost::str(boost::format(\"%s|\") % res.name.c_str());\n  413  \n  414  \n  415          if(max_std_channel_dif > manage.param_channel_noise_.column_noise_spec && max_std_channel_dif > 0)\n  416          {\n  417              res.is_passed=false;\n  418              res.bin=manage.param_channel_noise_.bin_;\n  419              res.grade=manage.param_channel_noise_.grade_;"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 276, "last": 303, "note": "日志中正值取 20×log10(value/1023)，判定用原始差。", "code": "  276          //均值\n  277          double sumavg = std::accumulate(mean_column_std.begin(),mean_column_std.end(),0.0);\n  278          double avg_std = sumavg/mean_column_std.size();\n  279          float column_noise_avg =1;\n  280          float column_noise_avg0 = 0;\n  281          if(avg_std >0 )\n  282              column_noise_avg0 = std::log10((avg_std)/1023);\n  283          else\n  284              column_noise_avg0 = 0;\n  285          column_noise_avg = 20*column_noise_avg0;\n  286          //均值\n  287  \n  288          column_noise_max =1;\n  289          column_noise_max0 = 0;\n  290          if(*max_std >0 )\n  291              column_noise_max0 = std::log10((*max_std)/1023);\n  292          else\n  293              column_noise_max0 = 0;\n  294          column_noise_max = 20*column_noise_max0;\n  295          column_noise_channel.append(column_noise_max);\n  296          double dif_max_avg = (column_noise_max-column_noise_avg);\n  297          column_noise_channel_dif.append(dif_max_avg);\n  298          double dif_max_avg_std = (*max_std-avg_std);\n  299          column_std_channel_dif.append(dif_max_avg_std);\n  300          g_str_msg_all[site_]+=boost::str(boost::format(\"R Channel column_mean_std_Max:%.4f, std_avg:%.4f, noise_max:%.4f, noise_avg:%.4f,dif_std:%.4f,dif_noise:%.4f, noise_max pos:%d\\n\")\n  301                                           % (*max_std)  % avg_std % column_noise_max % column_noise_avg % dif_max_avg_std % dif_max_avg % max_pos);\n  302          g_str_log_all[site_]+=boost::str(boost::format(\"%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|\")\n  303                                           % (*max_std)  % avg_std % column_noise_max % column_noise_avg % dif_max_avg_std % dif_max_avg % max_pos);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 632, "last": 649, "note": "V1.1 先判 Level 2 后判 Level 1。", "code": "  632          if(max_std_channel_dif > manage.param_channel_noise_.column_noise_spec_level_2_ && max_std_channel_dif > 0)\n  633          {\n  634              res.is_passed=false;\n  635              res.bin=manage.param_channel_noise_.bin_level_2_;\n  636              res.grade=manage.param_channel_noise_.grade_level_2_;\n  637          }\n  638          else if(max_std_channel_dif > manage.param_channel_noise_.column_noise_spec_level_1_ && max_std_channel_dif > 0)\n  639          {\n  640              res.is_passed=false;\n  641              res.bin=manage.param_channel_noise_.bin_level_1_;\n  642              res.grade=manage.param_channel_noise_.grade_level_1_;\n  643          }\n  644  \n  645  \n  646      }\n  647      else\n  648      {\n  649          res.g_msg=false;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/Params/cpalgorithmraw.cpp", "first": 9702, "last": 9715, "note": "STD 取数限制为低 10 位，行分段依赖整数除法。", "code": " 9702      int w = width;\n 9703      int h = height;\n 9704      int all_size=w*(h/4);\n 9705      int start_loca=y_start*w;\n 9706      int frame_cnt=framecnt;\n 9707      vector<unsigned short> two_byte_array_(frame_cnt);\n 9708  \n 9709      for(int i=start_loca;i!=start_loca+all_size;++i)\n 9710      {\n 9711          int Raw16_loca=i*2;\n 9712          for(int cnt=0; cnt<frame_cnt; cnt++)\n 9713          {\n 9714              uchar *pRaw16 = pRaw16_in + cnt*w*h*2;\n 9715              two_byte_array_[cnt]=(unsigned short)pRaw16[Raw16_loca] | (((unsigned short)(pRaw16[Raw16_loca+1]&0x03))<<8);"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 391, "last": 399, "note": "B 通道结构化日志误引用 R 最大值，消息日志正确。", "code": "  391          column_noise_channel.append(column_noise_max);\n  392          dif_max_avg = (column_noise_max-column_noise_avg);\n  393          column_noise_channel_dif.append(dif_max_avg);\n  394          dif_max_avg_std = (*max_std3-avg_std);\n  395          column_std_channel_dif.append(dif_max_avg_std);\n  396          g_str_msg_all[site_]+=boost::str(boost::format(\"B Channel column_mean_std_Max:%.4f, mean_std_avg:%.4f,noise_max:%.4f,noise_avg:%.4f,dif_std:%.4f,dif_noise:%.4f,noise_max pos:%d\\n\")\n  397                                           % (*max_std3) % avg_std % column_noise_max %column_noise_avg % dif_max_avg_std % dif_max_avg %  max_pos);\n  398          g_str_log_all[site_]+=boost::str(boost::format(\"%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%d|\")\n  399                                           % (*max_std) %  avg_std % column_noise_max % column_noise_avg % dif_max_avg_std % dif_max_avg % max_pos);"}], [{"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 272, "last": 278, "note": "模拟计算仍包括异常列在全部列的平均中。", "code": "  272          QVector <double>::const_iterator max_std = std::max_element(mean_column_std.begin(),mean_column_std.end());\n  273          max_pos = (mean_column_std.indexOf(*max_std)*2);\n  274  \n  275  \n  276          //均值\n  277          double sumavg = std::accumulate(mean_column_std.begin(),mean_column_std.end(),0.0);\n  278          double avg_std = sumavg/mean_column_std.size();"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 400, "last": 419, "note": "真实示例阈值比较假设输入的结果。", "code": "  400          double max_noise_channel = *std::max_element(column_noise_channel.begin(),column_noise_channel.end());\n  401          double min_noise_channel = *std::min_element(column_noise_channel.begin(),column_noise_channel.end());\n  402          double max_noise_channel_dif = *std::max_element(column_noise_channel_dif.begin(),column_noise_channel_dif.end());\n  403          double max_std_channel_dif = *std::max_element(column_std_channel_dif.begin(),column_std_channel_dif.end());\n  404  \n  405  \n  406  \n  407          double noise_channel_dif = max_noise_channel-min_noise_channel;\n  408          g_str_msg_all[site_]+=boost::str(boost::format(\"Channel Max:%.4f, Channel Min:%.4f, Channel dif:%.4f ,Channel std max-avg dif max:%.4f,Channel noise max-avg dif max:%.4f\\n\")\n  409                                           % (max_noise_channel) % min_noise_channel % noise_channel_dif % max_std_channel_dif % max_noise_channel_dif);\n  410          g_str_log_all[site_]+=boost::str(boost::format(\"%.4f|%.4f|%.4f|%.4f|\")\n  411                                          % (max_noise_channel) % (noise_channel_dif) % (max_std_channel_dif) % (max_noise_channel_dif));\n  412          g_str_log_all[site_]+=boost::str(boost::format(\"%s|\") % res.name.c_str());\n  413  \n  414  \n  415          if(max_std_channel_dif > manage.param_channel_noise_.column_noise_spec && max_std_channel_dif > 0)\n  416          {\n  417              res.is_passed=false;\n  418              res.bin=manage.param_channel_noise_.bin_;\n  419              res.grade=manage.param_channel_noise_.grade_;"}, {"path": "Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp", "first": 28, "last": 35, "note": "最终 bin 由所有子项汇总；互动仅模拟该子项。", "code": "   28      std::vector<Subitem_Result> items_results;   //各测试子项 测试结果集合\n   29      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_read));\n   30      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_row));\n   31      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_ColRTS));\n   32      items_results.push_back(Noise_Dark_by_pixel_chao(manage,Noise_Dark_Pixel_Col_chanel));\n   33      Subitem_Result noise_result=Algorithm_all[site_].Calculate_The_Final_Bin(items_results);\n   34  \n   35      return noise_result.bin;"}]];
+</script><script>
+const state=AlgoAnim.state;state.amp=3;
+const W=3840,H=2160,COLS=1920,ROWS=1080,LIMIT=3.2;
+function sequence(k){return [100-3*k,100-k,100+k,100+3*k];}
+function stdev(values){const mean=values.reduce((a,b)=>a+b,0)/values.length;return Math.sqrt(values.reduce((s,v)=>s+(v-mean)**2,0)/(values.length-1));}
+function evaluate(k){const base=stdev(sequence(1)),peak=stdev(sequence(k)),avg=(base*(COLS-1)+peak)/COLS,diff=peak-avg;return {base,peak,avg,diff,fail:diff>LIMIT&&diff>0};}
+function limit(d){return d>LIMIT&&d>0;}
+function panel(x,y,w,h){card(x,y,w,h,{fill:'rgba(110,168,254,.055)',stroke:'rgba(110,168,254,.25)'});}
+function chip(x,y,w,h,title,sub,color){card(x,y,w,h,{r:8,fill:withA(color,.12),stroke:withA(color,.6)});txt(title,x+14,y+25,{size:15,color,weight:700});if(sub)txt(sub,x+14,y+49,{size:12,color:C.ink});}
+function flow(x,y,x2,y2,p){if(p>0)arrow(x,y,x+(x2-x)*ease(clamp01(p)),y+(y2-y)*ease(clamp01(p)),C.accent2,2);}
+function note(s){txt(s,55,535,{size:12,color:C.dim});}
+function chart(x,y,w,h,vals,max){panel(x,y,w,h);let bw=(w-40)/vals.length;vals.forEach((v,i)=>{let bh=(h-65)*v/max;card(x+20+i*bw,y+h-25-bh,bw*.64,Math.max(1,bh),{r:3,fill:i===3?withA(C.accent2,.65):withA(C.accent,.5),stroke:false});});}
+function stdGrid(x,y,hot,p){for(let j=0;j<8;j++)for(let i=0;i<12;i++){let selected=i===3;card(x+i*27,y+j*27,24,24,{r:3,fill:withA(selected&&hot?C.accent2:C.accent,selected&&hot?.4:.12),stroke:withA(selected&&hot?C.accent2:C.accent,.35)});}if(p>.4)txt('黄色列：放大的局部示意',x,y+244,{size:12,color:C.accent2});}
+function bars(x,y,w,value,t){const max=Math.max(7,value*1.15);card(x,y,w,12,{r:5,fill:'rgba(125,155,195,.25)',stroke:false});card(x,y,Math.max(1,w*value/max*ease(clamp01(t))),12,{r:5,fill:value>LIMIT?C.fail:C.pass,stroke:false});card(x+w*LIMIT/max-2,y-6,4,24,{r:2,fill:C.accent2,stroke:false});}
+function intro(p){header(0,'一眼看懂','先算每个位置的帧间波动，再找通道内异常列');stdGrid(55,165,p>.18,p);if(p>.25){flow(390,270,430,270,seg(p,.25,.45));chip(445,185,210,80,'每列平均','同 Bayer 位置独立算',C.accent);}if(p>.48)chip(685,185,225,80,'最大列 − 通道平均','四个差值再取最大',C.accent2);if(p>.7)chip(445,345,465,75,'和真实上限 3.2 比较','严格大于且大于 0 → 失败',CH.Gr);note('左图为缩略示意；帧数、STD 和列值是假设。');}
+function config(p){header(1,'调用与配置','示例目录采用 Channel_Noise.data V1.0');chip(55,180,420,85,'实际：Column_Noise_Max = 3.2','bin 2075 / grade 5；open_mode=1',C.accent2);if(p>.25)chip(515,180,420,85,'实际：Basic.data','3840×2160；RG Bayer',C.accent);if(p>.5)txt('本目录没有 Channel_Noise_V1.1.data；若其他目录有，后加载可覆盖版本',55,360,{size:14});if(p>.7)txt('版本赋值发生在文件打开后，解析失败仍可能已经赋值',55,410,{size:14,color:C.dim});note('下面演示假设 4 帧、10 位输入；帧数不是上述配置文件给出的。');}
+function frames(p){header(2,'多帧输入','同一位置看多张暗帧，才能得到时间方向的波动');const v=sequence(1);v.forEach((n,i)=>{if(p>=i*.12){let x=55+i*225;card(x,190,190,150,{fill:withA(C.accent,.08),stroke:C.accent});txt('帧 '+(i+1),x+18,225,{size:16,weight:700,color:C.accent});card(x+65,250,55,45,{r:4,fill:withA(C.accent2,.3),stroke:C.accent2});txt(n,x+92,279,{size:16,align:'center',weight:700});}});if(p>.65)txt('同一个位置：97、99、101、103 DN（假设）',55,420,{size:16,color:C.accent2,weight:700});note('至少两帧；这 4 帧不是实际采集数据。');}
+function std(p){const v=sequence(1),d=stdev(v);header(3,'单点帧间 STD','一个位置的四帧先求均值，再求样本标准差');panel(55,155,880,315);chip(80,185,300,70,'四帧：97 / 99 / 101 / 103','均值 = 100 DN',C.accent);if(p>.25)txt('偏差：−3、−1、+1、+3；平方和 = 20',80,320,{size:15});if(p>.55)txt('样本 STD = √(20 ÷ (4−1)) ≈ '+d.toFixed(5)+' DN',80,390,{size:17,color:C.accent2,weight:700});note('每个空间位置各算一个 STD；不播放整图逐点计算。');}
+function map(p){header(4,'标准差图','每个图上位置对应原始同一坐标的多帧 STD');stdGrid(55,165,true,p);panel(435,155,500,315);txt('暗帧序列 → 一张 STD 图',455,205,{size:16,color:C.accent2,weight:700});if(p>.25)txt('每个数是该位置跨帧的样本标准差',455,265,{size:14});if(p>.5)txt('示例图尺寸仍为 3840×2160',455,325,{size:14});if(p>.7)txt('四个线程分行区段，并非四个颜色通道',455,395,{size:14,color:C.ink});note('图示只显示局部；示例高度 2160 能被 4 整除。');}
+function bayer(p){header(5,'四个位置','每个 2×2 的四个位置分别形成列序列');const colors=[CH.R,CH.Gr,CH.Gb,CH.B],names=['R','Gr','Gb','B'];names.forEach((n,i)=>{const x=75+(i%2)*150,y=180+Math.floor(i/2)*130;card(x,y,120,100,{fill:withA(colors[i],.18),stroke:colors[i]});txt(n,x+60,y+60,{size:22,align:'center',weight:700,color:colors[i]});});panel(425,155,510,315);txt('本示例 RG 排列',445,200,{size:15,color:C.accent2,weight:700});if(p>.25)txt('每次取同一位置沿列的 STD，求平均',445,270,{size:14});if(p>.5)txt('每类位置有 1920 列，每列 1080 个 STD',445,325,{size:14});if(p>.7)txt('源码固定按四个奇偶位置计算并打印 R/Gr/Gb/B',445,405,{size:12,color:C.dim});note('仅对 RG 排列能直接按此颜色名称解释；其他 Bayer 需核查。');}
+function col(p){let d=evaluate(3);header(6,'一列怎么变成一个数','只取 R 位置的一列，把该列 1080 个 STD 求平均');stdGrid(55,165,true,p);panel(435,155,500,315);txt('假设目标 R 列每个 STD ≈ '+d.peak.toFixed(5),455,205,{size:14,weight:700});if(p>.25)txt('1080 个 STD 求平均',455,275,{size:15});if(p>.55)txt('该列的均值 ≈ '+d.peak.toFixed(5)+' DN',455,350,{size:17,color:C.accent2,weight:700});if(p>.75)txt('这不是求这一列像素亮度的平均',455,410,{size:13,color:C.dim});note('假设该列每个 R 点的 4 帧都为 91、97、103、109。');}
+function allcols(p){let d=evaluate(3);header(7,'形成列序列','每个通道都有 1920 个列均值；画面只示意局部');let vals=[d.base,d.base,d.base,d.peak,d.base,d.base,d.base,d.base];chart(55,165,415,265,vals,9);txt('局部柱条（并非仅 8 列）',75,456,{size:13,color:C.dim});panel(510,155,425,315);txt('R 通道假设：',530,200,{size:15,weight:700});if(p>.2)txt('1919 列均值 ≈ '+d.base.toFixed(5),530,260,{size:14});if(p>.45)txt('1 列均值 ≈ '+d.peak.toFixed(5),530,315,{size:14,color:C.accent2});if(p>.7)txt('其他三个位置假设各列均为 '+d.base.toFixed(5),530,400,{size:13});note('全图构造是假设；柱条为局部示意，不代表真实分布。');}
+function maxavg(p){const d=evaluate(3);header(8,'最大列与平均','各通道分别找列最大值，并对所有列求平均');chart(55,165,415,265,[d.base,d.base,d.base,d.peak,d.base,d.base,d.base,d.base],9);panel(510,155,425,315);txt('R 最大列均值 ≈ '+d.peak.toFixed(5),530,205,{size:15,color:C.accent2,weight:700});if(p>.3)txt('R 全部列均值的平均 ≈ '+d.avg.toFixed(5),530,275,{size:14});if(p>.6)txt('R 差值 ≈ '+d.diff.toFixed(5)+' DN',530,365,{size:16,color:C.fail,weight:700});note('最大与平均都来自该通道列均值，不是按帧先求列噪声。');}
+function channels(p){let d=evaluate(3);header(9,'四通道差值','每通道各做最大列 − 自己的平均，再取四者最大');panel(55,155,880,315);['R','Gr','Gb','B'].forEach((n,i)=>{if(p>=i*.13){let y=205+i*52,v=i===0?d.diff:0;txt(n,80,y,{size:15,color:CH[n],weight:700});bars(160,y-10,380,v,seg(p,i*.13,i*.13+.2));txt(v.toFixed(5)+' DN',570,y,{size:14,color:v>LIMIT?C.fail:C.ink});}});if(p>.7)txt('四者最大 ≈ '+d.diff.toFixed(5)+' DN',80,445,{size:15,color:C.fail,weight:700});note('黄色刻线为配置 3.2；其余通道相同是假设。');}
+function decision(p){let d=evaluate(3);header(10,'严格比较','使用原始 STD 差值，而不是 dB 差或通道之间的差');panel(55,155,880,315);txt('四通道最大差 ≈ '+d.diff.toFixed(5)+' DN',80,215,{size:17,weight:700});bars(80,260,620,d.diff,seg(p,.1,.45));txt('真实配置上限 3.2',730,273,{size:14,color:C.accent2});if(p>.55)txt('5.161… > 3.2 且 > 0 → 子项失败',80,365,{size:16,color:C.fail,weight:700});if(p>.75)txt('bin 2075 / grade 5；等于 3.2 不失败',80,420,{size:14});note('示例差值来自假设图像；对未舍入值判断。');}
+function db(p){header(11,'日志里的 dB','这些换算与最大−平均的原始 STD 判定不是同一个量');panel(55,155,880,315);chip(80,190,350,85,'正值 → 20×log10(STD / 1023)','源码使用固定的 1023',C.accent);if(p>.25)chip(490,190,350,85,'非正值 → 0','这是代码的特殊分支',C.accent2);if(p>.55)txt('日志也算 dB 差，但 V1.0 用原始 STD 差比较 3.2',80,365,{size:15,weight:700});note('允许多种输入位深，但 STD 取数只保留高字节低两位；需核查。');}
+function risks(p){header(12,'版本与边界','不能把示例和异常情况下的初始状态当成有效测量');panel(55,155,880,315);const lines=['① 本示例 V1.0；V1.1 按 Level 2、Level 1 两级判断','② 帧数须 >1；按四段处理要求核查高度可被 4 整除','③ 两行两列取样要求偶数宽高，否则可能越界','④ 固定按 10 位取数；其他 Bayer 仍打印固定 R/Gr/Gb/B 标签','⑤ B 通道结构化日志误引用 R 最大值；需核查日志'];lines.forEach((v,i)=>{if(p>=i*.12)txt(v,80,215+i*52,{size:14,color:i===3?C.fail:C.ink});});note('配置关闭或未知版本返回 g_msg=false；运行时还需确认参数与缓冲。');}
+function interactive(p){let d=evaluate(state.amp);header(13,'互动观察','改变假设 R 目标列的帧间波动，重算通道最大差');stdGrid(55,165,true,1);txt('目标列 4 帧：'+sequence(state.amp).join(' / '),55,465,{size:13,color:C.accent2});panel(435,155,500,315);txt('普通列 STD ≈ '+d.base.toFixed(5),455,205,{size:14});txt('目标列 STD ≈ '+d.peak.toFixed(5),455,255,{size:14});txt('R 列均值的平均 ≈ '+d.avg.toFixed(5),455,305,{size:14});txt('最大差 ≈ '+d.diff.toFixed(5)+' DN',455,355,{size:15,weight:700});bars(455,380,355,d.diff,1);txt(d.fail?'子项失败：2075 / grade 5':'模拟未超限',455,445,{size:15,weight:700,color:d.fail?C.fail:C.pass});note('假设其他通道各列相同；滑杆不运行真实多帧图像。');}
+const SCENES=[
+ {kicker:'一眼看懂',dur:20,draw:intro,caption:p=>'① 先求帧间 STD 图，再对各通道列均值作比较',html:'<h3>流程概览</h3><p>对每个像素的多帧计算样本标准差，按 Bayer 的四个位置分别对每列取 STD 平均。每类位置找最大列均值与该类全部列均值平均的差，四个差值中最大者用于判定。</p><p>画面帧数和数值均为模拟。</p>'},
+ {kicker:'调用与配置',dur:20,draw:config,caption:p=>'② 示例 Channel_Noise.data：V1.0 上限 3.2，失败 2075 / 5',html:'<h3>真实配置</h3><p>GC8613T 暗帧目录 Channel_Noise.data 为 Column_Noise_Max=3.2、bin=2075、grade=5、open_mode=1；Basic.data 为 3840×2160 RG。本目录无 Channel_Noise_V1.1.data。加载顺序先 V1.0 后 V1.1；文件打开后即赋版本，后续解析仍可能失败。</p><p>本页假设已成功加载 V1.0，并以 4 帧 10 位模拟；帧数不是从该配置文件获得。</p>'},
+ {kicker:'多帧输入',dur:20,draw:frames,caption:p=>'③ 假设同一位置四帧为 97、99、101、103',html:'<h3>同一位置跨帧</h3><p>入口要求 frameCnt&gt;1，先将输入按 datatype 掩码转换到 ushort。教程仅假设 4 帧 10 位数据，某位置的四次值为 97、99、101、103 DN；并不代表设备实际采集帧数或数值。</p>'},
+ {kicker:'单点帧间 STD',dur:22,draw:std,caption:p=>'④ 四帧均值 100；样本标准差 √(20/3) ≈ 2.58199',html:'<h3>一个位置怎么算</h3><p>该位置四帧平均为 100，平方偏差之和 9+1+1+9=20，除以 4−1，再开平方，得到约 2.58199 DN。源码使用 N−1 样本标准差，而不是按四帧求总体标准差。</p>'},
+ {kicker:'标准差图',dur:20,draw:map,caption:p=>'⑤ 每个空间位置生成一个跨帧 STD，组成与 RAW 同尺寸的图',html:'<h3>STD 图</h3><p>Get_STD_Map_by_4channel 创建四个线程，但它们分别处理图像高度的四段，不是先拆四个色彩通道。每个线程对自己区域的每个位置计算跨帧样本标准差并写回原坐标，构成 RAW 布局的 double 标准差图。</p><p>示例 2160 行能被 4 整除；不整除时的行分配需核查。</p>'},
+ {kicker:'四个位置',dur:20,draw:bayer,caption:p=>'⑥ 按 2×2 奇偶位置分成四类，沿列分别求平均',html:'<h3>RG Bayer 中的位置</h3><p>代码以 x、y 每次跨 2，同时访问 (偶行偶列)、(偶行奇列)、(奇行偶列)、(奇行奇列)，把四组列均值放入独立向量。若为 RG Bayer，分别对应 R、Gr、Gb、B；每组 1920 列，每列 1080 个 STD。</p><p>该函数没有根据 Bayer 类型重新映射四组；其他排列不能直接照搬日志颜色标签。</p>'},
+ {kicker:'一列怎么变成一个数',dur:22,draw:col,caption:p=>'⑦ 对同一类位置的一列，将 1080 个帧间 STD 求平均',html:'<h3>列均值</h3><p>假设 R 通道的一列所有位置跨帧值都是 91、97、103、109，样本 STD 都约为 7.74597 DN。1080 个同类位置 STD 的均值仍为 7.74597。该值不是这列亮度均值，也不是对整列逐帧求和后算噪声。</p><p>这是假设列，不是实际传感器图像。</p>'},
+ {kicker:'形成列序列',dur:22,draw:allcols,caption:p=>'⑧ 每个通道形成 1920 个列均值；图中只画局部',html:'<h3>整张 STD 图</h3><p>假设 R 中 1919 列的每位置帧间 STD 为 √(20/3)，第 301 列为 3 倍；其他位置的所有列均为 √(20/3)。每列都包含 1080 个 STD。柱状图只示意少数列，数值非实测。</p>'},
+ {kicker:'最大列与平均',dur:22,draw:maxavg,caption:p=>'⑨ 最大列均值减去该通道全部列均值的平均',html:'<h3>找通道内部最大差</h3><p>R 最大约 7.74597，全部 1920 列的平均约 2.58468，二者之差约 5.16129 DN。注意异常列本身也计入平均；本例不是最大列与某一条邻列比较。</p>'},
+ {kicker:'四通道差值',dur:20,draw:channels,caption:p=>'⑩ 四类位置各自求最大与平均的差，再从四个差中取最大',html:'<h3>四个差值</h3><p>每类位置独立计算最大列均值减自己的列均值平均，最后取四个差值的最大。虚构例子 R 约 5.16129，其他三类因各列相同为 0。</p><p>不是四个通道的最大 dB 减最小 dB，也不是某个像素 STD 的全图最大值。</p>'},
+ {kicker:'严格比较',dur:22,draw:decision,caption:p=>'⑪ 最大原始 STD 差严格大于 3.2 且大于 0 时失败',html:'<h3>V1.0 判定</h3><p>源码比较 max_std_channel_dif，而不是日志中的 dB 差。假设最大差约 5.16129，严格大于配置 3.2 且大于 0，子项失败 bin 2075/grade 5。等于 3.2 不失败；比较不使用画面的舍入结果。</p>'},
+ {kicker:'日志里的 dB',dur:20,draw:db,caption:p=>'⑫ dB 主要用于日志；该 V1.0 分支用 STD 原始差判定',html:'<h3>不要混淆指标</h3><p>源码对正的列最大与列平均值分别计算 20×log10(value/1023) 并输出日志；非正时使用 0。还记录 dB 差和通道最大 dB 差，但 V1.0 判定使用原始 STD 差。</p><p>虽然入口接受 8、10、12、14、16 位，Get_STD_MAP_Doublebyte_chao 只取高字节低 2 位，实际按低 10 位取数；1023 也固定，应核查其他位深。</p>'},
+ {kicker:'版本与边界',dur:22,draw:risks,caption:p=>'⑬ 版本、尺寸、位深、Bayer 标签与日志都需要核查',html:'<h3>其他路径和风险</h3><p>V1.1 先比较 Level 2 再比较 Level 1，使用另一组配置，本示例不模拟。四线程按整数 h/4 分段，若高度不能被 4 整除可能遗漏行；逐 2 访问要求偶数宽高，奇数尺寸可能越界。入口仅检查宽高大于零。</p><p>函数固定使用四种奇偶位置并打印固定颜色名；B 通道结构化日志的一个最大值参数引用了 R 的最大值；普通消息日志该项正确。关闭时 g_msg=false，未知版本也返回 false 且 g_msg=false。</p>'},
+ {kicker:'互动观察',dur:22,draw:interactive,caption:p=>'⑭ 改变一列的模拟帧间波动，观察最大差与上限',html:'<h3>简化互动</h3><p>固定 4 帧，普通列每点为 97、99、101、103；目标 R 列每点为 100−3k、100−k、100+k、100+3k。假设其余 1919 列及其他三个位置的所有列均为普通列。k=2 时约 2.58064，小于 3.2；k=3 时约 5.16129，超过 3.2。</p><p>互动不运行整图、真实采集、其他子项或最终 bin 汇总。</p>'}
+];
+AlgoAnim.start({scenes:SCENES});
+function setAmp(v){state.amp=Number(v);document.getElementById('amp').value=String(state.amp);document.getElementById('ampout').textContent=String(state.amp);AlgoAnim.render();}
+document.getElementById('amp').addEventListener('input',()=>setAmp(document.getElementById('amp').value));document.getElementById('normal').addEventListener('click',()=>setAmp(2));document.getElementById('example').addEventListener('click',()=>setAmp(3));document.getElementById('flat').addEventListener('click',()=>setAmp(1));
+</script>
+<script>
+/* 兜底：脚本没跑起来时，别把「加载中…」和一个空画布丢给读者。
+   做法：写一句人话 + 指向同一内容的静态分镜页（storyboard.html），并把已经点不动的控件关掉。 */
+setTimeout(function () {
+  if (window.__ANIM) return;
+  var why = (window.__ERR && window.__ERR[0]) ? ('：' + window.__ERR[0]) : '';
+
+  var c = document.getElementById('caption');
+  if (c) c.textContent = '动画没有启动' + why + '　请看右侧讲解或 storyboard.html 静态分镜';
+
+  var ex = document.getElementById('explain');
+  if (ex) {
+    var d = document.createElement('div');
+    d.className = 'cue';
+    var b = document.createElement('b');
+    b.textContent = '动画没有启动' + why + '　';
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('可能是脚本运行出错或当前环境不支持动画。可改看不依赖脚本的版本：'));
+    var a = document.createElement('a');
+    a.href = 'storyboard.html';
+    a.textContent = 'storyboard.html 静态分镜';
+    d.appendChild(a);
+    d.appendChild(document.createTextNode('，每幕一张定格图 + 同样的字幕和讲解。'));
+    ex.insertBefore(d, ex.firstChild);
+  }
+
+  var ctr = document.querySelector('.controls');
+  if (ctr) {
+    var btns = ctr.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+    ctr.style.opacity = '.5';
+  }
+  var tuner = document.querySelector('.tuner');
+  if (tuner) tuner.style.display = 'none';
+}, 1200);
+</script>
+</body></html>

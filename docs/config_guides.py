@@ -6,7 +6,9 @@ import re
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = Path('STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_bright1_normal_30fps')
 # 字段解释只是阅读提示；数值始终从原文件读取，不写死在讲解里。
+DARK_CONFIG_DIR = Path('STD_Tester_GCXXXX_XXX_DTSTD_XX_20260817_V1.4.1.23/GC8613T/CP_SPEC/param_4l_f_dark1_normal_30fps')
 CONFIGS = {
+    'noise_col_channel': ('Channel_Noise.data', [('Column_Noise_Max','列通道最大差上限'),('bin','失败 bin'),('grade','失败 grade'),('open_mode','开关')]),
     'roi_prnu': ('ROI_PRNU.data', [('X_ROI','区域左坐标'),('Y_ROI','区域上坐标'),('W_ROI','区域宽'),('H_ROI','区域高'),('SpecR','R 上限'),('SpecG1','Gr 上限'),('SpecG2','Gb 上限'),('SpecB','B 上限'),('bin','失败 bin'),('grade','失败 grade'),('open_mode','开关')]),
     'single_pixel_defect': ('Basic.data', [('width','RAW 宽'), ('height','RAW 高'), ('bayer','Bayer 排列')]),
     'blemish_test': ('Blemish_V1.1.data', [('winSmall','普通小窗口'),('winBig','普通大窗口'),('threshold_center','普通中心阈值'),('threshold_margin','普通外围阈值'),('magnification','增强坐标倍率'),('search_area_x','横向搜索范围'),('search_area_y','纵向搜索范围'),('min_enhace_size','增强尺寸下限（不含）'),('max_enhace_size','增强尺寸上限（含）'),('pd_area_x','PD 横向排除范围'),('pd_area_y','PD 纵向排除范围'),('bin_blemish','失败 bin'),('grade_blemish','失败 grade'),('open_mode','开关')]),
@@ -78,7 +80,7 @@ def get_config(page):
     files = []
     names = ([filename] if page in ('color_shading_15x15', 'color_gi_5x5', 'single_pixel_defect') else [filename, 'Basic.data']) + (['PixelDefect.data', 'LightResponse.data'] if page == 'roi_prnu' else ['LightResponse.data'] if page == 'color_ratio' else ['ColorRatio.data', 'LightResponse.data'] if page in ('color_shading', 'color_shading_5x5', 'color_gi', 'color_gi_5x5') else [])
     for name in names:
-        path = CONFIG_DIR / name
+        path = (DARK_CONFIG_DIR if page == 'noise_col_channel' else CONFIG_DIR) / name
         text = (ROOT / path).read_text(encoding='utf-8')
         files.append({'path': str(path), 'name': name, 'text': text})
     values = dict(re.findall(r'^\[([^\]]+)\]\s*=\s*([^\r\n]*)', files[0]['text'], re.M))
@@ -95,7 +97,7 @@ def render_config(page):
     file_html = ''.join('''<section class="config-file"><h3>{name} · 文件原文</h3>
 <div class="config-path">{path}</div><pre tabindex="0" aria-label="{name} 文件原文，可滚动"><code>{text}</code></pre></section>'''.format(
         name=escape(f['name']), path=escape(f['path']), text=escape(f['text'])) for f in files)
-    notice = ('<p><b>仓库没有 PD.data；无法确认该子项实际版本及专用配置。</b> 以下仅为 Basic.data 原文；本页像素、阈值、开关、分档与 bin 均为教学假设。</p>' if page == 'single_pixel_defect' else '<p><b>仓库没有 GI_5x5.data；无法确认专用配置。</b> 下方为已有 Basic、ColorRatio、LightResponse 原文，5×5 网格、开关、阈值和 bin 均为教学假设。</p>' if page == 'color_gi_5x5' else '<p><b>仓库没有 ColorShading_15x15.data；无法确认专用配置。</b> 以下只有实际 Basic.data，15×15 网格、开关、阈值和 bin 均为教学假设，不是配置原文。</p>' if page == 'color_shading_15x15' else '<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>')
+    notice = ('<p>来源：GC8613T / CP_SPEC / param_4l_f_dark1_normal_30fps。下方为真实配置原文；该目录没有 Channel_Noise_V1.1.data，加载是否成功需运行时确认。动画帧数和数据为模拟，不是实测。</p>' if page == 'noise_col_channel' else '<p><b>仓库没有 PD.data；无法确认该子项实际版本及专用配置。</b> 以下仅为 Basic.data 原文；本页像素、阈值、开关、分档与 bin 均为教学假设。</p>' if page == 'single_pixel_defect' else '<p><b>仓库没有 GI_5x5.data；无法确认专用配置。</b> 下方为已有 Basic、ColorRatio、LightResponse 原文，5×5 网格、开关、阈值和 bin 均为教学假设。</p>' if page == 'color_gi_5x5' else '<p><b>仓库没有 ColorShading_15x15.data；无法确认专用配置。</b> 以下只有实际 Basic.data，15×15 网格、开关、阈值和 bin 均为教学假设，不是配置原文。</p>' if page == 'color_shading_15x15' else '<p>来源：GC8613T / CP_SPEC / param_4l_f_bright1_normal_30fps。下方是仓库中的文件原文，框内可滚动查看全部内容；不同配置或版本可能不同。动画里的像素数值是模拟值，不是配置或实测；拖动滑杆不会修改配置文件。</p>')
     return '''<section class="config-panel" aria-label="示例配置文件">
 <h2>本页使用的 .data 配置</h2>
 {notice}
