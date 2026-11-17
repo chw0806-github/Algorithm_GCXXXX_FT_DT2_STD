@@ -27,7 +27,7 @@ from config_guides import CSS as CONFIG_CSS, render_config
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 PAGES = [
-    {"dir": "noise_col_channel", "title": "Noise_Dark_Col_Channel", "sub": "暗场列通道噪声：帧间 STD 与最大列差", "crumb": "图像传感器 FT 测试 · 暗帧测试子项", "lead": "14 幕定格图、逐幕源码和实际暗帧示例配置；图像数值为模拟。"},
+    {"dir": "noise_col_channel", "title": "Noise_Dark_Col_Channel", "sub": "暗场列通道噪声：帧间 STD 与最大列差", "crumb": "图像传感器 FT 测试 · 暗帧测试子项", "lead": "18 幕定格图、逐幕源码和实际暗帧示例配置；图像数值为模拟。"},
     {"dir": "roi_prnu", "title": "ROI_PRNU", "sub": "ROI 内 Delta 平方量与原始均值", "crumb": "图像传感器 FT 测试 · 白帧测试子项", "lead": "14 幕定格图、逐幕源码和示例配置；图像与 Delta 为假设模拟。"},
     {"dir": "single_pixel_defect", "title": "Single_Pixel_Defect_Test", "sub": "单点缺陷：亮暗分档、等级竞争与总数覆盖", "crumb": "图像传感器 FT 测试 · 白帧测试子项", "lead": "14 幕定格图与逐幕源码；PD.data 缺失，专用参数与 bin 均为假设。"},
     {"dir": "blemish_test", "title": "Blemish_Test", "sub": "污点检测：双路候选、PD 排除与增强匹配", "crumb": "图像传感器 FT 测试 · 白帧测试子项", "lead": "15 幕定格图、逐幕源码和示例配置原文；像素与候选为教学假设。"},

@@ -51,7 +51,7 @@ pixratio=S(RAW,9175,9198,'compareValue[n]>spec','Ratio 模式计算绝对差与�
 pixmask=S(RAW,9195,9217,'out_blemish','主缺陷 flag>0 时写主图；否则才检查 blemish 阈值，两个标记互斥。')
 
 EXPECTED_KICKERS = {
-    'noise_col_channel': ['一眼看懂','调用与配置','多帧输入','单点帧间 STD','标准差图','四个位置','一列怎么变成一个数','形成列序列','最大列与平均','四通道差值','严格比较','日志里的 dB','版本与边界','互动观察'],
+    'noise_col_channel': ['一眼看懂','调用与配置','多帧输入','单点帧间 STD','标准差图','两个方向','四个位置','找出 R 那一列','先用小例子看列平均','一列怎么变成一个数','形成列序列','为什么要减去平均','最大列与平均','四通道差值','严格比较','日志里的 dB','版本与边界','互动观察'],
     'roi_prnu': ['一眼看懂','真实示例配置','前置与开关','通道与区域','Delta 来源','模拟 ROI','原始像素均值','Delta 平方','计算 PRNU','四通道判定','共享缓冲','边界与无效值','返回与追加','互动模拟'],
     'single_pixel_defect': ['一眼看懂','配置与版本','模式选择','分通道','四块邻域','比例比较','标记与方向','合图与计数','亮点分档','亮暗竞争','总数覆盖','返回与追加','风险与边界','互动分档'],
     'blemish_test': ['一眼看懂','配置与版本','图像预处理','亮度修正与增强','大小窗口找暗斑','区域阈值','提取连通候选','找 PD 标记','排除附近 PD','匹配增强候选','增强包围框','没匹配到增强','返回与特殊情况','边界与版本','互动观察'],
@@ -76,9 +76,13 @@ GUIDES = {
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',4,25,'test_frameCnt<=1','检查帧数、尺寸和位深并转换输入。'),S(ITEM,249,285,'src[i] & mask','逐 ushort 依据 datatype 掩码转换。')],
   [S(RAW,9709,9730,'std_t/=frame_cnt-1','先取各帧同坐标，均值中心化后除 N−1 并开平方。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',39,61,'h*3/4','四线程按行起点分段。'),S(RAW,9702,9715,'all_size=w*(h/4)','每段长度为 w×整数 h/4，按帧读取低 10 位。')],
+  [S(RAW,9718,9728,'std_t/=frame_cnt-1','同一个位置先跨帧求 STD。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',242,263,'sum = 2*sum/h','再沿同类位置列计算 STD 的平均。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',242,266,'g_buf_delta_raw_[(j+1)*w+i+1]','每 2×2 四位置分别累加，分别得到列均值；无 Bayer 映射。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',242,253,'j+=2','固定原图列并隔行取四个奇偶位置，不混合 R 与 Gb。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',248,263,'sum = 2*sum/h','小例子说明同类位置的 STD 求列平均；源码按实际 h/2 求平均。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',242,266,'sum = 2*sum/h','以偶数高度为例，列和除以 h/2。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',259,278,'mean_column_std.append(sum)','将每列的 STD 平均值放到四个独立向量中。')],
+  [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',276,278,'std::accumulate','通道内的所有列参与均值，包含最大列。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',295,299,'*max_std-avg_std','最大列减同通道平均。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',272,278,'std::max_element','找出最大列并对该通道所有列平均。'),S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',290,300,'dif_max_avg_std','最大列减去平均列。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',391,403,'column_std_channel_dif','收集四类位置的原始差并取最大。')],
   [S('Algorithm_GCXXXX_FT_DT2_STD/TestItems/NoiseTest.cpp',400,419,'max_std_channel_dif >','原始差严格大于阈值且大于 0 才设失败。')],
